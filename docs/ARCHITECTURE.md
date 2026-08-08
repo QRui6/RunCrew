@@ -10,9 +10,8 @@ CorosMcpClient
   │ MCP initialize / tools/call
   ▼
 CorosActivityProvider
-  │ 原始文本或结构
-  ▼
-Coros Parser
+  ├── Coros Parser（详情 / 分圈）
+  └── FIT URL → private cache → Garmin FIT Parser
   │ ActivitySummary / ActivityDetail
   ▼
 Sync Service
@@ -94,6 +93,9 @@ provider + external_id
 | OAuth 失败 | 整次同步失败，不写入活动 |
 | 活动列表失败 | 整次同步失败 |
 | 单条活动详情失败 | 列表数据保留，记录 warning |
+| COROS 详情/分圈失败 | 最多请求一条 FIT；优先复用私有缓存 |
+| FIT URL 过期、超时或服务限额 | 删除不可解析缓存；列表数据保留并记录 warning |
+| FIT CRC 或 Schema 无效 | 不写入伪详情；删除不可用缓存并记录 warning |
 | Parser 无法识别格式 | 明确报错；仅显式调试时保存私有载荷 |
 | 缺少分圈 | 不生成配速稳定性结论 |
 | 缺少部分基础字段 | 降低 data quality confidence |
@@ -110,4 +112,3 @@ Agent
 ```
 
 这样才能替换 COROS、增加 FIT 或 Keep，而不重写所有 Agent Prompt。
-

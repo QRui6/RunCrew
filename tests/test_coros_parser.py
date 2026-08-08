@@ -1,7 +1,10 @@
 import json
 
+import pytest
+
 from runcrew.domain.activity import ActivityDetail, SportType
 from runcrew.providers.coros.parser import (
+    CorosPayloadError,
     extract_records,
     parse_activity_detail,
     parse_activity_summary,
@@ -16,6 +19,31 @@ def tool_response(payload: object) -> dict:
         "id": 1,
         "result": {"content": [{"type": "text", "text": nested}]},
     }
+
+
+def test_tool_error_preserves_reason_but_redacts_url_and_long_id() -> None:
+    response = {
+        "result": {
+            "isError": True,
+            "content": [
+                {
+                    "type": "text",
+                    "text": (
+                        "Daily limit reached for 123456789012 at "
+                        "https://example.test/private?token=secret"
+                    ),
+                }
+            ],
+        }
+    }
+
+    with pytest.raises(CorosPayloadError) as captured:
+        unwrap_tool_result(response)
+
+    message = str(captured.value)
+    assert "Daily limit reached" in message
+    assert "123456789012" not in message
+    assert "token=secret" not in message
 
 
 def test_nested_text_payload_is_normalized() -> None:

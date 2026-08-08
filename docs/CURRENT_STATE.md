@@ -5,25 +5,25 @@
 
 ## 当前里程碑
 
-**M1：真实 COROS 数据竖切——已完成。**
+**M2：FIT 详情兜底——进行中。**
 
-已经可以完成：
+M1 数据竖切已完成；M2 当前可以完成：
 
 ```text
-COROS 官方授权
-→ MCP 握手
-→ 获取最近活动列表
-→ 解析 COROS 格式化文本
-→ 转换为 ActivitySummary
-→ 保存原始事件和规范化活动
-→ SQLite 幂等更新
-→ 输出确定性 summary 复盘
+COROS 详情
+→ 失败时尝试分圈
+→ 再失败时优先读取私有 FIT 缓存
+→ 无缓存时请求单条 FIT URL
+→ HTTPS 限制、大小上限和超时控制
+→ CRC 校验并解析 session/lap/record
+→ 转换为 ActivityDetail
+→ 全部失败则保留 ActivitySummary + warning
 ```
 
 ## 已验证事实
 
 - Python 3.13 本地环境可运行；
-- 自动化测试：9 passed；
+- 自动化测试：19 passed；
 - fixture 首次同步插入 2 条；
 - fixture 第二次同步插入 0 条、更新 2 条；
 - 真实 COROS OAuth + PKCE 成功；
@@ -34,13 +34,19 @@ COROS 官方授权
 - 必要项目文档和 AI 入口已补齐。
 - RunCrew 已初始化为独立 Git 仓库，默认分支为 `main`；首次提交为 `d157a78`。
 - GitHub 私有仓库：`https://github.com/QRui6/RunCrew`；本地 `main` 跟踪 `origin/main`。
+- 官方 `garmin-fit-sdk` 21.212.0 可在 Python 3.13 解码和编码 FIT；
+- 合成 FIT 可稳定映射 1 个 session、4 个 lap 和 12 个 record；
+- FIT HTTPS、50 MB 上限、过期 URL、CRC、私有缓存和失败降级均有自动化测试；
+- `queryActivityFitFileDownloadUrls` 的实时 schema 已核对，单活动参数为 `labelId + sportType`。
 
 ## 当前已知问题
 
-真实账户测试中，COROS 当前详情类工具返回服务端异常文本：
+真实账户测试中，COROS 当前三个详情来源均未成功：
 
 - `getActivityDetail` 异常；
 - `queryActivityLapData` 返回相同异常。
+- `queryActivityFitFileDownloadUrls` 在参数符合实时 schema 的情况下返回 `isError=true`，没有下发下载 URL；
+- 因没有获得真实 FIT，真实分圈复盘尚未验收，不能把 M2 标为完成。
 
 当前系统行为正确：
 
@@ -52,19 +58,11 @@ COROS 官方授权
 
 ## 下一项唯一任务
 
-**M2：实现单条活动的 FIT 详情兜底。**
+**完成 M2 的唯一剩余验收：在 COROS FIT 工具恢复后，用一条真实 FIT 做 smoke test。**
 
-具体起点：
+验收成功标准：`detailed=1, detail_errors=0`，随后 `activities review` 输出至少 3 个带配速证据的真实 lap。若 COROS 仍返回工具错误，不重复消耗当天额度，只记录服务端原因并等待下次验证。
 
-1. 为 COROS Provider 增加 `queryActivityFitFileDownloadUrls` 调用；
-2. 只选择一条活动，避免浪费每日 FIT 下载额度；
-3. 将 FIT 保存到 `data/private/fit/`；
-4. 选择确定性 FIT 解析库；
-5. 映射 session、lap、record 到 `ActivityDetail`；
-6. 添加脱敏 fixture 和契约测试；
-7. 降级失败时继续保持 summary-only warning。
-
-## 开始下一任务前需要用户确认
+## 再次真实验收前需要用户确认
 
 FIT URL/文件获取会消耗 COROS 的每日下载额度。在进行真实下载前应向用户说明并确认只下载一条活动。
 

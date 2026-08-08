@@ -18,7 +18,9 @@ RunCrew 处理运动、睡眠、心率、HRV、恢复、位置等私人数据。
 - COROS Token 只保存在当前进程内；
 - OAuth 使用 Authorization Code + PKCE；
 - 私有 payload 只有显式传入 `--debug-payload` 才会保存；
-- 测试 fixture 为人工构造的脱敏数据。
+- FIT 只写入 `data/private/fit/`，缓存文件名是 LabelId 的单向摘要；
+- 下载错误不会输出签名 URL，工具错误会脱敏 URL 和长数字 ID；
+- 测试 FIT 由 Garmin Encoder 人工生成，不含坐标或真实用户指标。
 
 ## 尚未实现
 
@@ -38,4 +40,3 @@ RunCrew 可以做训练风险提示和建议用户寻求专业帮助，但不能
 - 承诺预防伤病；
 - 替代医生、康复师或营养师；
 - 在数据不足时给出高置信度健康结论。
-

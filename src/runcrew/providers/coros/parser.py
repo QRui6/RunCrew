@@ -32,7 +32,7 @@ SPORT_CODE_MAP = {
 def unwrap_tool_result(response: Mapping[str, Any]) -> Any:
     result = response.get("result", {})
     if result.get("isError"):
-        raise CorosPayloadError("COROS tool returned isError=true")
+        raise CorosPayloadError(_tool_error_message(result))
     texts = [
         item.get("text", "")
         for item in result.get("content", [])
@@ -44,6 +44,21 @@ def unwrap_tool_result(response: Mapping[str, Any]) -> Any:
             return structured
         raise CorosPayloadError("COROS tool response did not contain text or structured data")
     return decode_nested_json("\n".join(texts))
+
+
+def _tool_error_message(result: Mapping[str, Any]) -> str:
+    texts = [
+        str(item.get("text", "")).strip()
+        for item in result.get("content", [])
+        if isinstance(item, Mapping) and item.get("type") == "text"
+    ]
+    detail = " ".join(text for text in texts if text)
+    if not detail:
+        return "COROS tool returned an unspecified error"
+    detail = re.sub(r"https?://\S+", "[redacted-url]", detail)
+    detail = re.sub(r"\b\d{10,}\b", "[redacted-id]", detail)
+    detail = re.sub(r"\s+", " ", detail).strip()
+    return f"COROS tool error: {detail[:300]}"
 
 
 def decode_nested_json(value: Any) -> Any:
@@ -164,6 +179,38 @@ def extract_detail_object(payload: Any) -> Mapping[str, Any]:
     raise CorosPayloadError(
         f"Expected COROS activity detail object, received {type(payload).__name__}"
     )
+
+
+def extract_fit_download_url(payload: Any) -> str:
+    payload = decode_nested_json(payload)
+    if isinstance(payload, str):
+        match = re.search(r"https://[^\s<>\"']+", payload)
+        if not match:
+            raise CorosPayloadError("COROS FIT response did not contain an HTTPS URL")
+        return match.group().rstrip(".,);]")
+    if isinstance(payload, Mapping):
+        for key in (
+            "url",
+            "downloadUrl",
+            "download_url",
+            "fitUrl",
+            "fit_url",
+            "urls",
+            "data",
+            "result",
+        ):
+            if key in payload:
+                try:
+                    return extract_fit_download_url(payload[key])
+                except CorosPayloadError:
+                    continue
+    if isinstance(payload, list):
+        for item in payload:
+            try:
+                return extract_fit_download_url(item)
+            except CorosPayloadError:
+                continue
+    raise CorosPayloadError("COROS FIT response did not contain a download URL")
 
 
 def parse_activity_summary(raw: Mapping[str, Any]) -> ActivitySummary:
