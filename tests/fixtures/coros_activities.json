@@ -1,0 +1,70 @@
+{
+  "activities": [
+    {
+      "id": "fixture-run-20260807",
+      "sport_type_code": 100,
+      "started_at": "2026-08-07T06:30:00+08:00",
+      "duration_seconds": 2718,
+      "distance_meters": 8020,
+      "average_pace_seconds_per_km": 338.9,
+      "average_heart_rate": 151,
+      "training_load": 92,
+      "title": "滨江轻松跑",
+      "location": "杭州",
+      "elevation_gain_meters": 36,
+      "average_cadence": 176,
+      "max_heart_rate": 166,
+      "laps": [
+        {
+          "index": 1,
+          "duration_seconds": 337,
+          "distance_meters": 1000,
+          "average_pace_seconds_per_km": 337,
+          "average_heart_rate": 145,
+          "average_cadence": 175
+        },
+        {
+          "index": 2,
+          "duration_seconds": 340,
+          "distance_meters": 1000,
+          "average_pace_seconds_per_km": 340,
+          "average_heart_rate": 149,
+          "average_cadence": 176
+        },
+        {
+          "index": 3,
+          "duration_seconds": 338,
+          "distance_meters": 1000,
+          "average_pace_seconds_per_km": 338,
+          "average_heart_rate": 151,
+          "average_cadence": 176
+        },
+        {
+          "index": 4,
+          "duration_seconds": 341,
+          "distance_meters": 1000,
+          "average_pace_seconds_per_km": 341,
+          "average_heart_rate": 153,
+          "average_cadence": 177
+        }
+      ]
+    },
+    {
+      "id": "fixture-run-20260803",
+      "sport_type_code": 103,
+      "started_at": "2026-08-03T18:40:00+08:00",
+      "duration_seconds": 2160,
+      "distance_meters": 6000,
+      "average_pace_seconds_per_km": 360,
+      "average_heart_rate": null,
+      "training_load": 75,
+      "title": "操场有氧跑",
+      "location": "杭州",
+      "elevation_gain_meters": 2,
+      "average_cadence": 174,
+      "max_heart_rate": null,
+      "laps": []
+    }
+  ]
+}
+
