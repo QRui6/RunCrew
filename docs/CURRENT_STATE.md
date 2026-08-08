@@ -5,7 +5,7 @@
 
 ## 当前里程碑
 
-**M2：FIT 详情兜底——进行中。**
+**M2：FIT 详情兜底——已完成。**
 
 M1 数据竖切已完成；M2 当前可以完成：
 
@@ -38,33 +38,35 @@ COROS 详情
 - 合成 FIT 可稳定映射 1 个 session、4 个 lap 和 12 个 record；
 - FIT HTTPS、50 MB 上限、过期 URL、CRC、私有缓存和失败降级均有自动化测试；
 - `queryActivityFitFileDownloadUrls` 的实时 schema 已核对，单活动参数为 `labelId + sportType`。
+- 一条由用户从 COROS App 手动导出的真实 FIT 已通过 CRC、session、lap 和 record 解析；
+- 真实 FIT 经私有缓存进入完整同步链，验收结果为 `detailed=1, detail_errors=0`；
+- 真实活动复盘已输出基于多分圈计算的 `pace_stability` evidence，数据质量为 high。
 
 ## 当前已知问题
 
-真实账户测试中，COROS 当前三个详情来源均未成功：
+真实账户测试中，COROS 的自动详情来源仍存在外部限制：
 
 - `getActivityDetail` 异常；
 - `queryActivityLapData` 返回相同异常。
 - `queryActivityFitFileDownloadUrls` 在参数符合实时 schema 的情况下返回 `isError=true`，没有下发下载 URL；
-- 因没有获得真实 FIT，真实分圈复盘尚未验收，不能把 M2 标为完成。
+- 自动 FIT URL 未能验证，但用户手动导出的真实 FIT 已通过私有缓存完成端到端验收。
 
-当前系统行为正确：
+当前降级行为：
 
 - 活动列表仍然保存；
-- 同步状态记为 `completed_with_warnings`；
-- `detail_errors=1`；
-- 不伪造分圈和时间序列；
-- 复盘明确提示详情数据不足。
+- 若私有缓存存在，解析真实 FIT 并生成 `ActivityDetail`；
+- 若没有缓存且 COROS FIT URL 工具失败，保留 summary 并记录 warning；
+- 不伪造分圈和时间序列。
 
 ## 下一项唯一任务
 
-**完成 M2 的唯一剩余验收：在 COROS FIT 工具恢复后，用一条真实 FIT 做 smoke test。**
+**M3：实现 Training Review Skill 的最小可回放竖切。**
 
-验收成功标准：`detailed=1, detail_errors=0`，随后 `activities review` 输出至少 3 个带配速证据的真实 lap。若 COROS 仍返回工具错误，不重复消耗当天额度，只记录服务端原因并等待下次验证。
+具体起点：定义 Skill 的输入/输出 Schema，把现有确定性复盘服务包装成可复用能力；先完成无 LLM 的回放与 evidence 契约，再接入模型。
 
-## 再次真实验收前需要用户确认
+## 外部额度约束
 
-FIT URL/文件获取会消耗 COROS 的每日下载额度。在进行真实下载前应向用户说明并确认只下载一条活动。
+未来重试 COROS 自动 FIT URL 获取仍会消耗每日下载额度，执行前必须向用户说明并确认只下载一条活动。M3 开发不需要再次下载真实 FIT。
 
 ## 验收命令
 

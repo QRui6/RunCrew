@@ -30,20 +30,21 @@ pytest / scripts/verify.py: 19 passed
 合成 FIT: 1 session, 4 laps, 12 records
 缓存回归: 两次详情请求仅下载一次
 真实 COROS summary: 同步成功并在详情失败时保留
-真实 FIT: 未取得；queryActivityFitFileDownloadUrls 返回 isError=true
+真实 FIT: 用户从 COROS App 手动导出并写入私有缓存
+真实同步: detailed=1, detail_errors=0
+真实复盘: 输出基于多分圈计算的 pace_stability evidence，confidence=high
 ```
 
-真实调用前通过 `tools/list` 核对了输入 schema；`labelId + sportType` 参数正确。因此当前剩余问题是 COROS 外部服务行为，不是本地参数契约错误。
+真实调用前通过 `tools/list` 核对了输入 schema；`labelId + sportType` 参数正确。COROS 自动 URL 工具没有返回地址后，使用官方 App 手动导出同一条活动的 FIT；先独立验证解析，再放入私有缓存完成 Provider、Sync、Storage 和 Review 端到端验收。
 
 ## 已知问题
 
-- 尚无真实 FIT 文件可用于 smoke test；
-- 尚未验收带真实分圈证据的活动复盘；
+- COROS 自动 FIT URL 工具仍返回错误，当前真实文件由用户手动导出；
 - COROS 工具首次只返回通用 `isError`，新代码已保留并脱敏服务端错误文本，方便下次定位。
 
 ## 下一阶段唯一入口
 
-在用户再次确认当天的一次 FIT 额度后重跑一条真实活动。成功标准为 `detailed=1, detail_errors=0`，并输出至少 3 个真实分圈证据；失败时不重复调用。
+M3：定义 Training Review Skill 的输入/输出 Schema，把确定性复盘服务包装成可回放、带 evidence、缺失数据可降级的 Skill。M3 不需要再次下载真实 FIT。
 
 ## 私有数据与额度
 

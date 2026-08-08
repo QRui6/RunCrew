@@ -39,14 +39,14 @@
 
 ## M2：FIT 详情兜底
 
-状态：**进行中（实现与离线验收完成，真实 FIT 受 COROS 服务阻塞）**
+状态：**完成**
 
 验收：
 
-- [ ] 只下载一条真实 FIT：2026-08-08 已调用一次，但 COROS 工具返回 `isError=true`，未返回 URL；
+- [x] 只使用一条真实 FIT 验收：COROS URL 工具失败后，由用户从 App 手动导出并放入私有缓存；
 - [x] 确定性解析 session/lap/record；
 - [x] 生成 `ActivityDetail`；
-- [ ] 能生成带分圈证据的真实活动复盘：等待真实 FIT；
+- [x] 能生成带分圈证据的真实活动复盘；
 - [x] 有不含位置的合成 FIT fixture；
 - [x] 处理下载额度、缓存、超时和过期 URL；
 - [x] FIT 失败仍保留 summary。

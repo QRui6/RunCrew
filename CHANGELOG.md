@@ -33,6 +33,7 @@
 - COROS 详情服务异常时列表数据不会回滚。
 - FIT 解析、缓存复用、错误脱敏和三级降级链通过离线自动化验收；
 - 真实 FIT 工具参数已根据 COROS 实时 `tools/list` schema 核对。
+- 用户手动导出的单条真实 FIT 已通过私有缓存完成同步、入库和分圈复盘，结果为 `detailed=1, detail_errors=0`；
 
 ### Known Issues
 
