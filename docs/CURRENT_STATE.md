@@ -32,7 +32,8 @@ COROS 官方授权
 - `activities review --latest --provider coros` 可以输出复盘 JSON；
 - Token 未落盘；
 - 必要项目文档和 AI 入口已补齐。
-- RunCrew 已初始化为独立 Git 仓库，默认分支为 `main`；当前文件尚未创建首次提交。
+- RunCrew 已初始化为独立 Git 仓库，默认分支为 `main`；首次提交为 `d157a78`。
+- GitHub 私有仓库：`https://github.com/QRui6/RunCrew`；本地 `main` 跟踪 `origin/main`。
 
 ## 当前已知问题
 

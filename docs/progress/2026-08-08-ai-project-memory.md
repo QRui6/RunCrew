@@ -19,7 +19,9 @@
 - `docs/adr/`：架构决策记录；
 - `docs/GLOSSARY.md`：术语解释；
 - `scripts/verify.py`：统一项目自检入口。
-- 初始化独立 Git 仓库并将默认分支设为 `main`；未自动创建提交。
+- 初始化独立 Git 仓库并将默认分支设为 `main`；
+- 创建首次提交 `d157a78 chore: bootstrap RunCrew data vertical slice`；
+- 创建并推送 GitHub 私有仓库 `QRui6/RunCrew`。
 
 ## 以后每阶段写在哪里
 

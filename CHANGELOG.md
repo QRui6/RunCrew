@@ -18,6 +18,7 @@
 - 增加 AI 项目入口、当前状态、路线图、架构、ADR、进展索引和安全文档；
 - 增加统一自检脚本 `scripts/verify.py`。
 - 初始化独立 Git 仓库，默认分支为 `main`。
+- 创建首次提交并推送至 GitHub 私有仓库 `QRui6/RunCrew`。
 
 ### Verified
 
