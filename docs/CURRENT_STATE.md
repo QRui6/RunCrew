@@ -5,25 +5,25 @@
 
 ## 当前里程碑
 
-**M1：真实 COROS 数据竖切——已完成。**
+**M2：FIT 详情兜底——已完成。**
 
-已经可以完成：
+M1 数据竖切已完成；M2 当前可以完成：
 
 ```text
-COROS 官方授权
-→ MCP 握手
-→ 获取最近活动列表
-→ 解析 COROS 格式化文本
-→ 转换为 ActivitySummary
-→ 保存原始事件和规范化活动
-→ SQLite 幂等更新
-→ 输出确定性 summary 复盘
+COROS 详情
+→ 失败时尝试分圈
+→ 再失败时优先读取私有 FIT 缓存
+→ 无缓存时请求单条 FIT URL
+→ HTTPS 限制、大小上限和超时控制
+→ CRC 校验并解析 session/lap/record
+→ 转换为 ActivityDetail
+→ 全部失败则保留 ActivitySummary + warning
 ```
 
 ## 已验证事实
 
 - Python 3.13 本地环境可运行；
-- 自动化测试：9 passed；
+- 自动化测试：19 passed；
 - fixture 首次同步插入 2 条；
 - fixture 第二次同步插入 0 条、更新 2 条；
 - 真实 COROS OAuth + PKCE 成功；
@@ -34,39 +34,39 @@ COROS 官方授权
 - 必要项目文档和 AI 入口已补齐。
 - RunCrew 已初始化为独立 Git 仓库，默认分支为 `main`；首次提交为 `d157a78`。
 - GitHub 私有仓库：`https://github.com/QRui6/RunCrew`；本地 `main` 跟踪 `origin/main`。
+- 官方 `garmin-fit-sdk` 21.212.0 可在 Python 3.13 解码和编码 FIT；
+- 合成 FIT 可稳定映射 1 个 session、4 个 lap 和 12 个 record；
+- FIT HTTPS、50 MB 上限、过期 URL、CRC、私有缓存和失败降级均有自动化测试；
+- `queryActivityFitFileDownloadUrls` 的实时 schema 已核对，单活动参数为 `labelId + sportType`。
+- 一条由用户从 COROS App 手动导出的真实 FIT 已通过 CRC、session、lap 和 record 解析；
+- 真实 FIT 经私有缓存进入完整同步链，验收结果为 `detailed=1, detail_errors=0`；
+- 真实活动复盘已输出基于多分圈计算的 `pace_stability` evidence，数据质量为 high。
 
 ## 当前已知问题
 
-真实账户测试中，COROS 当前详情类工具返回服务端异常文本：
+真实账户测试中，COROS 的自动详情来源仍存在外部限制：
 
 - `getActivityDetail` 异常；
 - `queryActivityLapData` 返回相同异常。
+- `queryActivityFitFileDownloadUrls` 在参数符合实时 schema 的情况下返回 `isError=true`，没有下发下载 URL；
+- 自动 FIT URL 未能验证，但用户手动导出的真实 FIT 已通过私有缓存完成端到端验收。
 
-当前系统行为正确：
+当前降级行为：
 
 - 活动列表仍然保存；
-- 同步状态记为 `completed_with_warnings`；
-- `detail_errors=1`；
-- 不伪造分圈和时间序列；
-- 复盘明确提示详情数据不足。
+- 若私有缓存存在，解析真实 FIT 并生成 `ActivityDetail`；
+- 若没有缓存且 COROS FIT URL 工具失败，保留 summary 并记录 warning；
+- 不伪造分圈和时间序列。
 
 ## 下一项唯一任务
 
-**M2：实现单条活动的 FIT 详情兜底。**
+**M3：实现 Training Review Skill 的最小可回放竖切。**
 
-具体起点：
+具体起点：定义 Skill 的输入/输出 Schema，把现有确定性复盘服务包装成可复用能力；先完成无 LLM 的回放与 evidence 契约，再接入模型。
 
-1. 为 COROS Provider 增加 `queryActivityFitFileDownloadUrls` 调用；
-2. 只选择一条活动，避免浪费每日 FIT 下载额度；
-3. 将 FIT 保存到 `data/private/fit/`；
-4. 选择确定性 FIT 解析库；
-5. 映射 session、lap、record 到 `ActivityDetail`；
-6. 添加脱敏 fixture 和契约测试；
-7. 降级失败时继续保持 summary-only warning。
+## 外部额度约束
 
-## 开始下一任务前需要用户确认
-
-FIT URL/文件获取会消耗 COROS 的每日下载额度。在进行真实下载前应向用户说明并确认只下载一条活动。
+未来重试 COROS 自动 FIT URL 获取仍会消耗每日下载额度，执行前必须向用户说明并确认只下载一条活动。M3 开发不需要再次下载真实 FIT。
 
 ## 验收命令
 

@@ -12,11 +12,13 @@ from runcrew.providers.coros.oauth import CorosOAuthClient
 from runcrew.providers.coros.parser import (
     CorosPayloadError,
     extract_detail_object,
+    extract_fit_download_url,
     extract_records,
     parse_activity_detail,
     parse_activity_summary,
     unwrap_tool_result,
 )
+from runcrew.providers.fit import FitFileStore, parse_fit_activity
 
 
 class CorosActivityProvider:
@@ -29,6 +31,7 @@ class CorosActivityProvider:
         oauth_client: CorosOAuthClient | None = None,
         mcp_client: CorosMcpClient | None = None,
         debug_payload_path: Path | None = None,
+        fit_file_store: FitFileStore | None = None,
     ) -> None:
         self.oauth_client = oauth_client or CorosOAuthClient(
             callback_port=callback_port,
@@ -37,6 +40,7 @@ class CorosActivityProvider:
         )
         self.mcp_client = mcp_client
         self.debug_payload_path = debug_payload_path
+        self.fit_file_store = fit_file_store or FitFileStore()
         self._summaries: dict[str, ActivitySummary] = {}
         self._sport_codes: dict[str, int] = {}
 
@@ -96,27 +100,57 @@ class CorosActivityProvider:
                 "Call list_activities before get_activity so COROS sportType is available"
             )
         tool_arguments = {"labelId": external_id, "sportType": sport_code}
-        response = await client.call_tool("getActivityDetail", tool_arguments)
-        payload = unwrap_tool_result(response)
         try:
+            response = await client.call_tool("getActivityDetail", tool_arguments)
+            payload = unwrap_tool_result(response)
             if isinstance(payload, str):
                 raise CorosPayloadError("COROS detail tool returned unstructured text")
             raw = extract_detail_object(payload)
+            detail = parse_activity_detail(raw, fallback_summary=fallback)
+            return ProviderActivity(activity=detail, raw_payload=raw)
         except Exception:
-            self._capture_debug_payload("getActivityDetail", payload)
+            if "payload" in locals():
+                self._capture_debug_payload("getActivityDetail", payload)
+        try:
             lap_response = await client.call_tool(
                 "queryActivityLapData", tool_arguments
             )
             lap_payload = unwrap_tool_result(lap_response)
-            try:
-                if isinstance(lap_payload, str):
-                    raise CorosPayloadError("COROS lap tool returned unstructured text")
-                raw = extract_detail_object(lap_payload)
-            except Exception:
+            if isinstance(lap_payload, str):
+                raise CorosPayloadError("COROS lap tool returned unstructured text")
+            raw = extract_detail_object(lap_payload)
+            detail = parse_activity_detail(raw, fallback_summary=fallback)
+            return ProviderActivity(activity=detail, raw_payload=raw)
+        except Exception:
+            if "lap_payload" in locals():
                 self._capture_debug_payload("queryActivityLapData", lap_payload)
-                raise
-        detail = parse_activity_detail(raw, fallback_summary=fallback)
-        return ProviderActivity(activity=detail, raw_payload=raw)
+
+        artifact = self.fit_file_store.load_cached(external_id)
+        if artifact is None:
+            fit_response = await client.call_tool(
+                "queryActivityFitFileDownloadUrls", tool_arguments
+            )
+            fit_payload = unwrap_tool_result(fit_response)
+            fit_url = extract_fit_download_url(fit_payload)
+            artifact = await self.fit_file_store.download(fit_url, external_id)
+        try:
+            parsed = parse_fit_activity(
+                artifact.content,
+                fallback_summary=fallback,
+            )
+        except Exception:
+            self.fit_file_store.discard(external_id)
+            raise
+        return ProviderActivity(
+            activity=parsed.activity,
+            raw_payload={
+                "detail_source": "fit",
+                "fit_sha256": parsed.sha256,
+                "fit_size_bytes": len(artifact.content),
+                "fit_message_counts": parsed.message_counts,
+                "from_private_cache": artifact.from_cache,
+            },
+        )
 
     async def aclose(self) -> None:
         if self.mcp_client is not None:

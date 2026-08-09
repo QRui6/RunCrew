@@ -31,6 +31,7 @@ COROS OAuth + PKCE
 | MCP 客户端 | `src/runcrew/providers/coros/mcp.py` | initialize、tools/call、SSE/JSON 响应 |
 | COROS 解析器 | `src/runcrew/providers/coros/parser.py` | 嵌套 JSON 与官方格式化文本的确定性解析 |
 | COROS Provider | `src/runcrew/providers/coros/provider.py` | 活动列表、详情/分圈降级链 |
+| FIT 下载与解析 | `src/runcrew/providers/fit` | 私有缓存、下载边界、CRC、session/lap/record 映射 |
 | SQLite 存储 | `src/runcrew/storage` | activities、raw events、sync runs |
 | 同步服务 | `src/runcrew/services/sync.py` | 幂等、部分成功、warning 隔离 |
 | 活动复盘 | `src/runcrew/services/activity_review.py` | 无 LLM、证据驱动的确定性分析 |
@@ -41,7 +42,7 @@ COROS OAuth + PKCE
 ### 自动化测试
 
 ```text
-9 passed
+19 passed
 ```
 
 覆盖：
@@ -53,6 +54,9 @@ COROS OAuth + PKCE
 - 确定性复盘；
 - SQLite 幂等同步；
 - 详情端点失败不回滚活动列表。
+- 合成 FIT 编解码、CRC 和 Domain 映射；
+- FIT 下载缓存、大小限制和过期链接；
+- COROS 详情/分圈失败后的 FIT 降级编排。
 
 ### CLI 离线验收
 
@@ -81,6 +85,7 @@ status=completed_with_warnings
 - `querySportRecords` 正常；
 - `getActivityDetail` 返回 COROS 服务端异常提示；
 - 降级调用 `queryActivityLapData` 返回相同异常提示。
+- `queryActivityFitFileDownloadUrls` 参数符合实时 schema，但工具返回 `isError=true`。
 
 RunCrew 当前行为：
 
@@ -98,11 +103,11 @@ RunCrew 当前行为：
 
 当前通过 SQLAlchemy `create_all` 创建结构。Schema 稳定后应加入 Alembic 迁移，避免手工修改本地数据库。
 
-## 下一里程碑：FIT 详情兜底
+## 当前里程碑：FIT 详情兜底
 
-目标：在不依赖 COROS 详情文本工具的情况下生成 `ActivityDetail`。
+状态：**已完成离线与真实 FIT 端到端验收。**
 
-实施顺序：
+已经实现：
 
 1. 调用 `queryActivityFitFileDownloadUrls` 获取指定活动的短期下载地址；
 2. 下载 FIT 到 Git 忽略的私有目录；
@@ -117,10 +122,10 @@ getActivityDetail
   → summary-only warning
 ```
 
-6. 用一份脱敏后的最小 FIT fixture 建立回归测试；
-7. 增加下载额度、超时、链接过期和重试策略。
+6. 用官方 Encoder 生成无坐标合成 FIT 建立回归测试；
+7. 增加下载额度、缓存、超时、链接过期和失败清理策略。
 
-FIT 下载会消耗 COROS 的每日额度，因此开发时只选择一条活动验证，不做批量下载。
+COROS 自动 URL 工具未返回下载地址，因此用户从官方 App 手动导出同一条活动的 FIT 并放入私有缓存。真实同步得到 `detailed=1, detail_errors=0`，复盘成功产生基于多分圈的 evidence。自动 URL 获取保留为外部服务已知限制。
 
 ## 常用命令
 

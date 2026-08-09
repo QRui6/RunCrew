@@ -7,6 +7,7 @@
 | 2026-08-08 | M0 COROS MCP 接入 Spike | 完成 | [M0 接入 Spike](progress/2026-08-08-m0-coros-mcp-spike.md) |
 | 2026-08-08 | M1 真实数据竖切 | 完成 | [M1 数据竖切](progress/2026-08-08-m1-data-vertical-slice.md) |
 | 2026-08-08 | 项目记忆与 AI 交接体系 | 完成 | [AI 交接体系](progress/2026-08-08-ai-project-memory.md) |
+| 2026-08-08 | M2 FIT 详情兜底 | 完成 | [M2 FIT 详情兜底](progress/2026-08-08-m2-fit-detail-fallback.md) |
 
 ## 新阶段记录模板
 
@@ -20,4 +21,3 @@
 6. 已知问题；
 7. 下一阶段唯一入口；
 8. 是否涉及真实数据或外部额度。
-

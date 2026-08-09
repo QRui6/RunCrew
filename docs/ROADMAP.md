@@ -39,17 +39,17 @@
 
 ## M2：FIT 详情兜底
 
-状态：**待开始**
+状态：**完成**
 
 验收：
 
-- 只下载一条真实 FIT；
-- 确定性解析 session/lap/record；
-- 生成 `ActivityDetail`；
-- 能生成带分圈证据的真实活动复盘；
-- 有脱敏 FIT fixture；
-- 处理下载额度、超时和过期 URL；
-- FIT 失败仍保留 summary。
+- [x] 只使用一条真实 FIT 验收：COROS URL 工具失败后，由用户从 App 手动导出并放入私有缓存；
+- [x] 确定性解析 session/lap/record；
+- [x] 生成 `ActivityDetail`；
+- [x] 能生成带分圈证据的真实活动复盘；
+- [x] 有不含位置的合成 FIT fixture；
+- [x] 处理下载额度、缓存、超时和过期 URL；
+- [x] FIT 失败仍保留 summary。
 
 ## M3：Training Review Skill
 
@@ -96,4 +96,3 @@
 - 可演示界面；
 - 架构图与 Trace；
 - 简历描述、项目难点和量化结果。
-
