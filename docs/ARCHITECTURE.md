@@ -34,7 +34,7 @@ review-running-training Skill
 Review Agent Harness
   │ 有界 Context + Action Schema + 权限 + 预算 + 重试 + Trace
   ├── DeterministicReviewPolicy（离线基线）
-  └── DeepSeekReviewPolicy（非思考 Tool Calls；当前仅 Mock 验证）
+  └── DeepSeekReviewPolicy（非思考 Tool Calls；v1.1 同题评测通过）
   ▼
 CLI Agent Run JSON 输出
   │ 版本化合成场景 + 故障注入 + 预期终态
@@ -43,6 +43,9 @@ Agent Evaluation Runner
   │ 事实一致性 + 护栏执行检查 + 聚合指标
   ▼
 私有 Evaluation Report
+  │ 只读取规范化活动、脱敏 Trace 与私有报告
+  ▼
+Local Read-only Demo（127.0.0.1）
 ```
 
 ## 分层职责
@@ -77,6 +80,14 @@ Agent Evaluation Runner
 
 负责接收参数和展示结果，不承担解析和业务规则。
 
+### Web Demo
+
+位置：`src/runcrew/web/`
+
+使用 Python 标准库 HTTP Server 提供单页本地演示，不增加 Web 框架依赖。`DemoDashboardService` 只读取规范化活动和最终评测报告，并通过现有 `ReviewAgentHarness` 重新执行确定性只读回放；HTTP 层只接受 GET，固定绑定 `127.0.0.1`。
+
+浏览器只接收展示所需字段，不接收 Provider 外部 ID、原始 payload、坐标、Token 或完整数据库对象。静态页面、数据契约与 HTTP 适配层分离，可独立测试。
+
 ### Skill
 
 位置：`skills/review-running-training/`
@@ -93,7 +104,7 @@ Agent Evaluation Runner
 
 M5-B1 已新增 `DeepSeekReviewPolicy`：通过官方 Chat Completions + 普通 Tool Calls 选择动作，使用 `httpx`、环境变量和 `SecretStr` 管理调用；模型 API 重试与业务工具重试分离。Harness 只接收模型名、Token、耗时和解析错误等白名单元数据，Prompt、响应正文、Key 和工具参数不进入 Trace。
 
-真实首次 Smoke 证明首轮 Tool Call 可用，但第二轮仅传 Context JSON 会让模型重复调用工具。当前修复在单次 Run 内保留 assistant Tool Call，并以相同 `tool_call_id` 回传已校验 Tool Result，形成标准 `assistant(tool_calls) → tool(result)` 对话。该修复已通过 Mock，真实复验待完成。
+真实首次 Smoke 证明首轮 Tool Call 可用，但第二轮仅传 Context JSON 会让模型重复调用工具。修复后在单次 Run 内保留 assistant Tool Call，并以相同 `tool_call_id` 回传已校验 Tool Result，形成标准 `assistant(tool_calls) → tool(result)` 对话。该链路已通过真实 Smoke 和 v1.1 完整同题评测。
 
 ### Evaluation
 

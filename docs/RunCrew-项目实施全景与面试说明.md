@@ -12,7 +12,7 @@
 
 > RunCrew 已经完成“真实跑步数据接入 → 统一数据模型 → 私有存储 → FIT 详情恢复 → 确定性复盘 → 可回放 Training Review Skill → 有界单 Agent Loop → 版本化评测基线 → DeepSeek Policy → v1.1 同 Hash 完整模型对照”。多 Agent 没有评测必要性，产品化界面尚未完成。
 
-当前里程碑是 **M5 全部完成，下一阶段 M6-A 本地只读演示界面**。
+当前里程碑是 **M5 与 M6-A 已完成，下一阶段 M6-B 演示脚本、架构图与简历表达**。
 
 | 能力 | 当前状态 | 说明 |
 |---|---|---|
@@ -764,7 +764,7 @@ M5 只允许增加：
 
 ## 11. 当前下一步
 
-M5-B3 已完成，下一任务是 M6-A 本地只读演示界面：
+M5-B3 与 M6-A 已完成，下一任务是 M6-B 面试交付材料：
 
 ```text
 [已完成] 增加受确认和共享总费用门保护的完整 Suite 命令
@@ -772,7 +772,20 @@ M5-B3 已完成，下一任务是 M6-A 本地只读演示界面：
 → [已完成] v1.0 同 Hash 复跑，发现1秒预算导致网络模型统一超时
 → [已完成] 升级 v1.1，为全部 Policy 固定15秒预算并建立新基线
 → [已完成] DeepSeek v1.1 同 Hash 复跑12/12
-→ [下一步] 展示 Activity → Skill → Agent Loop → Trace → Evaluation 对照
+→ [已完成] 本地只读 Dashboard 展示 Activity → Skill → Agent Loop → Trace → Evaluation 对照
+→ [下一步] 形成5分钟演示脚本、架构图和简历表达
+
+### M6-A：本地只读演示 Dashboard
+
+M6-A 没有增加新业务 Agent，而是把 M1-M5 已经完成的工程链路做成可解释产品面。`runcrew demo` 使用 Python 标准库启动本地服务，只绑定 `127.0.0.1`，页面提供 Provider 筛选、可选训练目标和只读 Agent 回放。
+
+页面集中展示最新活动、三类 finding 与 evidence、数据质量、输入 Hash、Agent 终态/预算/Trace，以及确定性 Policy 与 DeepSeek 的 Same-Hash 评测对照。浏览器端不接收外部活动 ID、原始 payload、坐标或 Token。
+
+阶段价值不是“做了一个数据大屏”，而是让面试官可以沿着一个页面看到 Provider、Domain、Skill、Context、Harness、Loop、Trace 和 Evaluation 如何连接。实现没有引入前端框架或 Web 后端依赖，静态资源随 Python Wheel 打包，56项测试覆盖数据脱敏、只读 API、缺失数据库不落盘和启动入口。
+
+面试表达：
+
+> 我没有在评测完成后继续堆业务 Agent，而是做了一个本地只读演示面，把真实活动、确定性 evidence、Agent Trace 和同 Hash 模型对照放在一起。页面数据仍通过原有 Service 和 Harness 产生，不复制业务规则；服务只绑定回环地址，浏览器拿不到 Provider 外部 ID 和原始运动数据。
 → 脚本化异常/护栏场景继续复用真实 Harness
 → 记录完成率、终态、Token、费用、延迟和事实一致性
 → 与确定性 Policy 基线比较

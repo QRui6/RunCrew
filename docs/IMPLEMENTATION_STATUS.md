@@ -10,7 +10,7 @@
 4. [ROADMAP.md](ROADMAP.md)：后续阶段和验收条件；
 5. [adr/README.md](adr/README.md)：关键架构选择及其原因。
 
-当前一句话状态：52 项自动化测试通过；DeepSeek 与确定性 Policy 在相同 v1.1 Suite/Hash/15秒预算下均为12/12，M5-B3完成；下一步只做本地演示与可解释界面，不升级模型或拆多 Agent。
+当前一句话状态：56项自动化测试通过；M6-A 本地只读 Dashboard 已完成，可以展示 Activity、Skill evidence、Agent Trace 和 Same-Hash 模型对照；下一步制作演示脚本、架构图与简历材料。
 
 常用验收命令：
 
@@ -20,4 +20,5 @@
 .\.venv\Scripts\runcrew.exe agent review --latest --provider fixture
 .\.venv\Scripts\runcrew.exe eval review-agent --output data\private\evals\m5-baseline.json
 .\.venv\Scripts\runcrew.exe eval deepseek-suite --help
+.\.venv\Scripts\runcrew.exe demo --no-open-browser
 ```

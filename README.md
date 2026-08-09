@@ -1,6 +1,6 @@
 # RunCrew
 
-RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前已经形成可靠数据竖切、可回放 Training Review Skill、具备有界上下文与 Trace 的单 Agent Loop，以及 12 场景离线评测基线。
+RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前已经形成可靠数据竖切、可回放 Training Review Skill、具备有界上下文与 Trace 的单 Agent Loop、真实 LLM 同题评测，以及本地只读演示界面。
 
 > AI 或新开发者开始工作时，请先阅读 [AGENTS.md](AGENTS.md)，然后阅读 [当前状态](docs/CURRENT_STATE.md)。
 
@@ -19,6 +19,7 @@ RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前�
 - 输出 Suite Hash、事实一致性、工具执行和调用成本等可比较指标；
 - 提供 `DeepSeekReviewPolicy` 非思考 Tool Calls 适配器，并以 Mock 验证请求、解析、重试、脱敏和 Harness 护栏；
 - 在评测报告 1.1 中统计 Policy 调用、API 尝试、动作解析错误、Token 和模型耗时；
+- 通过本地只读 Dashboard 展示活动、Skill evidence、Agent Trace 和 Same-Hash 评测对照；
 - 使用不含位置的合成 FIT 进行离线开发和回归测试。
 
 ## 文档导航
@@ -50,10 +51,30 @@ python -m pip install -e ".[dev]"
 .\.venv\Scripts\runcrew.exe training review --latest --provider fixture
 .\.venv\Scripts\runcrew.exe agent review --latest --provider fixture
 .\.venv\Scripts\runcrew.exe eval review-agent --output data\private\evals\m5-baseline.json
+.\.venv\Scripts\runcrew.exe demo
 .\.venv\Scripts\python.exe scripts\verify.py
 ```
 
 默认数据库位于 `data/runcrew.db`。真实 COROS 接入位于统一 Provider 接口之下，业务层不依赖 COROS 的原始文本格式。
+
+## 启动本地演示界面
+
+```powershell
+.\.venv\Scripts\runcrew.exe demo
+```
+
+默认打开 `http://127.0.0.1:8766`。页面可以切换 COROS/fixture、设置可选训练目标并重新执行只读 Agent 回放，展示：
+
+- 最新活动与最近跑量；
+- 三类 Training Review finding、evidence、置信度和输入 Hash；
+- Agent 终态、预算和逐步脱敏 Trace；
+- 确定性 Policy 与 DeepSeek 的 v1.1 Same-Hash 评测对照。
+
+服务只绑定本机回环地址，只提供 GET，不读取 Provider 原始事件、外部活动 ID 或坐标。停止服务请在终端按 `Ctrl+C`。不希望自动打开浏览器时使用：
+
+```powershell
+.\.venv\Scripts\runcrew.exe demo --no-open-browser
+```
 
 ## 同步真实 COROS 数据
 
@@ -93,7 +114,7 @@ runcrew activities review --latest --provider coros
 .\.venv\Scripts\runcrew.exe agent review --latest --provider coros
 ```
 
-Agent 输出在 Training Review 之外增加 `run_id`、终态、退出原因、预算使用和 Trace。默认 CLI 仍使用确定性 Policy；DeepSeek Policy 已完成单用例真实验证，但完整评测尚未建立，因此不能把当前版本描述成稳定的生产级大模型系统。
+Agent 输出在 Training Review 之外增加 `run_id`、终态、退出原因、预算使用和 Trace。默认业务 CLI 仍使用确定性 Policy；DeepSeek 已完成同 Hash 完整评测，但当前结论只覆盖一个工具和两种动作，不能描述成生产级复杂规划系统。
 
 ## 运行 Agent 离线评测
 

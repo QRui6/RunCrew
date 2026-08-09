@@ -21,6 +21,9 @@ RunCrew 处理运动、睡眠、心率、HRV、恢复、位置等私人数据。
 - FIT 只写入 `data/private/fit/`，缓存文件名是 LabelId 的单向摘要；
 - 下载错误不会输出签名 URL，工具错误会脱敏 URL 和长数字 ID；
 - 测试 FIT 由 Garmin Encoder 人工生成，不含坐标或真实用户指标。
+- 本地演示服务强制绑定 `127.0.0.1`，不提供公网监听参数；
+- 演示 API 只接受 GET，不返回 Provider 外部 ID、原始 payload、坐标或 Token；
+- 演示响应设置 CSP、禁止 MIME 嗅探、不缓存 API 数据。
 
 ## 尚未实现
 

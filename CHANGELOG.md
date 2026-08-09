@@ -6,6 +6,10 @@
 
 ### Added
 
+- 增加 `runcrew demo` 本地只读 Dashboard，集中展示 Activity、Training Review evidence、Agent 预算/Trace 和 Same-Hash 模型对照；
+- 增加无第三方 Web 依赖的回环 HTTP 服务、展示 DTO、响应式单页和静态资源 Wheel 配置；
+- 演示 API 只接受 GET，浏览器 DTO 排除 Provider 外部 ID、raw payload、坐标和 Token；
+- 增加4项 Dashboard 数据、隐私、静态路由、参数、只读方法、缺失数据库不落盘和 CLI 测试；
 - 增加 `DeepSeekReviewPolicy`、官方 HTTPS Chat Completions Transport、环境配置、非思考 Tool Calls 解析和有限 API 重试；
 - 增加 Policy Trace 白名单，记录模型名、模式、API 尝试、动作解析错误、Token 和耗时，不记录 Prompt、响应正文、Key 或工具参数；
 - Evaluation Report 升级至 1.1，增加按用例和聚合的模型调用与 Token 指标；
@@ -40,6 +44,8 @@
 
 ### Verified
 
+- 本机已有 COROS 规范化数据通过只读 Dashboard 验收：Agent succeeded、3条 finding、9个 Trace 事件、Same-Hash 成立；
+- 全量自动化测试增至56项；
 - v1.1 最终 DeepSeek 与确定性基线使用相同 Suite Hash `2b89473f...`，双方均为 12/12 满足预期；
 - DeepSeek 最终任务、护栏、Schema 和事实一致率均为 100%，越权工具执行和动作解析错误均为0；
 - 最终模型评测使用12次 API 请求、13175 Token，估算费用0.00076208美元，Policy 累计耗时24667.601ms，P95单场景耗时4862.875ms；
@@ -55,7 +61,7 @@
 - 首次真实 Smoke 记录 2 次模型请求、2369 Token、0 个动作解析错误和 0.00036106 美元估算费用；
 - M3 PR #2 与 M4 PR #3 已依次合并到 `main`；
 - M5-A 离线基线 12/12 场景通过，正确性指标均为 100%，越权后工具执行数为 0；
-- 全部自动化测试增至 52 项；
+- M5-B3 完成时全部自动化测试为52项；
 - M4 单 Agent 成功路径和故障路径通过 10 项专项测试；
 - fixture 端到端 Agent CLI 验收成功，Trace 完整记录 2 步策略决策和 1 次工具调用；
 - M2 通过 PR #1 合并到 `main`；

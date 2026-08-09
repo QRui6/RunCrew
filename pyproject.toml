@@ -28,6 +28,9 @@ runcrew = "runcrew.cli:app"
 [tool.hatch.build.targets.wheel]
 packages = ["src/runcrew"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"src/runcrew/web/static" = "runcrew/web/static"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q -p no:cacheprovider --basetemp=data/private/pytest"

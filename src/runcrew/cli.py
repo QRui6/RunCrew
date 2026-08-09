@@ -25,6 +25,7 @@ from runcrew.services.training_review import execute_training_review
 from runcrew.storage.database import Database
 from runcrew.storage.models import ActivityRecord, RawProviderEvent, SyncRunRecord
 from runcrew.storage.repositories import ActivityRepository
+from runcrew.web import serve_demo
 
 
 app = typer.Typer(
@@ -92,6 +93,37 @@ def status_command(
         )
     else:
         typer.echo("Latest sync: none")
+
+
+@app.command("demo")
+def demo_command(
+    port: Annotated[
+        int,
+        typer.Option(min=1024, max=65535, help="本地演示界面端口。"),
+    ] = 8766,
+    database_path: Annotated[
+        Path,
+        typer.Option("--db", help="只读展示使用的 SQLite 数据库路径。"),
+    ] = Path("data/runcrew.db"),
+    evaluation_directory: Annotated[
+        Path,
+        typer.Option("--eval-dir", help="私有评测报告目录。"),
+    ] = Path("data/private/evals"),
+    open_browser: Annotated[
+        bool,
+        typer.Option(
+            "--open-browser/--no-open-browser",
+            help="服务启动后是否尝试打开默认浏览器。",
+        ),
+    ] = True,
+) -> None:
+    """启动只绑定 127.0.0.1 的本地只读演示界面。"""
+    serve_demo(
+        port=port,
+        database_path=database_path,
+        evaluation_directory=evaluation_directory,
+        open_browser=open_browser,
+    )
 
 
 @app.command("sync")

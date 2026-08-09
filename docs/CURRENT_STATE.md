@@ -5,7 +5,7 @@
 
 ## 当前里程碑
 
-**M5-A 至 M5-B3 已完成；下一阶段进入 M6-A 本地可演示与可解释界面。**
+**M5-A 至 M5-B3 与 M6-A 已完成；下一阶段进入 M6-B 演示脚本、架构材料与简历表达。**
 
 M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
@@ -22,7 +22,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 ## 已验证事实
 
 - Python 3.13 本地环境可运行；
-- 自动化测试：52 passed；
+- 自动化测试：56 passed；
 - fixture 首次同步插入 2 条；
 - fixture 第二次同步插入 0 条、更新 2 条；
 - 真实 COROS OAuth + PKCE 成功；
@@ -69,7 +69,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - Evaluation Report Schema 已升级至 1.1，可按用例和总报告统计模型调用、API 尝试、动作解析错误、缓存 Token、输入/输出/思考 Token 和模型耗时；
 - `runcrew eval deepseek-smoke` 已实现，只运行 `complete_training_review` 合成用例，并在读取 Key 前强制要求 `--confirm-paid-api` 与 `--max-estimated-cost-usd`；
 - 费用按 `deepseek-pricing/2026-08-09` 估算并写入 Trace/报告，超过 Policy 上限时停止后续动作；该上限是本地后验停止门，不是供应商账单硬上限；
-- DeepSeek Policy 与 CLI 的零费用测试已覆盖 Mock 契约、安全门、单用例 Smoke、完整 Suite 费用门、Suite 不变性和请求取消遥测；全量 52 项测试通过。
+- DeepSeek Policy 与 CLI 的零费用测试已覆盖 Mock 契约、安全门、单用例 Smoke、完整 Suite 费用门、Suite 不变性和请求取消遥测；M6-A 加入 Dashboard 测试后全量56项通过。
 - 真实 `deepseek-v4-flash` 非思考请求已连通，首次 Tool Call 参数通过 Action Schema 和 Harness 校验；
 - 第一次真实 Smoke 共 2 次模型请求、2369 Token、估算 0.00036106 美元，动作解析错误为 0；
 - 第二轮模型重复请求工具，Harness 在执行前以工具预算拦截，底层工具实际只执行 1 次；
@@ -92,6 +92,12 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - DeepSeek 共12次 API 请求、13175 Token，估算费用0.00076208美元；Policy 累计耗时24667.601ms，平均单次 API 约2055.633ms，P95单场景4862.875ms；
 - 输入 Token 缓存命中率约81.49%；最终报告保存在 `data/private/evals/deepseek-suite-v1.1-final.json`；
 - 当前简单动作协议没有证据需要升级 `deepseek-v4-pro`，也没有职责冲突或上下文负担证据支持拆分多 Agent。
+- `runcrew demo` 已提供本地只读单页 Dashboard，只绑定 `127.0.0.1:8766`；
+- Dashboard 可以筛选 Provider、设置可选训练目标并回放确定性 Agent，展示活动、finding evidence、数据质量、预算和9步脱敏 Trace；
+- Dashboard 读取最终私有评测报告，展示确定性 Policy / DeepSeek 的 Same-Hash、12/12、Token、费用和 P95 对照；
+- 演示 API 不返回外部活动 ID、raw payload、坐标或 Token，只接受 GET，并设置 CSP/no-store 等响应头；
+- 本机真实 COROS 规范化数据只读验收通过：活动可用、Agent succeeded、3条 finding、9个 Trace 事件、Same-Hash 成立；
+- 自动化测试增至56项，覆盖 Dashboard 数据脱敏、Agent 回放、静态资源、API 参数、只读方法、缺失数据库不落盘和 CLI 入口。
 
 ## 当前已知限制
 
@@ -118,9 +124,9 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 ## 下一项唯一任务
 
-**M6-A：制作只读本地演示界面，把已有工程能力展示清楚。**
+**M6-B：形成固定演示脚本、架构图和简历/面试表达。**
 
-界面只展示已经实现的活动摘要、Training Review evidence、Agent 状态/预算/Trace，以及确定性 Policy 与 DeepSeek 的同 Hash 评测对照；不增加营养、伤病、训练计划生成或多 Agent 新业务。
+围绕已完成的本地 Dashboard，制作5分钟演示顺序、系统架构图、失败复盘图、简历项目描述和高频面试问答；不增加营养、伤病、训练计划生成或多 Agent 新业务。
 
 完整模型结论见 [M5-B3 DeepSeek 最终评测报告](M5-B3-DeepSeek最终评测报告.md)。
 

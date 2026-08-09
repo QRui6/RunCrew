@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="RunCrew 随队：可验证的个人跑步 Agent 工程演示。">
+  <title>RunCrew 随队 · Agent 训练复盘</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="RunCrew 首页">
+      <span class="brand-mark">RC</span>
+      <span><strong>RunCrew</strong><small>随队 · 可验证跑步 Agent</small></span>
+    </a>
+    <div class="system-status">
+      <span class="pulse"></span>
+      <span>LOCAL / READ ONLY</span>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">FROM RUN DATA TO VERIFIED ACTION</p>
+        <h1>每一次跑步，<br><em>都有证据地</em>变成下一步。</h1>
+        <p class="hero-lead">真实数据接入、确定性 Skill、有界 Agent Loop 与同题模型评测，集中在一个只读演示面板中。</p>
+        <div class="capability-strip" aria-label="项目能力">
+          <span>01 · COROS MCP</span>
+          <span>02 · TRAINING SKILL</span>
+          <span>03 · AGENT HARNESS</span>
+          <span>04 · SAME-HASH EVAL</span>
+        </div>
+      </div>
+      <div class="hero-orbit" aria-hidden="true">
+        <div class="orbit-ring ring-one"></div>
+        <div class="orbit-ring ring-two"></div>
+        <div class="orbit-core"><span>LOOP</span><strong>2</strong><small>steps</small></div>
+        <span class="orbit-label label-context">CONTEXT</span>
+        <span class="orbit-label label-tool">TOOL</span>
+        <span class="orbit-label label-trace">TRACE</span>
+      </div>
+    </section>
+
+    <section class="control-deck" aria-labelledby="controls-title">
+      <div>
+        <p class="section-index">CONTROL DECK</p>
+        <h2 id="controls-title">选择一次训练，重新回放 Agent</h2>
+      </div>
+      <form id="dashboard-form" class="filters">
+        <label>数据来源
+          <select id="provider" name="provider">
+            <option value="all">自动选择最新</option>
+            <option value="coros">COROS</option>
+            <option value="fixture">Fixture 演示</option>
+            <option value="keep">Keep</option>
+          </select>
+        </label>
+        <label>回看窗口
+          <select id="lookback_days" name="lookback_days">
+            <option value="28">28 天</option>
+            <option value="14">14 天</option>
+            <option value="42">42 天</option>
+          </select>
+        </label>
+        <label>计划距离 <small>可选 / km</small>
+          <input id="planned_distance_km" name="planned_distance_km" inputmode="decimal" placeholder="例如 5.0">
+        </label>
+        <label>计划时长 <small>可选 / min</small>
+          <input id="planned_duration_minutes" name="planned_duration_minutes" inputmode="decimal" placeholder="例如 30">
+        </label>
+        <button type="submit"><span>运行只读回放</span><b>→</b></button>
+      </form>
+    </section>
+
+    <div id="loading" class="loading-panel" role="status">
+      <div class="loader-track"><span></span></div>
+      <p>正在构建有界上下文并回放 Agent…</p>
+    </div>
+    <div id="error" class="error-panel" role="alert" hidden></div>
+
+    <div id="dashboard" hidden>
+      <section class="run-overview">
+        <div class="section-heading">
+          <div><p class="section-index">LATEST ACTIVITY</p><h2>本次跑步</h2></div>
+          <span id="activity-provider" class="outline-badge">—</span>
+        </div>
+        <div class="run-grid">
+          <article class="run-primary">
+            <div class="run-date"><span id="activity-day">—</span><small id="activity-month">—</small></div>
+            <div class="run-title"><p id="activity-title">—</p><span id="activity-time">—</span></div>
+            <div class="run-line"></div>
+            <div id="recent-runs" class="recent-runs"></div>
+          </article>
+          <article class="metric-card metric-distance"><small>DISTANCE</small><strong id="metric-distance">—</strong><span>KM</span></article>
+          <article class="metric-card"><small>DURATION</small><strong id="metric-duration">—</strong><span>TIME</span></article>
+          <article class="metric-card"><small>AVG PACE</small><strong id="metric-pace">—</strong><span>PER KM</span></article>
+          <article class="metric-card"><small>AVG HEART RATE</small><strong id="metric-heart-rate">—</strong><span>BPM</span></article>
+          <article class="metric-card"><small>DETAIL</small><strong id="metric-laps">—</strong><span>LAPS</span></article>
+        </div>
+      </section>
+
+      <section class="review-section">
+        <div class="section-heading">
+          <div><p class="section-index">EVIDENCE-BACKED REVIEW</p><h2>训练复盘不是一句感觉</h2></div>
+          <div class="quality-badge"><span>DATA CONFIDENCE</span><strong id="confidence">—</strong></div>
+        </div>
+        <div id="findings" class="finding-grid"></div>
+        <div class="review-meta"><span>INPUT HASH <b id="input-hash">—</b></span><span id="missing-fields">MISSING · —</span></div>
+      </section>
+
+      <section class="agent-section">
+        <div class="agent-copy">
+          <p class="section-index">HARNESS / LOOP ENGINEERING</p>
+          <h2>模型可以提议动作，<br>执行权始终留在系统。</h2>
+          <p>白名单、参数一致性、确认门、预算、重试、超时与输出 Schema 逐层约束。右侧是本次真实回放的脱敏 Trace。</p>
+          <div class="agent-stats">
+            <div><small>STATUS</small><strong id="agent-status">—</strong></div>
+            <div><small>STEPS</small><strong id="agent-steps">—</strong></div>
+            <div><small>TOOL CALLS</small><strong id="agent-tools">—</strong></div>
+            <div><small>ATTEMPTS</small><strong id="agent-attempts">—</strong></div>
+          </div>
+          <div class="boundary-list">
+            <span>POLICY</span><i>选择 call_tool / finish</i>
+            <span>HARNESS</span><i>检查并执行</i>
+            <span>SKILL</span><i>返回确定性 evidence</i>
+          </div>
+        </div>
+        <div class="trace-shell">
+          <div class="trace-header"><span>RUN TRACE</span><small id="termination-reason">—</small></div>
+          <ol id="trace" class="trace-list"></ol>
+        </div>
+      </section>
+
+      <section class="evaluation-section">
+        <div class="section-heading evaluation-heading">
+          <div><p class="section-index">SAME-HASH EVALUATION</p><h2>不是“看起来能跑”，而是同题可比较。</h2></div>
+          <div id="same-suite" class="same-suite"><span>SUITE IDENTITY</span><strong>—</strong></div>
+        </div>
+        <div class="eval-grid">
+          <article id="baseline-eval" class="eval-card"></article>
+          <div class="versus"><span>VS</span><i></i></div>
+          <article id="deepseek-eval" class="eval-card accent"></article>
+        </div>
+        <p class="eval-note">三个非法动作场景由脚本化 Policy 注入，证明 Harness 防线；它们不被包装成模型对抗安全得分。</p>
+      </section>
+
+      <section class="pipeline-section">
+        <p class="section-index">THE RUNCREW PIPELINE</p>
+        <div class="pipeline">
+          <div><b>01</b><strong>Provider</strong><span>COROS · FIT · Fixture</span></div>
+          <i>→</i>
+          <div><b>02</b><strong>Domain</strong><span>Canonical Schema</span></div>
+          <i>→</i>
+          <div><b>03</b><strong>Skill</strong><span>Rules + Evidence</span></div>
+          <i>→</i>
+          <div><b>04</b><strong>Harness</strong><span>Budget + Trace</span></div>
+          <i>→</i>
+          <div><b>05</b><strong>Evaluation</strong><span>Replay + Compare</span></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer><span>RUNCREW / 随队</span><p>本地只读 · 不上传真实跑步数据 · 非医疗诊断</p></footer>
+  <script src="/assets/app.js" defer></script>
+</body>
+</html>
