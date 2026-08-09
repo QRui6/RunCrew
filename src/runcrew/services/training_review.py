@@ -1,14 +1,57 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from statistics import median
+from typing import Protocol
 
+from runcrew.domain.activity import ActivityDetail, ActivitySummary
 from runcrew.domain.review import ActivityReview, DataQuality
 from runcrew.domain.training_review import (
     TrainingFinding,
+    TrainingReviewRequest,
     TrainingReviewResult,
 )
 from runcrew.services.activity_review import build_activity_review
-from runcrew.services.training_context import TrainingContext
+from runcrew.services.training_context import TrainingContext, build_training_context
+
+
+Activity = ActivitySummary | ActivityDetail
+
+
+class TrainingReviewStore(Protocol):
+    def get_by_id(self, activity_id: str) -> Activity | None: ...
+
+    def between(
+        self,
+        start: datetime,
+        end: datetime,
+        *,
+        provider: str | None = None,
+    ) -> list[Activity]: ...
+
+
+class TrainingReviewTargetNotFoundError(LookupError):
+    pass
+
+
+def execute_training_review(
+    request: TrainingReviewRequest,
+    *,
+    store: TrainingReviewStore,
+) -> TrainingReviewResult:
+    """通过规范化活动仓库执行一次完整且可回放的 Training Review Skill。"""
+
+    target = store.get_by_id(request.target_activity_id)
+    if target is None:
+        raise TrainingReviewTargetNotFoundError("找不到需要复盘的目标活动")
+    provider = target.source_ref.provider.value
+    history = store.between(
+        target.started_at - timedelta(days=request.lookback_days),
+        target.started_at,
+        provider=provider,
+    )
+    context = build_training_context(request, target=target, activities=history)
+    return build_training_review(context)
 
 
 def build_training_review(context: TrainingContext) -> TrainingReviewResult:

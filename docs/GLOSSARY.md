@@ -60,6 +60,26 @@ Training Review Skill 输出的一条结构化结论，由类型、等级、中�
 
 围绕 Agent 的运行环境工程，包括权限、状态、超时、重试、日志、追踪、预算、审批和故障隔离。
 
+## Policy
+
+Agent 的动作选择策略。M4 默认 `DeterministicReviewPolicy` 根据有界 Context 选择 `call_tool` 或 `finish`；未来可以替换为 LLM Policy，但仍必须输出同一 Action Schema。
+
+## Action
+
+Policy 请求 Harness 执行的结构化下一步。当前只有 `call_tool` 和 `finish` 两种，不能用自由文本绕过权限检查。
+
+## Observation
+
+工具执行后返回给 Policy 的已校验结果。当前 Observation 只能是 `TrainingReviewResult`，非法或目标活动不一致的结果不会进入下一轮。
+
+## Trace
+
+一次 Agent Run 的结构化事件序列，记录动作、权限检查、工具尝试、重试、验证、预算和退出原因。当前 Trace 不记录异常正文、外部活动 ID 或私人活动载荷。
+
+## 逻辑工具调用与工具尝试
+
+逻辑工具调用代表 Agent 作出的一次业务调用决策；工具尝试包含这次调用发生的重试。M4 将两者分开计数，避免瞬时错误重试错误地消耗第二次业务决策额度。
+
 ## Loop Engineering
 
 设计 Agent 如何反复执行“观察—行动—验证—修正”，以及何时停止，防止无限循环或错误扩散。

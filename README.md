@@ -1,6 +1,6 @@
 # RunCrew
 
-RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前已经形成可靠数据竖切和第一个可回放 Training Review Skill。
+RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前已经形成可靠数据竖切、可回放 Training Review Skill，以及具备有界上下文、权限、预算、重试和 Trace 的单 Agent Loop。
 
 > AI 或新开发者开始工作时，请先阅读 [AGENTS.md](AGENTS.md)，然后阅读 [当前状态](docs/CURRENT_STATE.md)。
 
@@ -13,6 +13,8 @@ RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前�
 - 用确定性规则生成可审计的单次跑步复盘；
 - 用 `review-running-training` Skill 复盘训练完成度、七天负荷变化和训练异常；
 - 通过 `input_hash + ruleset_version` 回放同一结论；
+- 通过 `agent review` 在白名单、预算、超时和输出校验约束下运行 Skill；
+- 输出成功、失败、超时或预算耗尽终态，以及完整脱敏 Trace；
 - 使用不含位置的合成 FIT 进行离线开发和回归测试。
 
 ## 文档导航
@@ -41,6 +43,7 @@ python -m pip install -e ".[dev]"
 .\.venv\Scripts\runcrew.exe activities list
 .\.venv\Scripts\runcrew.exe activities review --latest
 .\.venv\Scripts\runcrew.exe training review --latest --provider fixture
+.\.venv\Scripts\runcrew.exe agent review --latest --provider fixture
 .\.venv\Scripts\python.exe scripts\verify.py
 ```
 
@@ -77,3 +80,11 @@ runcrew activities review --latest --provider coros
 ```
 
 缺少计划或历史训练负荷时，Skill 会返回 `unknown` 和所需数据，不会猜测结论。
+
+## 运行训练复盘 Agent
+
+```powershell
+.\.venv\Scripts\runcrew.exe agent review --latest --provider coros
+```
+
+Agent 输出在 Training Review 之外增加 `run_id`、终态、退出原因、预算使用和 Trace。当前默认 Policy 是确定性的，用于离线验证 Harness 和 Loop；真实 LLM Policy 尚未接入，不能把当前版本描述成已经由大模型自主决策。

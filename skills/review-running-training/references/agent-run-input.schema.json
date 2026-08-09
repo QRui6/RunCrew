@@ -1,0 +1,136 @@
+{
+  "$defs": {
+    "PlannedSession": {
+      "additionalProperties": false,
+      "properties": {
+        "distance_meters": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "计划完成的距离，单位为米。",
+          "title": "Distance Meters"
+        },
+        "duration_seconds": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "计划训练的持续时间，单位为秒。",
+          "title": "Duration Seconds"
+        }
+      },
+      "title": "计划训练目标",
+      "type": "object"
+    },
+    "TrainingReviewRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "target_activity_id": {
+          "description": "需要复盘的 RunCrew 内部活动 ID。",
+          "minLength": 1,
+          "title": "Target Activity Id",
+          "type": "string"
+        },
+        "lookback_days": {
+          "default": 28,
+          "description": "构建历史上下文时向前回看的天数。",
+          "maximum": 90,
+          "minimum": 14,
+          "title": "Lookback Days",
+          "type": "integer"
+        },
+        "planned_session": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PlannedSession"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "用户明确提供的本次训练计划；没有计划时必须留空。"
+        }
+      },
+      "required": [
+        "target_activity_id"
+      ],
+      "title": "训练复盘输入",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "review_request": {
+      "$ref": "#/$defs/TrainingReviewRequest",
+      "description": "传给训练复盘 Skill 的结构化业务请求。"
+    },
+    "max_steps": {
+      "default": 4,
+      "description": "一次 Agent Loop 允许执行的最大策略步骤数。",
+      "maximum": 12,
+      "minimum": 1,
+      "title": "Max Steps",
+      "type": "integer"
+    },
+    "tool_call_budget": {
+      "default": 1,
+      "description": "允许发起的业务工具调用次数；重试不重复占用逻辑调用额度。",
+      "maximum": 3,
+      "minimum": 0,
+      "title": "Tool Call Budget",
+      "type": "integer"
+    },
+    "max_retries": {
+      "default": 1,
+      "description": "单次工具调用发生瞬时错误或超时时允许的最大重试次数。",
+      "maximum": 3,
+      "minimum": 0,
+      "title": "Max Retries",
+      "type": "integer"
+    },
+    "tool_timeout_seconds": {
+      "default": 5.0,
+      "description": "每次工具尝试的超时时间。",
+      "exclusiveMinimum": 0,
+      "maximum": 60,
+      "title": "Tool Timeout Seconds",
+      "type": "number"
+    },
+    "run_timeout_seconds": {
+      "default": 15.0,
+      "description": "整个 Agent Run 的总超时时间。",
+      "exclusiveMinimum": 0,
+      "maximum": 120,
+      "title": "Run Timeout Seconds",
+      "type": "number"
+    },
+    "confirmed_tools": {
+      "description": "本次运行中用户已经明确确认可以调用的工具。",
+      "items": {
+        "type": "string"
+      },
+      "title": "Confirmed Tools",
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "review_request"
+  ],
+  "title": "训练复盘 Agent 运行请求",
+  "type": "object"
+}

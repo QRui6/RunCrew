@@ -31,7 +31,10 @@ Training Review Service
 review-running-training Skill
   │ Schema 验证 + evidence 解释
   ▼
-CLI JSON 输出 / 未来 Agent Harness
+Review Agent Harness
+  │ 有界 Context + Action Schema + 权限 + 预算 + 重试 + Trace
+  ▼
+CLI Agent Run JSON 输出
 ```
 
 ## 分层职责
@@ -71,6 +74,14 @@ CLI JSON 输出 / 未来 Agent Harness
 位置：`skills/review-running-training/`
 
 负责告诉 Agent 如何选择规范化数据、调用确定性 Service、验证输入输出并解释 evidence。Skill 不直接计算指标，也不读取 COROS 原始文本。
+
+### Agent Harness
+
+位置：`src/runcrew/harness/`
+
+负责一次 Agent Run 的状态循环、工具白名单、确认门、步骤和调用预算、有限重试、两级超时、输出校验、脱敏 Trace 和终止状态。策略层只接收 `ReviewAgentContext`，不能读取 Provider 原始数据或直接访问数据库。
+
+当前默认策略为确定性 `DeterministicReviewPolicy`，只会在没有观察时调用 `review_running_training`，获得合法观察后请求结束。未来 LLM Policy 必须实现同一动作协议，不能绕过 Harness。
 
 ## 数据模型
 
@@ -130,3 +141,17 @@ Agent
 ```
 
 这样才能替换 COROS、增加 FIT 或 Keep，而不重写所有 Agent Prompt。
+
+当前实际执行关系进一步收紧为：
+
+```text
+Policy
+→ call_tool / finish Action Schema
+→ Harness 权限与预算检查
+→ review_running_training
+→ TrainingReviewResult 校验
+→ observation
+→ Policy
+→ finish
+→ Agent Run Result + Trace
+```

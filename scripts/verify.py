@@ -21,10 +21,13 @@ REQUIRED_FILES = [
     "docs/ROADMAP.md",
     "docs/PROGRESS.md",
     "docs/progress/2026-08-09-m3-training-review-skill.md",
+    "docs/progress/2026-08-09-m4-review-agent-loop.md",
     "skills/review-running-training/SKILL.md",
     "skills/review-running-training/agents/openai.yaml",
     "skills/review-running-training/references/input.schema.json",
     "skills/review-running-training/references/output.schema.json",
+    "skills/review-running-training/references/agent-run-input.schema.json",
+    "skills/review-running-training/references/agent-run-output.schema.json",
 ]
 
 

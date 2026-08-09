@@ -82,6 +82,10 @@ class ActivityRepository:
         )
         return self._to_domain(record) if record else None
 
+    def get_by_id(self, activity_id: str) -> ActivitySummary | ActivityDetail | None:
+        record = self.session.get(ActivityRecord, activity_id)
+        return self._to_domain(record) if record else None
+
     def between(
         self,
         start: datetime,
