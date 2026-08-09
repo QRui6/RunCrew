@@ -72,4 +72,4 @@ RunCrew 是一个使用你自己的长期跑步数据，帮助完成“训练回
 → 必要的多 Agent 协作
 ```
 
-当前已经完成数据竖切、FIT 详情兜底、确定性 Training Review Skill、单 Agent Context + Harness + Loop、12 场景离线评测基线、DeepSeek Policy Mock 契约和单用例真实 Smoke。标准 assistant/tool 消息链已经完成真实 `call_tool → observation → finish`，下一步在完整 12 场景套件上与确定性基线对照；在评测证明必要以前不拆分多 Agent。完整实施过程和范围边界见 [项目实施全景与面试说明](RunCrew-项目实施全景与面试说明.md)。
+当前已经完成数据竖切、FIT 详情兜底、确定性 Training Review Skill、单 Agent Context + Harness + Loop、12 场景离线评测基线、DeepSeek Policy 和单用例真实闭环。完整评测已发现并修正 Hash 漂移与不公平超时预算，当前使用 `review-agent-eval/1.1` 的统一15秒预算，下一步完成 DeepSeek 同 Hash 对照；在评测证明必要以前不拆分多 Agent。完整实施过程和范围边界见 [项目实施全景与面试说明](RunCrew-项目实施全景与面试说明.md)。

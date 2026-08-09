@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import time
@@ -405,6 +406,19 @@ class DeepSeekReviewPolicy:
                     )
                 finish_reason = response.choices[0].finish_reason
                 action, selected_tool_call = self._parse_action(response)
+            except asyncio.CancelledError:
+                telemetry = self._record_telemetry(
+                    started=started,
+                    attempts=max(attempts, 1),
+                    parse_errors=parse_errors,
+                    usage=usage,
+                    response_model=response_model,
+                    finish_reason=finish_reason,
+                    action_type=None,
+                    outcome="failed",
+                )
+                self._pending_trace_details = telemetry.to_trace_details()
+                raise
             except DeepSeekTransportError as error:
                 last_error = error
                 if error.retryable and attempts <= self.config.max_api_retries:

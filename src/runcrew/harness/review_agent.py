@@ -141,6 +141,7 @@ class ReviewAgentHarness:
                     usage=usage,
                 )
         except TimeoutError:
+            policy_details = self._consume_policy_trace_details()
             return self._failure_result(
                 run_id=run_id,
                 code="run_timeout",
@@ -148,6 +149,7 @@ class ReviewAgentHarness:
                 retryable=True,
                 recorder=recorder,
                 usage=usage,
+                extra_details=policy_details,
             )
 
     async def _run_loop(

@@ -406,7 +406,7 @@
       "type": "string"
     },
     "suite_version": {
-      "const": "review-agent-eval/1.0",
+      "const": "review-agent-eval/1.1",
       "description": "使用的评测套件版本。",
       "title": "Suite Version",
       "type": "string"

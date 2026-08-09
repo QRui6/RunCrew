@@ -439,7 +439,7 @@ created
 - Policy 与 Harness 解耦，未来真实 LLM 复用同一动作协议；
 - 工具只能通过白名单进入，Agent 不能直接访问 COROS；
 - Trace、错误、预算和终态均有 Schema；
-- 51 项测试可以离线验证成功、故障路径、模型适配器契约和评测退化，不依赖 API Key。
+- 52 项测试可以离线验证成功、故障路径、模型适配器契约和评测退化，不依赖 API Key。
 
 #### 面试表达
 
@@ -453,7 +453,7 @@ created
 
 #### 技术实现
 
-- `review-agent-eval/1.0` 版本化 Suite；
+- `review-agent-eval/1.1` 版本化 Suite；
 - 12 个任务、韧性、护栏和预算场景；
 - Case、Metrics、Report Pydantic Schema；
 - Suite/Report JSON Schema 导出与漂移测试；
@@ -585,7 +585,7 @@ estimated_cost_usd=0.00016426
 | Loop Engineering | `call_tool → observation → finish` 有限状态循环和明确退出条件 | M4 最小竖切已完成 |
 | LLM | `deepseek-v4-flash` 单用例标准 Tool Calls Loop 已真实通过 | 完整 12 场景模型对照尚未完成 |
 | Multi-Agent | 尚未实现 | 必须由评测证明必要性 |
-| Evaluation | 12 场景版本化 Suite、51 项测试、Suite Hash、任务/护栏/事实/Token/费用/延迟指标 | 第一次完整运行通过，已修复 Hash 漂移，待严格同题复跑 |
+| Evaluation | 12 场景 v1.1 Suite、52 项测试、Suite Hash、任务/护栏/事实/Token/费用/延迟指标 | Hash 漂移和1秒不公平预算均已修复，待最终同题复跑 |
 
 ## 6. 贯穿项目的核心设计原则
 
@@ -735,7 +735,7 @@ M5 只允许增加：
 
 #### 项目目前最大的不足是什么？
 
-真实历史数据仍少、COROS 训练负荷未映射、训练计划未持久化。DeepSeek 第一次完整运行已经通过，但报告因 CLI 曾改写场景超时而与基线 Hash 不同，严格同题对照仍需复跑。因此可以描述为“LLM 完整 Suite 功能验证通过、评测缺陷已被发现并修复”，但不能描述为生产级大模型已经验收、已经上线的智能训练产品或多 Agent 系统。
+真实历史数据仍少、COROS 训练负荷未映射、训练计划未持久化。DeepSeek 第一次完整运行证明功能可以通过，第二次同 Hash 运行又暴露出 v1.0 的1秒预算只适合离线 Policy。现在 v1.1 已统一15秒预算并建立新基线，但最终模型复跑尚未完成。因此可以描述为“评测污染和不公平预算被真实运行发现并修复”，不能描述为生产级大模型已经验收或多 Agent 系统。
 
 ## 10. 代码与文档导航
 
@@ -769,8 +769,9 @@ M5 只允许增加：
 ```text
 [已完成] 增加受确认和共享总费用门保护的完整 Suite 命令
 → [已完成] 第一次完整运行 12/12 满足预期，但发现 Suite Hash 漂移
-→ [已完成] 移除超时改写并增加 Suite 不变性测试
-→ [下一步] 复跑并确认与确定性基线 `suite_hash` 相同
+→ [已完成] v1.0 同 Hash 复跑，发现1秒预算导致网络模型统一超时
+→ [已完成] 升级 v1.1，为全部 Policy 固定15秒预算并建立新基线
+→ [下一步] DeepSeek 复跑 v1.1 并确认 `suite_hash=2b89473f...`
 → 脚本化异常/护栏场景继续复用真实 Harness
 → 记录完成率、终态、Token、费用、延迟和事实一致性
 → 与确定性 Policy 基线比较

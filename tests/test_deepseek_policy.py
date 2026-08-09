@@ -324,6 +324,48 @@ def test_policy_failure_is_sanitized_and_telemetry_reaches_failure_trace() -> No
     assert SECRET not in serialized
 
 
+def test_run_timeout_records_cancelled_model_attempt_without_claiming_usage() -> None:
+    class SlowTransport:
+        def __init__(self) -> None:
+            self.payloads: list[dict[str, Any]] = []
+
+        async def complete(self, payload: dict[str, Any]) -> Any:
+            self.payloads.append(payload)
+            await asyncio.sleep(0.05)
+            return completion(finish_reason="stop")
+
+    transport = SlowTransport()
+    policy = DeepSeekReviewPolicy(policy_config(), transport=transport)
+    harness = ReviewAgentHarness(
+        policy=policy,
+        run_id_factory=lambda: "cancelled-policy-run",
+    )
+
+    async def tool(actual_request):
+        raise AssertionError("总超时发生在 Policy 阶段，不应执行工具")
+
+    result = asyncio.run(
+        harness.run(
+            ReviewAgentRunRequest(
+                review_request=review_request(),
+                run_timeout_seconds=0.001,
+            ),
+            tool=tool,
+        )
+    )
+
+    assert result.status == "timed_out"
+    assert result.termination_reason == "run_timeout"
+    assert len(transport.payloads) == 1
+    assert len(policy.telemetry) == 1
+    assert policy.telemetry[0].api_attempts == 1
+    assert policy.telemetry[0].total_tokens == 0
+    assert policy.telemetry[0].outcome == "failed"
+    assert result.trace[-1].details["policy_api_attempts"] == 1
+    assert result.trace[-1].details["policy_total_tokens"] == 0
+    assert result.trace[-1].details["policy_outcome"] == "failed"
+
+
 def test_http_transport_uses_official_endpoint_and_never_embeds_key_in_body() -> None:
     captured: dict[str, Any] = {}
 

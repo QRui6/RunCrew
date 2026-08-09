@@ -36,8 +36,8 @@
           "type": "number"
         },
         "run_timeout_seconds": {
-          "default": 1.0,
-          "description": "整个 Agent Run 的超时秒数。",
+          "default": 15.0,
+          "description": "整个 Agent Run 的超时秒数；同一 Suite 对所有 Policy 一致。",
           "exclusiveMinimum": 0,
           "maximum": 120,
           "title": "Run Timeout Seconds",
@@ -216,8 +216,8 @@
   "additionalProperties": false,
   "properties": {
     "suite_version": {
-      "const": "review-agent-eval/1.0",
-      "default": "review-agent-eval/1.0",
+      "const": "review-agent-eval/1.1",
+      "default": "review-agent-eval/1.1",
       "description": "评测用例集合版本。",
       "title": "Suite Version",
       "type": "string"

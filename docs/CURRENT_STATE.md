@@ -5,7 +5,7 @@
 
 ## 当前里程碑
 
-**M5-A、M5-B1 与 M5-B2 已完成；M5-B3 第一次完整运行通过，严格同题对照待复跑。**
+**M5-A、M5-B1 与 M5-B2 已完成；M5-B3 已升级公平时间预算，v1.1 严格同题对照待最终复跑。**
 
 M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
@@ -22,7 +22,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 ## 已验证事实
 
 - Python 3.13 本地环境可运行；
-- 自动化测试：51 passed；
+- 自动化测试：52 passed；
 - fixture 首次同步插入 2 条；
 - fixture 第二次同步插入 0 条、更新 2 条；
 - 真实 COROS OAuth + PKCE 成功；
@@ -56,7 +56,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - `runcrew agent review` 可以返回经过校验的训练复盘、终态、退出原因、预算和 Trace；
 - Agent Run 输入输出 JSON Schema 已导出，并由测试防止与 Pydantic 模型漂移。
 - fixture 端到端 Agent Smoke Test 已通过：`succeeded / completed`，2 个策略步骤、1 次逻辑工具调用、1 次工具尝试。
-- `review-agent-eval/1.0` 已包含 12 个无私人数据场景，覆盖任务、韧性、护栏和预算；
+- `review-agent-eval/1.1` 已包含 12 个无私人数据场景，覆盖任务、韧性、护栏和预算；
 - 离线基线 12/12 通过，正常任务完成率、护栏通过率、Schema 通过率和事实一致率均为 100%；
 - 被护栏拒绝后底层工具执行数为 0，平均逻辑工具调用 0.5833，平均工具尝试 0.75；
 - 评测套件和报告 Schema 已导出，`suite_hash` 可标识同一批评测输入；
@@ -69,7 +69,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - Evaluation Report Schema 已升级至 1.1，可按用例和总报告统计模型调用、API 尝试、动作解析错误、缓存 Token、输入/输出/思考 Token 和模型耗时；
 - `runcrew eval deepseek-smoke` 已实现，只运行 `complete_training_review` 合成用例，并在读取 Key 前强制要求 `--confirm-paid-api` 与 `--max-estimated-cost-usd`；
 - 费用按 `deepseek-pricing/2026-08-09` 估算并写入 Trace/报告，超过 Policy 上限时停止后续动作；该上限是本地后验停止门，不是供应商账单硬上限；
-- DeepSeek Policy 与 CLI 的零费用测试已覆盖 Mock 契约、安全门、单用例 Smoke、完整 Suite 费用门和 Suite 不变性；全量 51 项测试通过。
+- DeepSeek Policy 与 CLI 的零费用测试已覆盖 Mock 契约、安全门、单用例 Smoke、完整 Suite 费用门、Suite 不变性和请求取消遥测；全量 52 项测试通过。
 - 真实 `deepseek-v4-flash` 非思考请求已连通，首次 Tool Call 参数通过 Action Schema 和 Harness 校验；
 - 第一次真实 Smoke 共 2 次模型请求、2369 Token、估算 0.00036106 美元，动作解析错误为 0；
 - 第二轮模型重复请求工具，Harness 在执行前以工具预算拦截，底层工具实际只执行 1 次；
@@ -81,8 +81,11 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 第一次完整 DeepSeek 运行 12/12 满足预期：任务完成率、护栏通过率、Schema 通过率和事实一致率均为 100%，越权工具执行数与动作解析错误均为 0；
 - 第一次完整运行共 12 次 API 请求、12897 Token、估算费用 0.00061916 美元，Policy 累计耗时 23581.19 ms，P95 单场景耗时 4422.692 ms；
 - 9 个场景使用真实 DeepSeek Policy，3 个越权/参数篡改/提前结束场景继续使用脚本化故障注入；
-- 审核报告时发现 CLI 曾把默认场景 `run_timeout_seconds` 从 15 改为 60，使报告 Hash `783517...` 与基线 Hash `f3dc7d...` 不同；该报告已另存为 `deepseek-suite-attempt-1-timeout-adjusted.json`，只作为功能证据，不作为严格同题对照；
-- 已移除超时改写并增加 Suite 不变性回归测试，下一次运行应与确定性基线得到相同 `suite_hash`。
+- 审核报告时发现 CLI 曾把默认场景 `run_timeout_seconds` 从 1 改为 60，使报告 Hash `783517...` 与 v1.0 基线 Hash `f3dc7d...` 不同；该报告已另存为 `deepseek-suite-attempt-1-timeout-adjusted.json`；
+- 第二次运行原样使用 v1.0，Hash 与基线一致，但9个真实模型场景全部在1秒内 `run_timeout`，只有3个脚本化护栏场景通过；报告保存为 `deepseek-suite-attempt-2-one-second-timeout.json`；
+- v1.0 的1秒预算原本只适合确定性离线回归，不适合需要网络往返的 LLM；这不是模型动作质量失败，而是评测预算设计不公平；
+- Suite 已升级到 `review-agent-eval/1.1`，两种 Policy 统一使用15秒总预算，超时仍进入 Hash；新的确定性基线 12/12 通过，Hash 为 `2b89473f6f9e02f06960965bfafdac74aacff1b28ead42eeade0e7a5afd199e9`；
+- 被总超时取消的模型请求现在会记录 API 尝试和失败遥测；由于供应商没有返回 usage，本地 Token/费用保持0，但不能据此断言账户一定未计费。
 
 ## 当前已知限制
 
@@ -92,9 +95,8 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 自动 FIT URL 未能验证，但用户手动导出的真实 FIT 已通过私有缓存完成端到端验收；
 - 当前 COROS 规范化活动没有训练负荷字段，因此真实 `load_change` 暂时可能为 `unknown`；
 - 训练计划尚未持久化，只能通过 CLI 显式传入距离/时长目标；
-- 当前正式基线仍使用确定性 Policy 和脚本化故障；DeepSeek 只有单用例真实结果，尚无完整模型质量结论；
-- DeepSeek 已有单用例和第一次完整运行报告，但严格同一 Hash 的正式模型基线尚待复跑；
-- 第一次完整运行的功能指标全部通过，但因执行前修改了题集超时，不能直接作为最终对照报告；
+- 当前正式基线是 v1.1 确定性 Policy 和脚本化故障结果；DeepSeek 虽有完整功能通过记录，但尚无 v1.1 同 Hash 模型质量结论；
+- DeepSeek 第一次完整运行证明功能可通过，第二次运行证明 v1.0 的1秒预算不适合网络模型；正式结论必须使用 v1.1 同 Hash 报告；
 - 本地费用门只能在收到真实 usage 后停止后续动作，不能阻止第一笔请求，也不能替代 DeepSeek 账户侧余额控制；
 - 单用例真实 DeepSeek Loop 已验收，但还不能把一个成功用例描述成完整模型稳定性结论；
 - Trace 当前随 CLI JSON 返回，尚未持久化；
@@ -112,7 +114,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 **M5-B3：运行完整真实 LLM Suite，并与当前离线基线比较。**
 
-重新运行已经修正的 `runcrew eval deepseek-suite`，确认报告 `suite_hash` 为确定性基线的 `f3dc7dd964da5773c3a3fda5a717e41c4b8c02b06131959b3a708e88a74dd4f8`，再形成正式对照结论。没有同 Hash 对照结果前不拆分多 Agent。
+运行 v1.1 的 `runcrew eval deepseek-suite`，确认报告 `suite_version=review-agent-eval/1.1` 且 `suite_hash=2b89473f6f9e02f06960965bfafdac74aacff1b28ead42eeade0e7a5afd199e9`，再形成正式对照结论。没有同 Hash 对照结果前不拆分多 Agent。
 
 详细边界见 [M5-B：DeepSeek 模型选型与接入方案](M5-B-DeepSeek模型选型与接入方案.md)。
 

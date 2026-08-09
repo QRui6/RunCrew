@@ -25,6 +25,7 @@ REQUIRED_FILES = [
     "docs/IMPLEMENTATION_STATUS.md",
     "docs/adr/0008-versioned-offline-agent-evaluation.md",
     "docs/adr/0009-deepseek-policy-adapter-boundary.md",
+    "docs/adr/0010-shared-evaluation-time-budget.md",
     "docs/progress/2026-08-09-m3-training-review-skill.md",
     "docs/progress/2026-08-09-m4-review-agent-loop.md",
     "docs/progress/2026-08-09-m5-agent-evaluation-baseline.md",

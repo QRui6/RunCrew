@@ -66,7 +66,7 @@ async def evaluate_review_agent_suite(
     suite: ReviewAgentEvaluationSuite,
     *,
     default_policy_factory: DefaultPolicyFactory | None = None,
-    policy_name: str = "m5-offline-scripted-baseline/1.0",
+    policy_name: str = "m5-offline-scripted-baseline/1.1",
 ) -> ReviewAgentEvaluationReport:
     factory = default_policy_factory or DeterministicReviewPolicy
     results = [

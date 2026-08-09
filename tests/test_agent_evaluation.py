@@ -21,7 +21,7 @@ CASES_PATH = Path("evals/review_agent/cases.json")
 def test_evaluation_suite_is_versioned_and_contains_unique_scenarios() -> None:
     suite = load_review_agent_suite(CASES_PATH)
 
-    assert suite.suite_version == "review-agent-eval/1.0"
+    assert suite.suite_version == "review-agent-eval/1.1"
     assert len(suite.cases) == 12
     assert len({case.id for case in suite.cases}) == 12
     assert {case.category for case in suite.cases} == {
@@ -30,6 +30,7 @@ def test_evaluation_suite_is_versioned_and_contains_unique_scenarios() -> None:
         "guardrail",
         "budget",
     }
+    assert all(case.run.run_timeout_seconds == 15 for case in suite.cases)
 
 
 def test_offline_baseline_passes_all_metrics_and_is_replayable() -> None:

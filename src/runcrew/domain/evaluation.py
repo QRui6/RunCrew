@@ -54,10 +54,10 @@ class EvaluationRunOverrides(BaseModel):
         description="单次工具尝试超时秒数；离线评测使用短超时。",
     )
     run_timeout_seconds: float = Field(
-        default=1.0,
+        default=15.0,
         gt=0,
         le=120,
-        description="整个 Agent Run 的超时秒数。",
+        description="整个 Agent Run 的超时秒数；同一 Suite 对所有 Policy 一致。",
     )
 
 
@@ -122,8 +122,8 @@ class ReviewAgentEvaluationCase(BaseModel):
 class ReviewAgentEvaluationSuite(BaseModel):
     model_config = ConfigDict(extra="forbid", title="训练复盘 Agent 评测套件")
 
-    suite_version: Literal["review-agent-eval/1.0"] = Field(
-        default="review-agent-eval/1.0",
+    suite_version: Literal["review-agent-eval/1.1"] = Field(
+        default="review-agent-eval/1.1",
         description="评测用例集合版本。",
     )
     cases: list[ReviewAgentEvaluationCase] = Field(
@@ -276,7 +276,7 @@ class ReviewAgentEvaluationReport(BaseModel):
     model_config = ConfigDict(extra="forbid", title="训练复盘 Agent 评测报告")
 
     schema_version: Literal["1.1"] = Field(default="1.1", description="报告版本。")
-    suite_version: Literal["review-agent-eval/1.0"] = Field(
+    suite_version: Literal["review-agent-eval/1.1"] = Field(
         description="使用的评测套件版本。"
     )
     suite_hash: str = Field(

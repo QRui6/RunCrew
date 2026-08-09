@@ -103,7 +103,10 @@
 - [x] 增加完整 Suite 命令和跨用例共享的总费用停止门；
 - [x] 第一次运行完整 12 场景 DeepSeek Suite，12/12 满足预期；
 - [x] 发现并修复 CLI 改写用例超时导致 Suite Hash 漂移的问题；
-- [ ] 使用原始 Suite 复跑并取得与确定性基线相同的 `suite_hash`；
+- [x] 使用原始 v1.0 Suite 复跑并取得相同 Hash，确认1秒总预算导致9个网络模型场景超时；
+- [x] 升级 `review-agent-eval/1.1`，为全部 Policy 统一设置15秒总预算并建立12/12确定性基线；
+- [x] 被总超时取消的模型请求记录已发起尝试，未知 usage 不伪造 Token 或费用；
+- [ ] 使用 v1.1 Suite 复跑 DeepSeek 并取得相同 `suite_hash`；
 - [ ] 与确定性 Policy 基线对照；
 - [ ] 多 Agent 决策记录。
 
