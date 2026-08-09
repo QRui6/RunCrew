@@ -14,7 +14,7 @@
 | 2026-08-09 | M5-B1 DeepSeek Policy 适配器与 Mock 契约 | 完成 | [M5-B1 DeepSeek Policy 适配器](progress/2026-08-09-m5b-deepseek-policy-adapter.md) |
 | 2026-08-09 | M5-B2 DeepSeek 真实合成 Smoke 与兼容修复 | 完成 | [M5-B2 真实 Smoke](progress/2026-08-09-m5b2-first-live-smoke.md) |
 | 2026-08-09 | M5-B3a 完整评测运行器与共享费用门 | 完成 | [M5-B3a 完整评测运行器](progress/2026-08-09-m5b3a-full-suite-runner.md) |
-| 2026-08-09 | M5-B3b 两次完整运行与公平预算修复 | 进行中 | [M5-B3b 完整运行审计](progress/2026-08-09-m5b3b-first-full-suite.md) |
+| 2026-08-09 | M5-B3 DeepSeek 完整同题评测 | 完成 | [M5-B3 完整运行审计](progress/2026-08-09-m5b3b-first-full-suite.md) |
 
 ## 新阶段记录模板
 

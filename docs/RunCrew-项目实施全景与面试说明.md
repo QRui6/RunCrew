@@ -10,9 +10,9 @@
 
 一句话结论：
 
-> RunCrew 已经完成“真实跑步数据接入 → 统一数据模型 → 私有存储 → FIT 详情恢复 → 确定性复盘 → 可回放 Training Review Skill → 有界单 Agent Loop → 版本化离线评测基线 → DeepSeek Policy 适配器 → 单用例真实 Loop”，完整模型对照、多 Agent 和产品化界面尚未完成。
+> RunCrew 已经完成“真实跑步数据接入 → 统一数据模型 → 私有存储 → FIT 详情恢复 → 确定性复盘 → 可回放 Training Review Skill → 有界单 Agent Loop → 版本化评测基线 → DeepSeek Policy → v1.1 同 Hash 完整模型对照”。多 Agent 没有评测必要性，产品化界面尚未完成。
 
-当前里程碑是 **M5-A、M5-B1 与 M5-B2 完成，M5 整体进行中**。
+当前里程碑是 **M5 全部完成，下一阶段 M6-A 本地只读演示界面**。
 
 | 能力 | 当前状态 | 说明 |
 |---|---|---|
@@ -583,9 +583,9 @@ estimated_cost_usd=0.00016426
 | Context Engineering | 领域上下文 + 有界 Agent Context，只暴露请求、权限、合法观察和剩余预算 | 已有分层和裁剪，尚无 Token 级压缩 |
 | Harness Engineering | 统一 Run、权限、确认、预算、重试、两级超时、验证和 Trace | M4 最小竖切已完成 |
 | Loop Engineering | `call_tool → observation → finish` 有限状态循环和明确退出条件 | M4 最小竖切已完成 |
-| LLM | `deepseek-v4-flash` 单用例标准 Tool Calls Loop 已真实通过 | 完整 12 场景模型对照尚未完成 |
+| LLM | `deepseek-v4-flash` v1.1 同 Hash 对照12/12通过 | 当前动作协议不需要升级 Pro |
 | Multi-Agent | 尚未实现 | 必须由评测证明必要性 |
-| Evaluation | 12 场景 v1.1 Suite、52 项测试、Suite Hash、任务/护栏/事实/Token/费用/延迟指标 | Hash 漂移和1秒不公平预算均已修复，待最终同题复跑 |
+| Evaluation | 12场景 v1.1 Suite、52项测试、Suite Hash、任务/护栏/事实/Token/费用/延迟指标 | 确定性与 DeepSeek 均12/12，M5-B3完成 |
 
 ## 6. 贯穿项目的核心设计原则
 
@@ -735,7 +735,7 @@ M5 只允许增加：
 
 #### 项目目前最大的不足是什么？
 
-真实历史数据仍少、COROS 训练负荷未映射、训练计划未持久化。DeepSeek 第一次完整运行证明功能可以通过，第二次同 Hash 运行又暴露出 v1.0 的1秒预算只适合离线 Policy。现在 v1.1 已统一15秒预算并建立新基线，但最终模型复跑尚未完成。因此可以描述为“评测污染和不公平预算被真实运行发现并修复”，不能描述为生产级大模型已经验收或多 Agent 系统。
+真实历史数据仍少、COROS 训练负荷未映射、训练计划未持久化；3个非法动作护栏场景也是脚本化注入，不是模型对抗安全评分。现在可以描述为“单 Agent、Harness、Loop 和真实模型同题评测已经完成”，但不能描述为生产上线、多 Agent 系统、医疗诊断或复杂自主规划平台。
 
 ## 10. 代码与文档导航
 
@@ -764,14 +764,15 @@ M5 只允许增加：
 
 ## 11. 当前下一步
 
-唯一下一任务是 M5-B3 完整 12 场景 DeepSeek 对照：
+M5-B3 已完成，下一任务是 M6-A 本地只读演示界面：
 
 ```text
 [已完成] 增加受确认和共享总费用门保护的完整 Suite 命令
 → [已完成] 第一次完整运行 12/12 满足预期，但发现 Suite Hash 漂移
 → [已完成] v1.0 同 Hash 复跑，发现1秒预算导致网络模型统一超时
 → [已完成] 升级 v1.1，为全部 Policy 固定15秒预算并建立新基线
-→ [下一步] DeepSeek 复跑 v1.1 并确认 `suite_hash=2b89473f...`
+→ [已完成] DeepSeek v1.1 同 Hash 复跑12/12
+→ [下一步] 展示 Activity → Skill → Agent Loop → Trace → Evaluation 对照
 → 脚本化异常/护栏场景继续复用真实 Harness
 → 记录完成率、终态、Token、费用、延迟和事实一致性
 → 与确定性 Policy 基线比较

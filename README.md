@@ -104,11 +104,11 @@ Agent 输出在 Training Review 之外增加 `run_id`、终态、退出原因、
 
 评测包含 12 个无私人数据场景，覆盖正常任务、缺数降级、瞬时恢复、超时、非法输出、越权、参数篡改、确认和预算。评测用例可以进入 Git，报告只能写入 `data/private/`。当前基线不调用真实 LLM。
 
-## 下一阶段模型方案
+## 真实模型评测结论
 
-M5-B2 已通过 `deepseek-v4-flash` 非思考模式真实合成 Smoke。M5-B3 第一次完整运行 12/12 满足预期但改写了 Suite 超时；第二次保持 v1.0 Hash 后，真实模型因离线题集的1秒总预算全部超时。Suite 已正式升级至 v1.1，为两种 Policy 统一使用15秒预算，等待最终同题复跑。详见 [DeepSeek 模型选型与接入方案](docs/M5-B-DeepSeek模型选型与接入方案.md)。
+M5-B3 已完成。`deepseek-v4-flash` 非思考模式与确定性 Policy 在完全相同的 `review-agent-eval/1.1` Suite 和15秒预算下均为 12/12 通过，Hash 均为 `2b89473f...`。DeepSeek 没有动作解析错误或越权工具执行，总费用约 0.000762 美元；当前没有证据支持升级 Pro 或拆分多 Agent。详见 [最终评测报告](docs/M5-B3-DeepSeek最终评测报告.md)。
 
-完整 Suite 命令已经实现但不会自动运行。它复用 12 个合成场景，并要求同时传入 `--confirm-paid-api` 和共享总费用上限；缺少 Key、确认或费用上限时会在联网前退出：
+完整 Suite 命令复用12个合成场景，并要求同时传入 `--confirm-paid-api` 和共享总费用上限；缺少 Key、确认或费用上限时会在联网前退出：
 
 ```powershell
 .\.venv\Scripts\runcrew.exe eval deepseek-suite `

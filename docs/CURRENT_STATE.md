@@ -5,7 +5,7 @@
 
 ## 当前里程碑
 
-**M5-A、M5-B1 与 M5-B2 已完成；M5-B3 已升级公平时间预算，v1.1 严格同题对照待最终复跑。**
+**M5-A 至 M5-B3 已完成；下一阶段进入 M6-A 本地可演示与可解释界面。**
 
 M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
@@ -86,6 +86,12 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - v1.0 的1秒预算原本只适合确定性离线回归，不适合需要网络往返的 LLM；这不是模型动作质量失败，而是评测预算设计不公平；
 - Suite 已升级到 `review-agent-eval/1.1`，两种 Policy 统一使用15秒总预算，超时仍进入 Hash；新的确定性基线 12/12 通过，Hash 为 `2b89473f6f9e02f06960965bfafdac74aacff1b28ead42eeade0e7a5afd199e9`；
 - 被总超时取消的模型请求现在会记录 API 尝试和失败遥测；由于供应商没有返回 usage，本地 Token/费用保持0，但不能据此断言账户一定未计费。
+- v1.1 最终 DeepSeek 报告与确定性基线 Suite Hash 完全一致，均为 `2b89473f6f9e02f06960965bfafdac74aacff1b28ead42eeade0e7a5afd199e9`；
+- 两种 Policy 均为12/12满足预期，终态分布、平均工具调用0.5833和平均工具尝试0.75一致；
+- DeepSeek 正常任务完成率、护栏通过率、Schema 通过率和事实一致率均为100%，越权工具执行数与动作解析错误均为0；
+- DeepSeek 共12次 API 请求、13175 Token，估算费用0.00076208美元；Policy 累计耗时24667.601ms，平均单次 API 约2055.633ms，P95单场景4862.875ms；
+- 输入 Token 缓存命中率约81.49%；最终报告保存在 `data/private/evals/deepseek-suite-v1.1-final.json`；
+- 当前简单动作协议没有证据需要升级 `deepseek-v4-pro`，也没有职责冲突或上下文负担证据支持拆分多 Agent。
 
 ## 当前已知限制
 
@@ -95,8 +101,8 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 自动 FIT URL 未能验证，但用户手动导出的真实 FIT 已通过私有缓存完成端到端验收；
 - 当前 COROS 规范化活动没有训练负荷字段，因此真实 `load_change` 暂时可能为 `unknown`；
 - 训练计划尚未持久化，只能通过 CLI 显式传入距离/时长目标；
-- 当前正式基线是 v1.1 确定性 Policy 和脚本化故障结果；DeepSeek 虽有完整功能通过记录，但尚无 v1.1 同 Hash 模型质量结论；
-- DeepSeek 第一次完整运行证明功能可通过，第二次运行证明 v1.0 的1秒预算不适合网络模型；正式结论必须使用 v1.1 同 Hash 报告；
+- 当前12场景中，3个非法动作场景使用脚本化 Policy 注入，只能证明 Harness 能拦截，不能声称真实 DeepSeek 在提示注入或恶意诱导下同样安全；
+- 当前模型任务只有一个工具和两种动作，12/12通过不代表复杂规划、多工具协作或生产稳定性已经验收；
 - 本地费用门只能在收到真实 usage 后停止后续动作，不能阻止第一笔请求，也不能替代 DeepSeek 账户侧余额控制；
 - 单用例真实 DeepSeek Loop 已验收，但还不能把一个成功用例描述成完整模型稳定性结论；
 - Trace 当前随 CLI JSON 返回，尚未持久化；
@@ -112,11 +118,11 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 ## 下一项唯一任务
 
-**M5-B3：运行完整真实 LLM Suite，并与当前离线基线比较。**
+**M6-A：制作只读本地演示界面，把已有工程能力展示清楚。**
 
-运行 v1.1 的 `runcrew eval deepseek-suite`，确认报告 `suite_version=review-agent-eval/1.1` 且 `suite_hash=2b89473f6f9e02f06960965bfafdac74aacff1b28ead42eeade0e7a5afd199e9`，再形成正式对照结论。没有同 Hash 对照结果前不拆分多 Agent。
+界面只展示已经实现的活动摘要、Training Review evidence、Agent 状态/预算/Trace，以及确定性 Policy 与 DeepSeek 的同 Hash 评测对照；不增加营养、伤病、训练计划生成或多 Agent 新业务。
 
-详细边界见 [M5-B：DeepSeek 模型选型与接入方案](M5-B-DeepSeek模型选型与接入方案.md)。
+完整模型结论见 [M5-B3 DeepSeek 最终评测报告](M5-B3-DeepSeek最终评测报告.md)。
 
 ## 外部额度约束
 
