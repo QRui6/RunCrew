@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from runcrew.domain.agent import ReviewAgentRunRequest, ReviewAgentRunResult
 from runcrew.domain.training_review import (
     TrainingReviewRequest,
     TrainingReviewResult,
@@ -20,6 +21,8 @@ def main() -> int:
     schemas = {
         "input.schema.json": TrainingReviewRequest.model_json_schema(),
         "output.schema.json": TrainingReviewResult.model_json_schema(),
+        "agent-run-input.schema.json": ReviewAgentRunRequest.model_json_schema(),
+        "agent-run-output.schema.json": ReviewAgentRunResult.model_json_schema(),
     }
     for filename, schema in schemas.items():
         (OUTPUT_DIRECTORY / filename).write_text(

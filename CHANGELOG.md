@@ -6,6 +6,11 @@
 
 ### Added
 
+- 增加训练复盘单 Agent 的 Run、Context、Action、Trace、Error 和 Budget Schema；
+- 增加只允许一个只读 Skill 的 Agent Harness 与 `call_tool → observation → finish` 有限循环；
+- 增加工具白名单、确认门、步骤/调用预算、有限重试、两级超时和结构化退出原因；
+- 增加 `runcrew agent review` CLI 和 Agent Run 输入输出 JSON Schema；
+- 增加瞬时错误、超时、非法输出、越权、缺少确认和预算耗尽的故障注入测试；
 - 增加 Training Review 输入、计划、窗口、finding 和结果 Schema；
 - 增加以目标活动时间为锚点的 7/28 天 Context Builder 和稳定输入哈希；
 - 增加训练完成度、七天负荷变化和训练异常三类 evidence-backed 规则；
@@ -16,6 +21,9 @@
 
 ### Verified
 
+- M4 单 Agent 成功路径和故障路径通过 10 项专项测试；
+- 全部自动化测试增至 34 项；
+- fixture 端到端 Agent CLI 验收成功，Trace 完整记录 2 步策略决策和 1 次工具调用；
 - M2 通过 PR #1 合并到 `main`；
 - 24 项自动化测试通过；
 - Skill 官方校验器通过；
@@ -23,9 +31,10 @@
 
 ### Known Issues
 
+- 当前使用确定性 Policy，真实 LLM Policy、Token/费用预算和模型评测尚未实现；
+- Agent Trace 尚未持久化；
 - COROS 训练负荷尚未进入规范化活动；
 - 训练计划尚未持久化；
-- LLM、Trace、状态机和 Harness 留待 M4。
 
 ## 2026-08-08
 

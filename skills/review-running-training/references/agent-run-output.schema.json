@@ -1,0 +1,526 @@
+{
+  "$defs": {
+    "ActivityReview": {
+      "additionalProperties": false,
+      "properties": {
+        "activity_id": {
+          "title": "Activity Id",
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": true,
+          "title": "Summary",
+          "type": "object"
+        },
+        "observations": {
+          "items": {
+            "$ref": "#/$defs/ReviewObservation"
+          },
+          "title": "Observations",
+          "type": "array"
+        },
+        "data_quality": {
+          "$ref": "#/$defs/DataQuality"
+        }
+      },
+      "required": [
+        "activity_id",
+        "summary",
+        "observations",
+        "data_quality"
+      ],
+      "title": "ActivityReview",
+      "type": "object"
+    },
+    "AgentBudgetUsage": {
+      "additionalProperties": false,
+      "properties": {
+        "steps_used": {
+          "description": "已经执行的策略步骤数。",
+          "minimum": 0,
+          "title": "Steps Used",
+          "type": "integer"
+        },
+        "tool_calls_used": {
+          "description": "已经发起的逻辑工具调用数。",
+          "minimum": 0,
+          "title": "Tool Calls Used",
+          "type": "integer"
+        },
+        "tool_attempts_used": {
+          "description": "包含重试在内的工具尝试次数。",
+          "minimum": 0,
+          "title": "Tool Attempts Used",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "steps_used",
+        "tool_calls_used",
+        "tool_attempts_used"
+      ],
+      "title": "Agent 预算使用情况",
+      "type": "object"
+    },
+    "AgentRunError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "description": "可稳定测试和统计的错误代码。",
+          "enum": [
+            "policy_error",
+            "permission_denied",
+            "confirmation_required",
+            "tool_failure",
+            "tool_timeout",
+            "invalid_tool_output",
+            "premature_finish",
+            "step_budget_exhausted",
+            "run_timeout"
+          ],
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "description": "面向用户的中文错误说明。",
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "description": "用户重新运行后是否可能恢复。",
+          "title": "Retryable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "title": "Agent 运行错误",
+      "type": "object"
+    },
+    "AgentTraceEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "sequence": {
+          "description": "事件在本次运行中的递增序号。",
+          "minimum": 1,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "elapsed_ms": {
+          "description": "相对本次运行开始的毫秒数。",
+          "minimum": 0,
+          "title": "Elapsed Ms",
+          "type": "number"
+        },
+        "state": {
+          "description": "事件发生时的 Agent 状态。",
+          "enum": [
+            "created",
+            "planning",
+            "calling_tool",
+            "validating",
+            "completed",
+            "failed"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "event": {
+          "description": "结构化事件类型。",
+          "enum": [
+            "run_started",
+            "policy_action",
+            "tool_permission_checked",
+            "tool_call_started",
+            "tool_call_retry_scheduled",
+            "tool_call_succeeded",
+            "tool_call_failed",
+            "output_validation_started",
+            "output_validated",
+            "run_completed",
+            "run_failed",
+            "run_timed_out",
+            "budget_exhausted"
+          ],
+          "title": "Event",
+          "type": "string"
+        },
+        "attempt": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "工具尝试序号；非工具事件为空。",
+          "title": "Attempt"
+        },
+        "tool_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "相关工具名称；非工具事件为空。",
+          "title": "Tool Name"
+        },
+        "details": {
+          "additionalProperties": true,
+          "description": "经过脱敏的补充信息，不保存原始活动数据和异常正文。",
+          "title": "Details",
+          "type": "object"
+        }
+      },
+      "required": [
+        "sequence",
+        "elapsed_ms",
+        "state",
+        "event"
+      ],
+      "title": "Agent Trace 事件",
+      "type": "object"
+    },
+    "DataQuality": {
+      "additionalProperties": false,
+      "properties": {
+        "missing_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Fields",
+          "type": "array"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        }
+      },
+      "required": [
+        "confidence"
+      ],
+      "title": "DataQuality",
+      "type": "object"
+    },
+    "ReviewObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "level": {
+          "enum": [
+            "good",
+            "normal",
+            "attention",
+            "unknown"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "evidence": {
+          "additionalProperties": true,
+          "title": "Evidence",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "level",
+        "message"
+      ],
+      "title": "ReviewObservation",
+      "type": "object"
+    },
+    "TrainingFinding": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "description": "结论类型：训练完成度、负荷变化或训练异常。",
+          "enum": [
+            "training_completion",
+            "load_change",
+            "training_anomaly"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "level": {
+          "description": "结论等级；数据不足时必须使用 unknown。",
+          "enum": [
+            "good",
+            "normal",
+            "attention",
+            "unknown"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "message": {
+          "description": "面向用户的简短结论。",
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "evidence": {
+          "additionalProperties": true,
+          "description": "支持该结论的结构化证据。",
+          "title": "Evidence",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "level",
+        "message",
+        "evidence"
+      ],
+      "title": "训练复盘结论",
+      "type": "object"
+    },
+    "TrainingReviewResult": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "description": "输出 Schema 版本。",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "ruleset_version": {
+          "const": "training-review-rules/1.0",
+          "default": "training-review-rules/1.0",
+          "description": "生成结论所使用的确定性规则版本。",
+          "title": "Ruleset Version",
+          "type": "string"
+        },
+        "input_hash": {
+          "description": "规范化输入的 SHA-256，用于确定性回放。",
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Hash",
+          "type": "string"
+        },
+        "target_activity_id": {
+          "description": "本次复盘对应的 RunCrew 活动 ID。",
+          "title": "Target Activity Id",
+          "type": "string"
+        },
+        "activity_review": {
+          "$ref": "#/$defs/ActivityReview",
+          "description": "目标活动的单次活动复盘。"
+        },
+        "current_7d": {
+          "$ref": "#/$defs/TrainingWindowMetrics",
+          "description": "截至目标活动的最近七天指标。"
+        },
+        "previous_7d": {
+          "$ref": "#/$defs/TrainingWindowMetrics",
+          "description": "此前七天的对照指标。"
+        },
+        "findings": {
+          "description": "固定包含训练完成度、负荷变化和训练异常三类结论。",
+          "items": {
+            "$ref": "#/$defs/TrainingFinding"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Findings",
+          "type": "array"
+        },
+        "data_quality": {
+          "$ref": "#/$defs/DataQuality",
+          "description": "整体缺失字段与结论置信度。"
+        }
+      },
+      "required": [
+        "input_hash",
+        "target_activity_id",
+        "activity_review",
+        "current_7d",
+        "previous_7d",
+        "findings",
+        "data_quality"
+      ],
+      "title": "训练复盘输出",
+      "type": "object"
+    },
+    "TrainingWindowMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "description": "时间窗口起点，必须包含时区。",
+          "format": "date-time",
+          "title": "Start",
+          "type": "string"
+        },
+        "end": {
+          "description": "时间窗口终点，必须包含时区。",
+          "format": "date-time",
+          "title": "End",
+          "type": "string"
+        },
+        "activity_count": {
+          "description": "窗口内的活动数量。",
+          "minimum": 0,
+          "title": "Activity Count",
+          "type": "integer"
+        },
+        "distance_meters": {
+          "description": "窗口内累计距离，单位为米。",
+          "minimum": 0,
+          "title": "Distance Meters",
+          "type": "number"
+        },
+        "duration_seconds": {
+          "description": "窗口内累计时长，单位为秒。",
+          "minimum": 0,
+          "title": "Duration Seconds",
+          "type": "integer"
+        },
+        "training_load_total": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "窗口内可获得的训练负荷之和；没有负荷数据时为空。",
+          "title": "Training Load Total"
+        },
+        "training_load_coverage": {
+          "description": "包含训练负荷字段的活动占比。",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Training Load Coverage",
+          "type": "number"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "activity_count",
+        "distance_meters",
+        "duration_seconds",
+        "training_load_coverage"
+      ],
+      "title": "训练时间窗口指标",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "description": "运行结果版本。",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "run_id": {
+      "description": "本次运行的唯一标识；不包含活动外部 ID。",
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "status": {
+      "description": "本次运行的终态。",
+      "enum": [
+        "succeeded",
+        "failed",
+        "timed_out",
+        "budget_exhausted"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "termination_reason": {
+      "description": "状态机退出循环的明确原因。",
+      "enum": [
+        "completed",
+        "policy_error",
+        "permission_denied",
+        "confirmation_required",
+        "tool_failure",
+        "tool_timeout",
+        "invalid_tool_output",
+        "premature_finish",
+        "step_budget_exhausted",
+        "run_timeout"
+      ],
+      "title": "Termination Reason",
+      "type": "string"
+    },
+    "output": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TrainingReviewResult"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "成功时返回且已经通过 Schema 校验的 Skill 结果。"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AgentRunError"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "失败、超时或预算耗尽时的结构化错误。"
+    },
+    "budget": {
+      "$ref": "#/$defs/AgentBudgetUsage",
+      "description": "本次运行实际消耗的预算。"
+    },
+    "trace": {
+      "description": "按顺序记录决策、工具、验证和退出过程。",
+      "items": {
+        "$ref": "#/$defs/AgentTraceEvent"
+      },
+      "minItems": 2,
+      "title": "Trace",
+      "type": "array"
+    }
+  },
+  "required": [
+    "run_id",
+    "status",
+    "termination_reason",
+    "budget",
+    "trace"
+  ],
+  "title": "训练复盘 Agent 运行结果",
+  "type": "object"
+}

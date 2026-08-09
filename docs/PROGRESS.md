@@ -9,6 +9,7 @@
 | 2026-08-08 | 项目记忆与 AI 交接体系 | 完成 | [AI 交接体系](progress/2026-08-08-ai-project-memory.md) |
 | 2026-08-08 | M2 FIT 详情兜底 | 完成 | [M2 FIT 详情兜底](progress/2026-08-08-m2-fit-detail-fallback.md) |
 | 2026-08-09 | M3 Training Review Skill | 完成 | [M3 Training Review Skill](progress/2026-08-09-m3-training-review-skill.md) |
+| 2026-08-09 | M4 训练复盘单 Agent Loop | 完成 | [M4 单 Agent Loop](progress/2026-08-09-m4-review-agent-loop.md) |
 
 ## 新阶段记录模板
 

@@ -12,7 +12,20 @@ description: 基于一条 RunCrew 规范化活动、近期训练历史和可选�
 1. 从 RunCrew Repository 选择一条规范化目标活动。除非用户明确要求排查问题，否则不要读取 COROS 原始文本或 `data/private/`。
 2. 按目标活动的时间而不是当前系统时间，收集回看窗口内相同 Provider 的活动。
 3. 只有用户明确提供计划距离或计划时长时，才加入训练计划；不得猜测计划。
-4. 运行确定性训练复盘：
+4. 通过 M4 Agent Harness 运行复盘；Harness 只允许调用当前 Skill，并负责权限、预算、重试、超时、输出校验和 Trace：
+
+```powershell
+runcrew agent review --latest --provider coros
+```
+
+已知训练计划时显式传入目标：
+
+```powershell
+runcrew agent review --latest --provider coros `
+  --planned-distance-km 8 --planned-duration-minutes 45
+```
+
+仅调试确定性 Skill 结果、不需要 Agent Trace 时运行：
 
 ```powershell
 runcrew training review --latest --provider coros
@@ -25,9 +38,17 @@ runcrew training review --latest --provider coros `
   --planned-distance-km 8 --planned-duration-minutes 45
 ```
 
-5. 使用 [输入 Schema](references/input.schema.json) 校验请求，使用 [输出 Schema](references/output.schema.json) 校验结果。
+5. 使用 [Skill 输入 Schema](references/input.schema.json) 和 [Skill 输出 Schema](references/output.schema.json) 校验业务结果；使用 [Agent Run 输入 Schema](references/agent-run-input.schema.json) 和 [Agent Run 输出 Schema](references/agent-run-output.schema.json) 校验运行过程。
 6. 固定返回 `training_completion`、`load_change` 和 `training_anomaly` 三类结论。数据不足时保留 `unknown` 及其 `requires` 证据，不得删除。
 7. 用户需要自然语言说明时，只改写已经验证的 message，并引用 evidence 中的数值；不得重新计算指标、改变 level 或隐藏缺失数据。
+
+## Agent Loop 约束
+
+- 只允许 `review_running_training` 一个只读工具，不得直接调用 COROS 或读取原始 Provider 文本。
+- 默认工具逻辑调用预算为 1，瞬时错误和超时最多重试 1 次，总运行和单次工具调用都有超时限制。
+- 只有工具结果通过 `TrainingReviewResult` 校验后才能进入结束动作。
+- Trace 只记录状态、动作、预算、错误代码、`input_hash` 和规则版本；不得记录外部活动 ID、异常原文或私人活动载荷。
+- 默认策略是确定性的；未来 LLM 策略必须输出同一结构化 `call_tool` / `finish` 动作，不能绕过 Harness。
 
 ## 证据规则
 

@@ -91,4 +91,5 @@ cli.py       人机入口，只做参数编排
 \.venv\Scripts\runcrew.exe status
 \.venv\Scripts\runcrew.exe sync --provider fixture --days 30 --detail-limit 1
 \.venv\Scripts\runcrew.exe activities review --latest --provider coros
+\.venv\Scripts\runcrew.exe agent review --latest --provider coros
 ```

@@ -10,9 +10,9 @@
 
 一句话结论：
 
-> RunCrew 已经完成“真实跑步数据接入 → 统一数据模型 → 私有存储 → FIT 详情恢复 → 确定性复盘 → 可回放 Training Review Skill”，但还没有进入真正的 LLM Agent Loop 和多 Agent 阶段。
+> RunCrew 已经完成“真实跑步数据接入 → 统一数据模型 → 私有存储 → FIT 详情恢复 → 确定性复盘 → 可回放 Training Review Skill → 有界单 Agent Loop”，但真实 LLM Policy、多 Agent 和产品化界面尚未实现。
 
-当前里程碑是 **M3 完成**。
+当前里程碑是 **M4 完成**。
 
 | 能力 | 当前状态 | 说明 |
 |---|---|---|
@@ -25,9 +25,9 @@
 | 单次活动确定性复盘 | 已完成 | 输出配速稳定性及 evidence |
 | Training Review Skill | 已完成 | 输出完成度、负荷变化、训练异常三类 finding |
 | 可回放上下文 | 已完成 | 使用目标活动时间、`input_hash` 和规则版本 |
-| LLM 自然语言总结 | 未实现 | M3 刻意不让 LLM 参与计算 |
-| Agent 状态机、Trace、预算和重试 | 未实现 | 属于 M4 |
-| 多 Agent 编排 | 未实现 | 只有评测证明单 Agent 不够时才进入 M5 |
+| LLM Policy / 自然语言总结 | 未实现 | 当前先用确定性 Policy 验证 Harness，LLM 不参与指标计算 |
+| Agent 状态机、Trace、预算和重试 | 已完成 | 支持权限、确认、重试、两级超时、故障注入和明确终态 |
+| 多 Agent 编排 | 未实现 | 只有 M5 评测证明单 Agent 不够时才条件式增加 |
 | Web 界面和简历演示 | 未实现 | 属于 M6 |
 | 伤病、营养、睡眠完整 Agent | 不在当前范围 | 防止重新变成“大而全”项目 |
 
@@ -49,6 +49,10 @@ COROS 官方服务
   → Deterministic Training Review Service
   → review-running-training Skill
   → 通过 JSON Schema 校验的 TrainingReviewResult
+  → Review Agent Harness
+  → Action / Observation Loop
+  → 权限 + 确认 + 预算 + 重试 + 超时 + Trace
+  → 通过 Agent Run Schema 校验的终态输出
 ```
 
 各层职责：
@@ -61,7 +65,7 @@ COROS 官方服务
 | Storage | 表结构、查询、幂等保存 | 不解释训练意义 |
 | Service | 确定性业务规则和流程组合 | 不解析厂商原始文本 |
 | Skill | 指导 Agent 选择数据、调用 Service、验证证据 | 不重新计算指标 |
-| 未来 Harness | 状态、权限、预算、Trace、重试和验证 | 不替代领域规则 |
+| Harness | 状态、权限、确认、预算、Trace、重试和验证 | 不替代领域规则、不直接读取 Provider 原始数据 |
 
 ## 3. 用户目前可以使用哪些功能
 
@@ -114,6 +118,21 @@ runcrew training review --latest --provider coros `
 3. `training_anomaly`：分圈波动或同类型历史配速偏差。
 
 如果缺少计划、训练负荷或历史活动，系统返回 `unknown + requires`，而不是猜测。
+
+### 3.4 运行训练复盘 Agent
+
+```powershell
+runcrew agent review --latest --provider coros
+```
+
+在原有 Training Review 结果之外，固定返回：
+
+- `run_id`、`status` 和 `termination_reason`；
+- 步骤、逻辑工具调用和工具尝试数量；
+- 从开始、策略动作、权限检查、工具尝试、输出验证到退出的 Trace；
+- 失败时稳定错误代码和是否值得重试，不输出潜在敏感的异常正文。
+
+当前默认 Policy 是确定性的。它用于证明 Harness 和 Loop 的工程边界，不等于已经调用真实大模型。
 
 ## 4. 各阶段实施过程
 
@@ -338,18 +357,93 @@ Skill：选择数据、调用 Service、验证 Schema
 
 > 我把 Skill 设计成确定性 Service 的编排层，而不是让大模型自由分析。输入、输出、缺失数据和 evidence 都有 Schema，回放使用输入哈希和规则版本，因此模型升级不会破坏基础判断。
 
+### M4：训练复盘单 Agent Loop
+
+#### 目标
+
+把 M3 的直接 Skill 调用放入一个真正有动作选择、观察反馈、权限、预算、Trace 和退出条件的有限循环，同时保持只有一个 Agent 和一个业务 Skill。
+
+#### 技术实现
+
+- `ReviewAgentRunRequest` / `ReviewAgentRunResult`；
+- `ReviewAgentContext` 分层上下文；
+- `call_tool` / `finish` 可判别联合 Action Schema；
+- `ToolPermission` 只读白名单和确认门；
+- `AgentTraceEvent`、`AgentRunError`、`AgentBudgetUsage`；
+- `ReviewAgentHarness` 有限状态循环；
+- 默认 `DeterministicReviewPolicy`；
+- 瞬时错误和超时有限重试；
+- 单次工具超时与整次 Run 超时；
+- 工具输出 Schema 和目标活动一致性校验；
+- `runcrew agent review` CLI；
+- Agent Run 输入输出 JSON Schema。
+
+#### 分层上下文策略
+
+Policy 只接收：固定目标、指令版本、用户结构化请求、允许工具、已经校验的 Observation 和剩余预算。它看不到 COROS 原始文本、完整数据库、外部活动 ID、GPS 或 Token。
+
+```text
+固定指令层
++ 用户请求层
++ 工具权限层
++ 已校验观察层
++ 运行预算层
+```
+
+#### Loop 与退出条件
+
+```text
+created
+→ planning
+→ call_tool
+→ permission check
+→ calling_tool
+→ observation / retry / failure
+→ planning
+→ finish
+→ validating
+→ completed
+```
+
+策略非法、越权、缺少确认、参数篡改、工具失败、超时、非法输出、提前结束和预算耗尽都会进入明确终态，不会无限循环。
+
+#### 遇到的问题
+
+| 问题 | 解决方案 | 工程启示 |
+|---|---|---|
+| Repository 执行入口首次运行出现 `NameError` | 补齐 `build_training_context` 显式导入 | Trace 需要保留可定位的异常类型 |
+| 异常正文可能包含私人数据 | Trace 只记录稳定错误代码和异常类名 | 可观测性不等于保存全部异常文本 |
+| 重试是否消耗第二次业务调用额度 | 分开统计逻辑工具调用和工具尝试 | 预算语义必须明确，否则指标无法解释 |
+| 同步数据库查询无法被线程强制终止 | Harness 停止等待并返回超时，只允许只读工具 | 超时边界与底层取消能力要分别说明 |
+
+#### 故障注入
+
+自动化测试覆盖首次瞬时失败后恢复、连续超时、非法输出、未知工具、缺少确认和步骤预算耗尽。所有失败路径都返回结构化错误，不使用不完整自然语言结果兜底。
+
+#### 阶段亮点
+
+- 不把一次函数调用包装后冒充 Agent，而是实现动作—观察循环；
+- Policy 与 Harness 解耦，未来真实 LLM 复用同一动作协议；
+- 工具只能通过白名单进入，Agent 不能直接访问 COROS；
+- Trace、错误、预算和终态均有 Schema；
+- 34 项测试可以离线验证成功和故障路径，不依赖 API Key。
+
+#### 面试表达
+
+> M4 我没有立即依赖 Agent 框架，而是先把最小状态机写清楚。Policy 只能输出 call_tool 或 finish，Harness 负责权限、确认、预算、重试、超时和输出校验；工具结果作为 Observation 回到下一轮，所有路径都有脱敏 Trace 和明确终态。默认确定性 Policy 用于建立离线基线，未来 LLM 只替换动作选择层。
+
 ## 5. Agent 工程技术目前做到哪里
 
 | Agent 工程概念 | 当前实现 | 当前结论 |
 |---|---|---|
 | MCP | RunCrew 作为客户端连接 COROS MCP | 已实践真实协议、OAuth 和工具调用 |
 | Skill | `review-running-training` | 已完成第一个可复用 Skill |
-| Context Engineering | 目标活动、同来源历史、目标时间锚定、7/28 天窗口 | 已有确定性上下文选择，但还没有 Token 压缩 |
-| Harness Engineering | 目前只有 CLI、Schema、错误隔离和验证脚本 | 尚无统一 Run、Trace、预算和权限系统 |
-| Loop Engineering | 尚未实现观察—行动—验证—修正状态机 | M4 核心任务 |
-| LLM | 尚未接入训练复盘主链 | 刻意推迟，避免规则不稳定 |
+| Context Engineering | 领域上下文 + 有界 Agent Context，只暴露请求、权限、合法观察和剩余预算 | 已有分层和裁剪，尚无 Token 级压缩 |
+| Harness Engineering | 统一 Run、权限、确认、预算、重试、两级超时、验证和 Trace | M4 最小竖切已完成 |
+| Loop Engineering | `call_tool → observation → finish` 有限状态循环和明确退出条件 | M4 最小竖切已完成 |
+| LLM | Policy 接口已预留，真实模型尚未接入 | 当前不能声称模型已经自主决策 |
 | Multi-Agent | 尚未实现 | 必须由评测证明必要性 |
-| Evaluation | 有单元测试、fixture、真实 Smoke Test 和确定性回放 | 尚无系统级历史评测集和指标看板 |
+| Evaluation | 有 34 项单元/集成测试、fixture、真实 Smoke Test、确定性回放和故障注入 | 尚无系统级历史评测集和模型指标看板 |
 
 ## 6. 贯穿项目的核心设计原则
 
@@ -384,9 +478,8 @@ Skill：选择数据、调用 Service、验证 Schema
 
 以下内容不能在面试中说成已经完成：
 
-- 没有真正调用 LLM 生成训练建议；
-- 没有 Agent 状态机和自动循环；
-- 没有统一 Trace、工具预算、重试策略和退出条件；
+- 没有真实 LLM Policy、LLM 生成说明、Token/费用预算和模型行为评测；
+- Trace 尚未持久化或做成可视化看板；
 - 没有伤病诊断、营养处方和医疗建议；
 - 没有睡眠、HRV、疼痛 Check-in 的完整数据闭环；
 - 没有训练计划数据库；
@@ -401,9 +494,9 @@ Skill：选择数据、调用 Service、验证 Schema
 
 为了防止项目再次扩大，后续必须遵守：
 
-### M4 只做一个 Review Agent Loop
+### M4 已按冻结范围完成一个 Review Agent Loop
 
-允许实现：
+已经实现：
 
 - 单 Agent；
 - 只使用 `review-running-training` 一个业务 Skill；
@@ -414,7 +507,8 @@ Skill：选择数据、调用 Service、验证 Schema
 - 故障注入；
 - 输出 Schema 验证；
 - 明确退出条件；
-- 可选的 LLM narrative。
+
+真实 LLM narrative 没有实现，因为它是可选项，不影响 Harness 和 Loop 的 M4 验收。
 
 M4 禁止顺手增加：
 
@@ -426,7 +520,17 @@ M4 禁止顺手增加：
 - 向量数据库或复杂 RAG；
 - 云部署。
 
-### M5 只有满足条件才做多 Agent
+### M5 先做单 Agent 评测和真实 LLM Policy
+
+M5 只允许增加：
+
+- 不含私人数据的历史回放评测集；
+- 完成率、非法动作率、工具调用数、重试数、延迟和模型费用指标；
+- 一个实现相同 Action Schema 的真实 LLM Policy；
+- LLM 与确定性 Policy 的对照结果；
+- 是否需要多 Agent 的书面决策门。
+
+### 只有满足条件才做多 Agent
 
 必须先有评测证据证明至少一项成立：
 
@@ -439,7 +543,6 @@ M4 禁止顺手增加：
 
 ### M6 才做演示与简历包装
 
-- 历史回放评测集；
 - Trace 展示；
 - 关键成功率和稳定性指标；
 - 最小演示界面；
@@ -450,27 +553,31 @@ M4 禁止顺手增加：
 
 ### 30 秒版本
 
-> RunCrew 是我基于真实跑步数据做的 Agent 工程项目。当前完成了 COROS MCP 接入、统一活动 Schema、SQLite 幂等同步、FIT 详情降级和第一个可回放 Training Review Skill。项目的重点不是让大模型自由生成计划，而是让每条训练结论都有 evidence、缺失数据能安全降级，并通过输入哈希和规则版本实现稳定回放。
+> RunCrew 是我基于真实跑步数据做的 Agent 工程项目。当前完成了 COROS MCP 接入、统一活动 Schema、SQLite 幂等同步、FIT 详情降级、可回放 Training Review Skill，以及具备权限、预算、重试、Trace 和退出条件的单 Agent Loop。训练指标由确定性 Service 计算，Agent 只通过白名单 Skill 获取结论，因此每条结论都有 evidence，缺失数据也不会被模型编造。
 
 ### 2 分钟版本
 
-> 我是跑步用户，所以选择了一个能长期产生真实反馈的场景。项目先通过 Spike 验证 COROS OAuth 和 MCP，再建立 Provider、Domain、Storage、Service 分层。真实环境中 COROS 详情接口不稳定，我设计了详情、分圈、FIT、summary warning 的降级链，并用 Garmin 官方 SDK 做 CRC 和消息解析。之后我没有马上接 LLM，而是先把训练完成度、负荷变化和异常判断做成确定性 Service，再用 Skill 和 JSON Schema 对外暴露。这样同一输入可以通过 input hash 和 ruleset version 回放，每个 finding 必须有 evidence，缺数据时返回 unknown 而不是编造。下一阶段才会增加单 Agent 状态机、Trace、预算、重试和输出验证。
+> 我是跑步用户，所以选择了一个能长期产生真实反馈的场景。项目先通过 Spike 验证 COROS OAuth 和 MCP，再建立 Provider、Domain、Storage、Service 分层。真实环境中 COROS 详情接口不稳定，我设计了详情、分圈、FIT、summary warning 的降级链，并用 Garmin 官方 SDK 做 CRC 和消息解析。之后我把训练完成度、负荷变化和异常判断做成确定性 Service，再通过 Skill 和 JSON Schema 暴露。M4 增加单 Agent Loop：Policy 只能输出 call_tool 或 finish，Harness 统一做工具白名单、确认、步骤和调用预算、有限重试、两级超时、输出校验和脱敏 Trace。默认确定性 Policy 用来建立可离线回归的基线，真实 LLM 以后只替换动作选择层，不修改领域结论。
 
 ### 最值得讲的三个难点
 
 1. **外部服务不稳定**：设计部分成功和多级降级，而不是吞错或伪造详情；
 2. **Agent 输出可信度**：把计算放在确定性 Service，Skill 只编排和验证；
-3. **回放与审计**：原始/规范化双层存储、evidence、input hash、规则版本和真实 Smoke Test。
+3. **受控 Agent 运行**：用有界 Context、动作 Schema、白名单、预算、故障注入和 Trace 防止越权与无限循环。
 
 ### 面试官可能追问
 
 #### 为什么不用 LangChain/LangGraph？
 
-当前 M0-M3 的核心风险在数据可靠性和领域契约，不在框架编排。先用清晰的 Python 分层和 Schema 建立可测试基线，M4 状态机需求稳定后再决定是否引入框架。
+当前只有一个 Agent、一个工具和两类动作，显式 Python 状态机更容易看清权限、预算和终止语义，也更适合故障注入。若后续评测出现持久化状态、并行分支或人工审批图明显复杂化，再用数据决定是否引入 LangGraph。
 
 #### 为什么现在还没有 LLM？
 
 因为如果基础指标都交给 LLM，无法判断模型错误还是数据错误。当前先建立确定性 ground truth，后续 LLM 只负责解释，这也为评测提供标准答案。
+
+#### 确定性 Policy 还能算 Agent 吗？
+
+当前已经有有界上下文、动作选择、工具观察、再次决策、输出验证和终止条件，因此是一个最小 Agent Loop；但 Policy 不是大模型，不能声称“LLM 已经自主规划”。它的价值是先把 Harness 建成可测试基线，之后接入 LLM 时能够区分模型问题和运行时问题。
 
 #### 为什么不用多个 Agent？
 
@@ -482,7 +589,7 @@ M4 禁止顺手增加：
 
 #### 项目目前最大的不足是什么？
 
-真实历史数据仍少、COROS 训练负荷未映射、训练计划未持久化，并且 M4 Harness/Loop 尚未实现。因此现在应描述为“数据与 Skill 基座完成”，不能描述为完整训练 Agent 产品。
+真实历史数据仍少、COROS 训练负荷未映射、训练计划未持久化，真实 LLM Policy 和系统级评测集也尚未实现。因此现在可以描述为“数据、Skill 和单 Agent Harness 已完成”，但不能描述为已经上线的智能训练产品或多 Agent 系统。
 
 ## 10. 代码与文档导航
 
@@ -499,22 +606,23 @@ M4 禁止顺手增加：
 | Training Review Skill | `skills/review-running-training/SKILL.md` |
 | Activity Domain | `src/runcrew/domain/activity.py` |
 | Training Review Domain | `src/runcrew/domain/training_review.py` |
+| Agent Run Domain | `src/runcrew/domain/agent.py` |
 | Context Builder | `src/runcrew/services/training_context.py` |
 | 训练复盘规则 | `src/runcrew/services/training_review.py` |
+| 单 Agent Harness 与 Loop | `src/runcrew/harness/review_agent.py` |
 | 统一验证入口 | `scripts/verify.py` |
 
 ## 11. 当前下一步
 
-唯一下一任务是 M4 的最小单 Agent Loop：
+唯一下一任务是建立单 Agent 历史回放评测基线：
 
 ```text
-接收复盘请求
-→ 构建受控上下文
-→ 调用 review-running-training Skill
-→ 验证输出
-→ 可选生成 narrative
-→ 记录 Trace
-→ 成功、降级或失败退出
+构造不含私人数据的代表性 Run 用例
+→ 回放成功、缺数据、瞬时错误、越权和超时场景
+→ 统计完成率、非法动作率、工具调用数、重试数和延迟
+→ 接入一个真实 LLM Policy
+→ 与确定性 Policy 基线比较
+→ 用评测证据决定是否需要多 Agent
 ```
 
-在 M4 完成以前，不扩展新业务 Agent。
+在评测证明单 Agent 存在职责冲突以前，不扩展新业务 Agent。

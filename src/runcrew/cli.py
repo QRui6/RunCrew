@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import timedelta
 from pathlib import Path
 from typing import Annotated
 
@@ -10,11 +9,12 @@ from sqlalchemy import func, select
 
 from runcrew.providers.fixture import FixtureActivityProvider
 from runcrew.providers.coros import CorosActivityProvider
+from runcrew.domain.agent import ReviewAgentRunRequest
 from runcrew.domain.training_review import PlannedSession, TrainingReviewRequest
+from runcrew.harness import ReviewAgentHarness
 from runcrew.services.activity_review import build_activity_review
 from runcrew.services.sync import sync_activities
-from runcrew.services.training_context import build_training_context
-from runcrew.services.training_review import build_training_review
+from runcrew.services.training_review import execute_training_review
 from runcrew.storage.database import Database
 from runcrew.storage.models import ActivityRecord, RawProviderEvent, SyncRunRecord
 from runcrew.storage.repositories import ActivityRepository
@@ -27,8 +27,10 @@ app = typer.Typer(
 )
 activities_app = typer.Typer(help="Inspect and review normalized activities.")
 training_app = typer.Typer(help="Run replayable training review skills.")
+agent_app = typer.Typer(help="运行带 Trace、预算和退出条件的单 Agent。")
 app.add_typer(activities_app, name="activities")
 app.add_typer(training_app, name="training")
+app.add_typer(agent_app, name="agent")
 
 
 def database_url(database_path: Path) -> str:
@@ -257,11 +259,6 @@ def review_training(
         )
         if target is None:
             raise typer.BadParameter("Activity not found.")
-        history = repository.between(
-            target.started_at - timedelta(days=lookback_days),
-            target.started_at,
-            provider=provider_name or target.source_ref.provider.value,
-        )
 
     plan = None
     if planned_distance_km is not None or planned_duration_minutes is not None:
@@ -278,9 +275,106 @@ def review_training(
         lookback_days=lookback_days,
         planned_session=plan,
     )
-    context = build_training_context(request, target=target, activities=history)
-    result = build_training_review(context)
+    with database.session() as session:
+        result = execute_training_review(
+            request,
+            store=ActivityRepository(session),
+        )
     typer.echo(result.model_dump_json(indent=2))
+
+
+@agent_app.command("review")
+def run_review_agent(
+    latest: Annotated[
+        bool, typer.Option("--latest", help="复盘最新一条活动。")
+    ] = False,
+    external_id: Annotated[
+        str | None, typer.Option("--external-id", help="Provider 活动 ID。")
+    ] = None,
+    provider_name: Annotated[
+        str | None, typer.Option("--provider", help="按 Provider 过滤。")
+    ] = None,
+    lookback_days: Annotated[
+        int, typer.Option(min=14, max=90, help="回放使用的历史窗口天数。")
+    ] = 28,
+    planned_distance_km: Annotated[
+        float | None,
+        typer.Option(min=0.01, help="可选计划距离，单位为公里。"),
+    ] = None,
+    planned_duration_minutes: Annotated[
+        float | None,
+        typer.Option(min=0.01, help="可选计划时长，单位为分钟。"),
+    ] = None,
+    max_steps: Annotated[
+        int, typer.Option(min=1, max=12, help="Agent 最大策略步骤数。")
+    ] = 4,
+    tool_call_budget: Annotated[
+        int, typer.Option(min=0, max=3, help="业务工具逻辑调用预算。")
+    ] = 1,
+    max_retries: Annotated[
+        int, typer.Option(min=0, max=3, help="工具超时或瞬时错误重试次数。")
+    ] = 1,
+    tool_timeout_seconds: Annotated[
+        float, typer.Option(min=0.01, max=60, help="单次工具尝试超时秒数。")
+    ] = 5.0,
+    run_timeout_seconds: Annotated[
+        float, typer.Option(min=0.01, max=120, help="整个 Agent Run 超时秒数。")
+    ] = 15.0,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    if not latest and external_id is None:
+        raise typer.BadParameter("Pass --latest or --external-id.")
+    database = open_database(database_path)
+    with database.session() as session:
+        repository = ActivityRepository(session)
+        target = (
+            repository.latest(provider=provider_name)
+            if latest
+            else repository.get_by_external_id(
+                provider_name or "fixture", external_id or ""
+            )
+        )
+    if target is None:
+        raise typer.BadParameter("Activity not found.")
+
+    plan = None
+    if planned_distance_km is not None or planned_duration_minutes is not None:
+        plan = PlannedSession(
+            distance_meters=planned_distance_km * 1000
+            if planned_distance_km is not None
+            else None,
+            duration_seconds=round(planned_duration_minutes * 60)
+            if planned_duration_minutes is not None
+            else None,
+        )
+    review_request = TrainingReviewRequest(
+        target_activity_id=target.id,
+        lookback_days=lookback_days,
+        planned_session=plan,
+    )
+    run_request = ReviewAgentRunRequest(
+        review_request=review_request,
+        max_steps=max_steps,
+        tool_call_budget=tool_call_budget,
+        max_retries=max_retries,
+        tool_timeout_seconds=tool_timeout_seconds,
+        run_timeout_seconds=run_timeout_seconds,
+    )
+
+    async def review_tool(request: TrainingReviewRequest):
+        def execute():
+            with database.session() as session:
+                return execute_training_review(
+                    request,
+                    store=ActivityRepository(session),
+                )
+
+        return await asyncio.to_thread(execute)
+
+    result = asyncio.run(ReviewAgentHarness().run(run_request, tool=review_tool))
+    typer.echo(result.model_dump_json(indent=2))
+    if result.status != "succeeded":
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":
