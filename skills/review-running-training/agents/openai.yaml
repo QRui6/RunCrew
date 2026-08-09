@@ -1,0 +1,4 @@
+interface:
+  display_name: "Training Review"
+  short_description: "Review running training with replayable evidence"
+  default_prompt: "Use $review-running-training to review my latest run and recent training history with evidence."

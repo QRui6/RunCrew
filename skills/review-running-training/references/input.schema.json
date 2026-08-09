@@ -1,0 +1,68 @@
+{
+  "$defs": {
+    "PlannedSession": {
+      "additionalProperties": false,
+      "properties": {
+        "distance_meters": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distance Meters"
+        },
+        "duration_seconds": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Seconds"
+        }
+      },
+      "title": "PlannedSession",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "target_activity_id": {
+      "minLength": 1,
+      "title": "Target Activity Id",
+      "type": "string"
+    },
+    "lookback_days": {
+      "default": 28,
+      "maximum": 90,
+      "minimum": 14,
+      "title": "Lookback Days",
+      "type": "integer"
+    },
+    "planned_session": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PlannedSession"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "target_activity_id"
+  ],
+  "title": "TrainingReviewRequest",
+  "type": "object"
+}

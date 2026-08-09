@@ -19,6 +19,11 @@ REQUIRED_FILES = [
     "docs/ARCHITECTURE.md",
     "docs/ROADMAP.md",
     "docs/PROGRESS.md",
+    "docs/progress/2026-08-09-m3-training-review-skill.md",
+    "skills/review-running-training/SKILL.md",
+    "skills/review-running-training/agents/openai.yaml",
+    "skills/review-running-training/references/input.schema.json",
+    "skills/review-running-training/references/output.schema.json",
 ]
 
 
@@ -48,4 +53,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

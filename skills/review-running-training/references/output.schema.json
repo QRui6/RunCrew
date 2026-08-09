@@ -1,0 +1,254 @@
+{
+  "$defs": {
+    "ActivityReview": {
+      "additionalProperties": false,
+      "properties": {
+        "activity_id": {
+          "title": "Activity Id",
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": true,
+          "title": "Summary",
+          "type": "object"
+        },
+        "observations": {
+          "items": {
+            "$ref": "#/$defs/ReviewObservation"
+          },
+          "title": "Observations",
+          "type": "array"
+        },
+        "data_quality": {
+          "$ref": "#/$defs/DataQuality"
+        }
+      },
+      "required": [
+        "activity_id",
+        "summary",
+        "observations",
+        "data_quality"
+      ],
+      "title": "ActivityReview",
+      "type": "object"
+    },
+    "DataQuality": {
+      "additionalProperties": false,
+      "properties": {
+        "missing_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Fields",
+          "type": "array"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        }
+      },
+      "required": [
+        "confidence"
+      ],
+      "title": "DataQuality",
+      "type": "object"
+    },
+    "ReviewObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "level": {
+          "enum": [
+            "good",
+            "normal",
+            "attention",
+            "unknown"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "evidence": {
+          "additionalProperties": true,
+          "title": "Evidence",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "level",
+        "message"
+      ],
+      "title": "ReviewObservation",
+      "type": "object"
+    },
+    "TrainingFinding": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "training_completion",
+            "load_change",
+            "training_anomaly"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "level": {
+          "enum": [
+            "good",
+            "normal",
+            "attention",
+            "unknown"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "evidence": {
+          "additionalProperties": true,
+          "title": "Evidence",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "level",
+        "message",
+        "evidence"
+      ],
+      "title": "TrainingFinding",
+      "type": "object"
+    },
+    "TrainingWindowMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "format": "date-time",
+          "title": "Start",
+          "type": "string"
+        },
+        "end": {
+          "format": "date-time",
+          "title": "End",
+          "type": "string"
+        },
+        "activity_count": {
+          "minimum": 0,
+          "title": "Activity Count",
+          "type": "integer"
+        },
+        "distance_meters": {
+          "minimum": 0,
+          "title": "Distance Meters",
+          "type": "number"
+        },
+        "duration_seconds": {
+          "minimum": 0,
+          "title": "Duration Seconds",
+          "type": "integer"
+        },
+        "training_load_total": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Training Load Total"
+        },
+        "training_load_coverage": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Training Load Coverage",
+          "type": "number"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "activity_count",
+        "distance_meters",
+        "duration_seconds",
+        "training_load_coverage"
+      ],
+      "title": "TrainingWindowMetrics",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "ruleset_version": {
+      "const": "training-review-rules/1.0",
+      "default": "training-review-rules/1.0",
+      "title": "Ruleset Version",
+      "type": "string"
+    },
+    "input_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Input Hash",
+      "type": "string"
+    },
+    "target_activity_id": {
+      "title": "Target Activity Id",
+      "type": "string"
+    },
+    "activity_review": {
+      "$ref": "#/$defs/ActivityReview"
+    },
+    "current_7d": {
+      "$ref": "#/$defs/TrainingWindowMetrics"
+    },
+    "previous_7d": {
+      "$ref": "#/$defs/TrainingWindowMetrics"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/TrainingFinding"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "title": "Findings",
+      "type": "array"
+    },
+    "data_quality": {
+      "$ref": "#/$defs/DataQuality"
+    }
+  },
+  "required": [
+    "input_hash",
+    "target_activity_id",
+    "activity_review",
+    "current_7d",
+    "previous_7d",
+    "findings",
+    "data_quality"
+  ],
+  "title": "TrainingReviewResult",
+  "type": "object"
+}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import timedelta
 from pathlib import Path
 from typing import Annotated
 
@@ -9,8 +10,11 @@ from sqlalchemy import func, select
 
 from runcrew.providers.fixture import FixtureActivityProvider
 from runcrew.providers.coros import CorosActivityProvider
+from runcrew.domain.training_review import PlannedSession, TrainingReviewRequest
 from runcrew.services.activity_review import build_activity_review
 from runcrew.services.sync import sync_activities
+from runcrew.services.training_context import build_training_context
+from runcrew.services.training_review import build_training_review
 from runcrew.storage.database import Database
 from runcrew.storage.models import ActivityRecord, RawProviderEvent, SyncRunRecord
 from runcrew.storage.repositories import ActivityRepository
@@ -22,7 +26,9 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 activities_app = typer.Typer(help="Inspect and review normalized activities.")
+training_app = typer.Typer(help="Run replayable training review skills.")
 app.add_typer(activities_app, name="activities")
+app.add_typer(training_app, name="training")
 
 
 def database_url(database_path: Path) -> str:
@@ -211,6 +217,70 @@ def review_activity(
     if activity is None:
         raise typer.BadParameter("Activity not found.")
     typer.echo(build_activity_review(activity).model_dump_json(indent=2))
+
+
+@training_app.command("review")
+def review_training(
+    latest: Annotated[
+        bool, typer.Option("--latest", help="Review the latest stored activity.")
+    ] = False,
+    external_id: Annotated[
+        str | None, typer.Option("--external-id", help="Provider activity ID.")
+    ] = None,
+    provider_name: Annotated[
+        str | None, typer.Option("--provider", help="Filter by provider.")
+    ] = None,
+    lookback_days: Annotated[
+        int, typer.Option(min=14, max=90, help="History window for replay context.")
+    ] = 28,
+    planned_distance_km: Annotated[
+        float | None,
+        typer.Option(min=0.01, help="Optional planned distance in kilometers."),
+    ] = None,
+    planned_duration_minutes: Annotated[
+        float | None,
+        typer.Option(min=0.01, help="Optional planned duration in minutes."),
+    ] = None,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    if not latest and external_id is None:
+        raise typer.BadParameter("Pass --latest or --external-id.")
+    database = open_database(database_path)
+    with database.session() as session:
+        repository = ActivityRepository(session)
+        target = (
+            repository.latest(provider=provider_name)
+            if latest
+            else repository.get_by_external_id(
+                provider_name or "fixture", external_id or ""
+            )
+        )
+        if target is None:
+            raise typer.BadParameter("Activity not found.")
+        history = repository.between(
+            target.started_at - timedelta(days=lookback_days),
+            target.started_at,
+            provider=provider_name or target.source_ref.provider.value,
+        )
+
+    plan = None
+    if planned_distance_km is not None or planned_duration_minutes is not None:
+        plan = PlannedSession(
+            distance_meters=planned_distance_km * 1000
+            if planned_distance_km is not None
+            else None,
+            duration_seconds=round(planned_duration_minutes * 60)
+            if planned_duration_minutes is not None
+            else None,
+        )
+    request = TrainingReviewRequest(
+        target_activity_id=target.id,
+        lookback_days=lookback_days,
+        planned_session=plan,
+    )
+    context = build_training_context(request, target=target, activities=history)
+    result = build_training_review(context)
+    typer.echo(result.model_dump_json(indent=2))
 
 
 if __name__ == "__main__":

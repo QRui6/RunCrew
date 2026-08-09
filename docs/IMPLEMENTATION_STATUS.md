@@ -1,24 +1,22 @@
 # RunCrew 实施状态
 
-> 这是 2026-08-08 数据竖切阶段的详细快照。最新进度以 [CURRENT_STATE.md](CURRENT_STATE.md) 为准，阶段历史以 [PROGRESS.md](PROGRESS.md) 为准。
+> 这是 M0-M3 的详细实施快照。最新进度以 [CURRENT_STATE.md](CURRENT_STATE.md) 为准，阶段历史以 [PROGRESS.md](PROGRESS.md) 为准。
 
-> 更新时间：2026-08-08
+> 更新时间：2026-08-09
 
-## 当前里程碑：真实数据竖切
+## 当前里程碑：Training Review Skill
 
-状态：**已完成并通过真实 COROS 账户验收。**
+状态：**已完成并通过 fixture 与真实 COROS 本地回放验收。**
 
 已经形成以下闭环：
 
 ```text
-COROS OAuth + PKCE
-  → MCP initialize
-  → querySportRecords
-  → 官方格式化文本解析
-  → ActivitySummary Schema 校验
-  → 原始事件 + 规范化活动分层保存
-  → SQLite 幂等 upsert
-  → 确定性活动复盘 JSON
+规范化目标活动 + 最近历史 + 可选计划
+  → Training Context Builder
+  → input_hash + 7/28 天窗口
+  → completion / load change / anomaly
+  → TrainingReviewResult Schema
+  → review-running-training Skill
 ```
 
 ## 已实现模块
@@ -35,14 +33,17 @@ COROS OAuth + PKCE
 | SQLite 存储 | `src/runcrew/storage` | activities、raw events、sync runs |
 | 同步服务 | `src/runcrew/services/sync.py` | 幂等、部分成功、warning 隔离 |
 | 活动复盘 | `src/runcrew/services/activity_review.py` | 无 LLM、证据驱动的确定性分析 |
-| CLI | `src/runcrew/cli.py` | init-db、status、sync、list、review |
+| Training Context | `src/runcrew/services/training_context.py` | 历史窗口、聚合和回放哈希 |
+| Training Review | `src/runcrew/services/training_review.py` | 完成度、负荷变化和异常 finding |
+| Training Skill | `skills/review-running-training` | Agent 工作流、Schema 和证据边界 |
+| CLI | `src/runcrew/cli.py` | init-db、status、sync、activity review、training review |
 
 ## 实际验收结果
 
 ### 自动化测试
 
 ```text
-19 passed
+24 passed
 ```
 
 覆盖：
@@ -57,6 +58,9 @@ COROS OAuth + PKCE
 - 合成 FIT 编解码、CRC 和 Domain 映射；
 - FIT 下载缓存、大小限制和过期链接；
 - COROS 详情/分圈失败后的 FIT 降级编排。
+- Training Review 输入输出 Schema 与 JSON Schema 漂移检查；
+- 时间锚定回放、缺失数据降级、负荷变化和异常规则；
+- Training Review CLI。
 
 ### CLI 离线验收
 
@@ -70,11 +74,10 @@ COROS OAuth + PKCE
 ### 真实 COROS 验收
 
 ```text
-fetched=1, inserted=1, detailed=0, detail_errors=1
-status=completed_with_warnings
+fetched=1, inserted=0, updated=1, detailed=1, detail_errors=0
 ```
 
-真实活动已进入数据库，并成功生成 summary 级确定性复盘。具体活动数值只保存在本地数据库，不写入此文档。
+真实活动已通过手动 FIT 私有缓存生成 detail，并成功通过 Training Review Skill 本地回放。具体活动数值只保存在本地数据库，不写入此文档。
 
 ## 当前已知限制
 
@@ -87,7 +90,7 @@ status=completed_with_warnings
 - 降级调用 `queryActivityLapData` 返回相同异常提示。
 - `queryActivityFitFileDownloadUrls` 参数符合实时 schema，但工具返回 `isError=true`。
 
-RunCrew 当前行为：
+没有私有 FIT 缓存时的 RunCrew 行为：
 
 1. 活动列表先独立提交；
 2. 详情错误计入 `detail_errors`；
@@ -127,6 +130,19 @@ getActivityDetail
 
 COROS 自动 URL 工具未返回下载地址，因此用户从官方 App 手动导出同一条活动的 FIT 并放入私有缓存。真实同步得到 `detailed=1, detail_errors=0`，复盘成功产生基于多分圈的 evidence。自动 URL 获取保留为外部服务已知限制。
 
+## 已完成里程碑：Training Review Skill
+
+已经实现：
+
+1. `TrainingReviewRequest` 和 `TrainingReviewResult` Pydantic Schema；
+2. 以目标活动时间为锚点的历史上下文；
+3. `input_hash + ruleset_version` 回放身份；
+4. 训练完成度、七天负荷变化和训练异常三类 finding；
+5. 每条 finding 的强制 evidence；
+6. 缺少计划、负荷或配速基线时的 `unknown + requires`；
+7. 项目 Skill、JSON Schema、CLI 和 5 项专项测试；
+8. 规则计算与未来 LLM narrative 的职责隔离。
+
 ## 常用命令
 
 ```powershell
@@ -144,6 +160,9 @@ COROS 自动 URL 工具未返回下载地址，因此用户从官方 App 手动�
 
 # 查看 COROS 最新活动的确定性复盘
 .\.venv\Scripts\runcrew.exe activities review --latest --provider coros
+
+# 运行 Training Review Skill
+.\.venv\Scripts\runcrew.exe training review --latest --provider coros
 ```
 
 ## 安全约束
