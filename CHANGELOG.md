@@ -12,6 +12,7 @@
 - 增加受显式付费确认与估算费用上限保护的单条合成 DeepSeek Smoke 命令；
 - 增加带价格版本的费用估算和 Policy 费用停止门；
 - 增加 9 项 DeepSeek Mock 契约、安全、脱敏、费用门和 Smoke CLI 测试；
+- DeepSeek 第二轮改用标准 `assistant(tool_calls) → tool(tool_call_id, result)` 消息链，避免只传 Observation JSON 导致模型重复调用工具；
 - 增加 M5-B DeepSeek 模型选型与接入方案，明确模型、模式、数据边界、Harness 校验、失败处理和验收标准；
 - 增加 `review-agent-eval/1.0` 版本化离线评测套件，包含 12 个任务、韧性、护栏和预算场景；
 - 增加 Evaluation Case、Suite、Metrics 和 Report Schema，以及 Schema 导出脚本；
@@ -33,6 +34,8 @@
 
 ### Verified
 
+- 第一次真实 DeepSeek 合成 Smoke 成功完成鉴权和首轮 Tool Call；第二轮重复调用被 Harness 在执行前拦截，实际工具执行数为 1；
+- 首次真实 Smoke 记录 2 次模型请求、2369 Token、0 个动作解析错误和 0.00036106 美元估算费用；
 - M3 PR #2 与 M4 PR #3 已依次合并到 `main`；
 - M5-A 离线基线 12/12 场景通过，正确性指标均为 100%，越权后工具执行数为 0；
 - 全部自动化测试增至 48 项；
@@ -45,7 +48,7 @@
 
 ### Known Issues
 
-- DeepSeek 适配器和 Mock 契约已完成，但尚未配置 Key、发起真实请求或得到模型评测结果；
+- DeepSeek 首次真实合成 Smoke 未完成最终 Loop；标准多轮 Tool Calls 消息修复尚待真实复验；
 - 当前正式基线仍使用确定性 Policy；费用估算和真实模型对照尚未实现；
 - Agent Trace 尚未持久化；
 - COROS 训练负荷尚未进入规范化活动；

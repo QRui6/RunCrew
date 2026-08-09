@@ -5,7 +5,7 @@
 
 ## 当前里程碑
 
-**M5-A 已完成；M5-B1 DeepSeek Policy 适配器与 Mock 契约已完成；M5-B2 真实合成 Smoke 待开始。**
+**M5-A 与 M5-B1 已完成；M5-B2 第一次真实合成 Smoke 已执行，兼容修复待复验。**
 
 M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
@@ -70,6 +70,10 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - `runcrew eval deepseek-smoke` 已实现，只运行 `complete_training_review` 合成用例，并在读取 Key 前强制要求 `--confirm-paid-api` 与 `--max-estimated-cost-usd`；
 - 费用按 `deepseek-pricing/2026-08-09` 估算并写入 Trace/报告，超过 Policy 上限时停止后续动作；该上限是本地后验停止门，不是供应商账单硬上限；
 - 9 项 DeepSeek Mock/安全/费用门/Smoke CLI 测试已加入，全量 48 项测试通过。
+- 真实 `deepseek-v4-flash` 非思考请求已连通，首次 Tool Call 参数通过 Action Schema 和 Harness 校验；
+- 第一次真实 Smoke 共 2 次模型请求、2369 Token、估算 0.00036106 美元，动作解析错误为 0；
+- 第二轮模型重复请求工具，Harness 在执行前以工具预算拦截，底层工具实际只执行 1 次；
+- 已把第二轮上下文修正为标准 `assistant(tool_calls) → tool(tool_call_id, result)` 消息链，Mock 回归与全量 48 项测试通过。
 
 ## 当前已知限制
 
@@ -80,9 +84,10 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 当前 COROS 规范化活动没有训练负荷字段，因此真实 `load_change` 暂时可能为 `unknown`；
 - 训练计划尚未持久化，只能通过 CLI 显式传入距离/时长目标；
 - 当前正式基线仍使用确定性 Policy 和脚本化故障；DeepSeek 只有 Mock 结果，尚无真实模型质量结论；
-- DeepSeek 适配器已实现，但尚未配置 API Key、发起付费请求或产生真实 Token/延迟/费用结果；
+- DeepSeek 适配器已经产生首份真实 Token、延迟和费用报告，但终态失败，尚无成功模型基线；
 - 评测已经支持 Token、动作解析和带版本单价的费用估算，但完整 12 场景模型对照尚未实现；
 - 本地费用门只能在收到真实 usage 后停止后续动作，不能阻止第一笔请求，也不能替代 DeepSeek 账户侧余额控制；
+- 第一次真实 Smoke 未达到 `succeeded`，当前不能声称 DeepSeek 真实 Agent Loop 已验收；标准多轮消息修复尚需同用例复验；
 - Trace 当前随 CLI JSON 返回，尚未持久化；
 - 工具超时会停止 Harness 等待，但已经在线程中开始的同步只读查询不能被强制终止；
 - 真实数据库历史活动数量仍少，跨周负荷回放主要由合成 fixture 验证。
@@ -98,7 +103,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 **M5-B：接入一个真实 LLM Policy，并与当前离线基线比较。**
 
-模型、Mock 适配器、费用门和单用例 Smoke 命令已经完成。具体起点：由用户在本机配置 API Key，明确同意付费外部调用和费用上限后执行一次 `runcrew eval deepseek-smoke`。成功后再在相同 12 个场景上记录动作解析、完成率、Token、费用和延迟。没有对照结果前不拆分多 Agent。
+使用修复后的标准 Tool Calls 多轮消息，在同一个 `complete_training_review` 合成用例上重新执行 `runcrew eval deepseek-smoke`。只有得到 `succeeded / completed` 后，才扩展到 12 场景模型对照；没有对照结果前不拆分多 Agent。
 
 详细边界见 [M5-B：DeepSeek 模型选型与接入方案](M5-B-DeepSeek模型选型与接入方案.md)。
 

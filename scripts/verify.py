@@ -29,6 +29,7 @@ REQUIRED_FILES = [
     "docs/progress/2026-08-09-m4-review-agent-loop.md",
     "docs/progress/2026-08-09-m5-agent-evaluation-baseline.md",
     "docs/progress/2026-08-09-m5b-deepseek-policy-adapter.md",
+    "docs/progress/2026-08-09-m5b2-first-live-smoke.md",
     "evals/review_agent/cases.json",
     "evals/review_agent/cases.schema.json",
     "evals/review_agent/report.schema.json",

@@ -23,6 +23,7 @@ from runcrew.domain.agent import (
     AgentAction,
     FinishAction,
     ReviewAgentContext,
+    ToolCallAction,
 )
 from runcrew.domain.evaluation import PolicyEvaluationUsage
 from runcrew.domain.training_review import TrainingReviewRequest
@@ -338,8 +339,15 @@ class DeepSeekReviewPolicy:
         self._transport = transport or HttpxDeepSeekTransport(config)
         self.telemetry: list[DeepSeekPolicyTelemetry] = []
         self._pending_trace_details: dict[str, Any] = {}
+        self._initial_user_message: str | None = None
+        self._assistant_tool_call_message: dict[str, Any] | None = None
 
     async def next_action(self, context: ReviewAgentContext) -> AgentAction:
+        if context.step == 0:
+            self.telemetry.clear()
+            self._pending_trace_details = {}
+            self._assistant_tool_call_message = None
+            self._initial_user_message = self._context_message(context)
         payload = self._build_payload(context)
         started = time.perf_counter()
         usage = _UsageAccumulator()
@@ -356,7 +364,7 @@ class DeepSeekReviewPolicy:
                 response_model = response.model
                 usage.add(response.usage)
                 finish_reason = response.choices[0].finish_reason
-                action = self._parse_action(response)
+                action, selected_tool_call = self._parse_action(response)
             except DeepSeekTransportError as error:
                 last_error = error
                 if error.retryable and attempts <= self.config.max_api_retries:
@@ -398,6 +406,12 @@ class DeepSeekReviewPolicy:
                     action_type=action.type,
                     outcome="succeeded",
                 )
+                if isinstance(action, ToolCallAction) and selected_tool_call is not None:
+                    self._assistant_tool_call_message = {
+                        "role": "assistant",
+                        "content": response.choices[0].message.content,
+                        "tool_calls": [selected_tool_call.model_dump(mode="json")],
+                    }
                 self._pending_trace_details = telemetry.to_trace_details()
                 return action
 
@@ -447,21 +461,48 @@ class DeepSeekReviewPolicy:
         )
 
     def _build_payload(self, context: ReviewAgentContext) -> dict[str, Any]:
-        context_json = json.dumps(
-            context.model_dump(mode="json"),
-            ensure_ascii=False,
-            sort_keys=True,
-            separators=(",", ":"),
-        )
+        initial_user_message = self._initial_user_message or self._context_message(context)
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": _SYSTEM_INSTRUCTION},
+            {"role": "user", "content": initial_user_message},
+        ]
+        tool_choice = "auto"
+        if context.observation is not None:
+            if self._assistant_tool_call_message is not None:
+                tool_call_id = self._assistant_tool_call_message["tool_calls"][0]["id"]
+                tool_result = {
+                    "observation": context.observation.model_dump(mode="json"),
+                    "remaining_steps": context.remaining_steps,
+                    "remaining_tool_calls": context.remaining_tool_calls,
+                }
+                messages.extend(
+                    [
+                        self._assistant_tool_call_message,
+                        {
+                            "role": "tool",
+                            "tool_call_id": tool_call_id,
+                            "content": json.dumps(
+                                tool_result,
+                                ensure_ascii=False,
+                                sort_keys=True,
+                                separators=(",", ":"),
+                            ),
+                        },
+                    ]
+                )
+            else:
+                # 防御性降级：如果 Policy 从一个已有 Observation 的上下文启动，
+                # 不允许在缺少对应 Tool Call 的情况下再次调用工具。
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": "训练复盘 Observation 已存在，请结束本次运行。",
+                    }
+                )
+                tool_choice = "none"
         return {
             "model": self.config.model,
-            "messages": [
-                {"role": "system", "content": _SYSTEM_INSTRUCTION},
-                {
-                    "role": "user",
-                    "content": "以下是唯一允许使用的上下文 JSON：\n" + context_json,
-                },
-            ],
+            "messages": messages,
             "tools": [
                 {
                     "type": "function",
@@ -473,14 +514,26 @@ class DeepSeekReviewPolicy:
                     },
                 }
             ],
-            "tool_choice": "auto",
+            "tool_choice": tool_choice,
             "thinking": {"type": "disabled"},
             "max_tokens": self.config.max_output_tokens,
             "stream": False,
         }
 
     @staticmethod
-    def _parse_action(response: _ChatCompletion) -> AgentAction:
+    def _context_message(context: ReviewAgentContext) -> str:
+        context_json = json.dumps(
+            context.model_dump(mode="json"),
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        return "以下是唯一允许使用的上下文 JSON：\n" + context_json
+
+    @staticmethod
+    def _parse_action(
+        response: _ChatCompletion,
+    ) -> tuple[AgentAction, _ToolCall | None]:
         choice = response.choices[0]
         if choice.finish_reason == "insufficient_system_resource":
             raise _RetryableResponseError("DeepSeek 推理资源暂时不足")
@@ -498,17 +551,20 @@ class DeepSeekReviewPolicy:
                 arguments = json.loads(tool_call.function.arguments)
             except json.JSONDecodeError as error:
                 raise _RetryableResponseError("工具参数不是合法 JSON") from error
-            return AGENT_ACTION_ADAPTER.validate_python(
-                {
-                    "type": "call_tool",
-                    "tool_name": tool_call.function.name,
-                    "arguments": arguments,
-                }
+            return (
+                AGENT_ACTION_ADAPTER.validate_python(
+                    {
+                        "type": "call_tool",
+                        "tool_name": tool_call.function.name,
+                        "arguments": arguments,
+                    }
+                ),
+                tool_call,
             )
 
         if choice.finish_reason == "tool_calls":
             raise _RetryableResponseError("响应声明工具调用但没有 Tool Call")
-        return FinishAction()
+        return FinishAction(), None
 
     def _record_telemetry(
         self,

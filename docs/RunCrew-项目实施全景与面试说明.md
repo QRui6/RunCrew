@@ -528,6 +528,40 @@ Policy Token/解析/耗时：进入 Trace 和 Evaluation Report 1.1
 
 > M5-B1 我让 DeepSeek 只替换 Policy，没有改 Harness。模型用普通 Tool Calls 表达动作，参数仍由 Pydantic、白名单、确认门和一致性校验兜底；API 重试与业务工具重试分开统计。为了保护隐私，Trace 只接收 Token、耗时和解析状态等白名单元数据。当前先用官方格式 Mock 验证了完整 Loop，下一步才做单条合成数据的真实调用。
 
+### M5-B2：第一次真实合成 Smoke 与兼容修复
+
+第一次真实请求成功完成鉴权、非思考模型调用和首轮 Tool Call，动作参数没有解析错误。工具返回 Observation 后，第二轮模型再次请求相同工具，最终被 Harness 的工具预算拦截：
+
+```text
+policy_calls=2
+api_attempts=2
+action_parse_errors=0
+total_tokens=2369
+estimated_cost_usd=0.00036106
+tool_attempts_used=1
+terminal=budget_exhausted / step_budget_exhausted
+```
+
+根因不是 DeepSeek 接口失败，而是第一版把 Observation 放进一个新的 Context JSON，却没有按标准 Tool Calls 对话回传上一轮 assistant Tool Call 和对应 Tool Result。模型没有获得明确的工具完成语义。
+
+修复后第二轮消息改为：
+
+```text
+system
+→ user(initial bounded context)
+→ assistant(tool_calls=[...])
+→ tool(tool_call_id=..., validated observation)
+```
+
+Mock 回归会检查消息角色顺序、`tool_call_id`、Observation 和剩余预算。真实同用例复验尚未完成，所以当前仍不能声称真实 LLM Loop 已通过。
+
+#### 这次失败的工程价值
+
+- 证明格式正确的 Mock 不等于真实模型理解了多轮语义；
+- Harness 在模型重复动作时将第二次工具执行数保持为 0；
+- Token、费用、动作解析和工具执行指标能够区分模型行为问题与接口问题；
+- 失败没有被吞掉或伪装成成功结果。
+
 ## 5. Agent 工程技术目前做到哪里
 
 | Agent 工程概念 | 当前实现 | 当前结论 |
@@ -537,9 +571,9 @@ Policy Token/解析/耗时：进入 Trace 和 Evaluation Report 1.1
 | Context Engineering | 领域上下文 + 有界 Agent Context，只暴露请求、权限、合法观察和剩余预算 | 已有分层和裁剪，尚无 Token 级压缩 |
 | Harness Engineering | 统一 Run、权限、确认、预算、重试、两级超时、验证和 Trace | M4 最小竖切已完成 |
 | Loop Engineering | `call_tool → observation → finish` 有限状态循环和明确退出条件 | M4 最小竖切已完成 |
-| LLM | `DeepSeekReviewPolicy` 与 Mock 契约已完成，真实 API 尚未验收 | 推荐 `deepseek-v4-flash` 非思考模式；当前不能声称真实模型已经自主决策 |
+| LLM | 已完成首次真实调用和首轮 Tool Call；标准多轮消息修复待复验 | 当前不能声称完整真实模型 Loop 已验收 |
 | Multi-Agent | 尚未实现 | 必须由评测证明必要性 |
-| Evaluation | 12 场景版本化 Suite、48 项测试、Suite Hash、任务/护栏/事实/Token/费用/延迟指标 | 离线基线和模型指标结构已完成，尚无真实模型结果 |
+| Evaluation | 12 场景版本化 Suite、48 项测试、Suite Hash、任务/护栏/事实/Token/费用/延迟指标 | 已有首份真实失败报告，成功模型基线尚未建立 |
 
 ## 6. 贯穿项目的核心设计原则
 

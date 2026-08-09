@@ -91,7 +91,9 @@ Agent Evaluation Runner
 
 当前默认策略为确定性 `DeterministicReviewPolicy`，只会在没有观察时调用 `review_running_training`，获得合法观察后请求结束。未来 LLM Policy 必须实现同一动作协议，不能绕过 Harness。
 
-M5-B1 已新增 `DeepSeekReviewPolicy`：通过官方 Chat Completions + 普通 Tool Calls 选择动作，使用 `httpx`、环境变量和 `SecretStr` 管理调用；模型 API 重试与业务工具重试分离。Harness 只接收模型名、Token、耗时和解析错误等白名单元数据，Prompt、响应正文、Key 和工具参数不进入 Trace。该适配器当前只通过 Mock 契约，尚无真实 API 结果。
+M5-B1 已新增 `DeepSeekReviewPolicy`：通过官方 Chat Completions + 普通 Tool Calls 选择动作，使用 `httpx`、环境变量和 `SecretStr` 管理调用；模型 API 重试与业务工具重试分离。Harness 只接收模型名、Token、耗时和解析错误等白名单元数据，Prompt、响应正文、Key 和工具参数不进入 Trace。
+
+真实首次 Smoke 证明首轮 Tool Call 可用，但第二轮仅传 Context JSON 会让模型重复调用工具。当前修复在单次 Run 内保留 assistant Tool Call，并以相同 `tool_call_id` 回传已校验 Tool Result，形成标准 `assistant(tool_calls) → tool(result)` 对话。该修复已通过 Mock，真实复验待完成。
 
 ### Evaluation
 

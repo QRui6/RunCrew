@@ -96,7 +96,10 @@
 - [x] Token、模型调用、API 尝试、动作解析错误和模型耗时指标结构；
 - [x] 受显式确认与费用上限保护的单次合成数据 Smoke 命令；
 - [x] 带价格版本的本地费用估算和后验停止门；
-- [ ] 使用真实 DeepSeek API 执行一次合成数据 Smoke；
+- [ ] 使用真实 DeepSeek API 完成一次成功的合成数据 Smoke；
+- [x] 验证真实 API 鉴权、非思考模型、首轮 Tool Call、Token 和费用返回；
+- [x] 第一次真实失败时由 Harness 阻止重复工具执行；
+- [ ] 使用标准 assistant/tool 消息链复验并得到 `succeeded / completed`；
 - [ ] 与确定性 Policy 基线对照；
 - [ ] 多 Agent 决策记录。
 

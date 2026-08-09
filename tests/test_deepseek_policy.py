@@ -215,6 +215,21 @@ def test_deepseek_policy_runs_full_mock_tool_loop_and_records_safe_trace() -> No
     assert context_payload["user_request"] == request.model_dump(mode="json")
     assert context_payload["observation"] is None
 
+    second_payload = transport.payloads[1]
+    assert [message["role"] for message in second_payload["messages"]] == [
+        "system",
+        "user",
+        "assistant",
+        "tool",
+    ]
+    assistant_call = second_payload["messages"][2]["tool_calls"][0]
+    tool_result_message = second_payload["messages"][3]
+    assert assistant_call["id"] == "call_1"
+    assert tool_result_message["tool_call_id"] == "call_1"
+    tool_result = json.loads(tool_result_message["content"])
+    assert tool_result["observation"]["target_activity_id"] == "target"
+    assert tool_result["remaining_tool_calls"] == 0
+
 
 def test_invalid_tool_arguments_are_retried_and_usage_is_accumulated() -> None:
     request = review_request()

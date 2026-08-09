@@ -10,7 +10,7 @@
 4. [ROADMAP.md](ROADMAP.md)：后续阶段和验收条件；
 5. [adr/README.md](adr/README.md)：关键架构选择及其原因。
 
-当前一句话状态：M5-A 离线基线和 M5-B1 DeepSeek Policy、Mock 契约、费用门与单用例 Smoke 命令已完成，12/12 确定性场景和全部 48 项自动化测试通过；真实 DeepSeek Smoke、完整模型对照和多 Agent 尚未实现。
+当前一句话状态：M5-A 与 M5-B1 已完成，48 项自动化测试通过；第一次真实 DeepSeek 合成 Smoke 已验证鉴权和首轮 Tool Call，第二轮重复调用的标准消息修复待复验，完整模型对照和多 Agent 尚未实现。
 
 常用验收命令：
 

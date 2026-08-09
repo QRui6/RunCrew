@@ -106,6 +106,6 @@ Agent 输出在 Training Review 之外增加 `run_id`、终态、退出原因、
 
 ## 下一阶段模型方案
 
-M5-B1 已实现 `deepseek-v4-flash` 非思考模式适配器，但目前只通过零费用 Mock 契约。模型 Tool Call 仍经过本地 Pydantic、白名单、确认、预算和参数一致性校验。尚未配置 API Key、发起真实请求或产生真实模型评测结果；详见 [DeepSeek 模型选型与接入方案](docs/M5-B-DeepSeek模型选型与接入方案.md)。
+M5-B1 已实现 `deepseek-v4-flash` 非思考模式适配器。第一次真实合成 Smoke 已完成鉴权和首轮 Tool Call，但第二轮模型重复调用工具并被 Harness 安全拦截；标准 assistant/tool 多轮消息修复已通过 Mock，真实复验待完成。详见 [DeepSeek 模型选型与接入方案](docs/M5-B-DeepSeek模型选型与接入方案.md)。
 
 真实 Smoke 命令已经实现，但不会自动运行。它只使用一个合成用例，并要求同时传入 `--confirm-paid-api` 和 `--max-estimated-cost-usd`；缺少 Key、确认或费用上限时会在联网前退出。
