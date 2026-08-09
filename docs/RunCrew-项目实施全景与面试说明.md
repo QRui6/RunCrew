@@ -1,0 +1,520 @@
+# RunCrew 项目实施全景与面试说明
+
+> 用途：帮助项目作者、后续开发者和 AI 清楚理解 RunCrew 为什么这样设计、各阶段已经做了什么、遇到过什么问题、下一步允许做什么。  
+> 最后更新：2026-08-09  
+> 当前事实来源仍以 `docs/CURRENT_STATE.md` 为准；本文负责解释完整过程和面试叙事。
+
+说明：类名、字段名、命令和 Skill 唯一名称继续使用英文，保证代码、JSON 和工具兼容；所有面向人的解释、流程、提示和字段描述使用中文。
+
+## 1. 项目当前处于什么程度
+
+一句话结论：
+
+> RunCrew 已经完成“真实跑步数据接入 → 统一数据模型 → 私有存储 → FIT 详情恢复 → 确定性复盘 → 可回放 Training Review Skill”，但还没有进入真正的 LLM Agent Loop 和多 Agent 阶段。
+
+当前里程碑是 **M3 完成**。
+
+| 能力 | 当前状态 | 说明 |
+|---|---|---|
+| COROS OAuth + MCP 接入 | 已完成 | 可以授权并查询真实活动列表 |
+| 活动统一 Schema | 已完成 | COROS/fixture/FIT 转换为 `ActivitySummary` / `ActivityDetail` |
+| SQLite 持久化 | 已完成 | 保存规范化活动、原始事件和同步记录 |
+| 幂等同步 | 已完成 | 使用 `provider + external_id` 去重更新 |
+| 详情失败隔离 | 已完成 | 详情失败不回滚活动摘要 |
+| FIT 详情兜底 | 已完成 | 支持私有缓存、CRC 校验和 session/lap/record 解析 |
+| 单次活动确定性复盘 | 已完成 | 输出配速稳定性及 evidence |
+| Training Review Skill | 已完成 | 输出完成度、负荷变化、训练异常三类 finding |
+| 可回放上下文 | 已完成 | 使用目标活动时间、`input_hash` 和规则版本 |
+| LLM 自然语言总结 | 未实现 | M3 刻意不让 LLM 参与计算 |
+| Agent 状态机、Trace、预算和重试 | 未实现 | 属于 M4 |
+| 多 Agent 编排 | 未实现 | 只有评测证明单 Agent 不够时才进入 M5 |
+| Web 界面和简历演示 | 未实现 | 属于 M6 |
+| 伤病、营养、睡眠完整 Agent | 不在当前范围 | 防止重新变成“大而全”项目 |
+
+## 2. 当前完整技术链路
+
+```text
+COROS 官方服务
+  → OAuth 2.0 Authorization Code + PKCE
+  → MCP initialize / tools/call
+  → CorosActivityProvider
+      ├─ 活动详情
+      ├─ 分圈数据
+      └─ FIT URL / 私有 FIT 缓存
+  → COROS Parser / Garmin FIT SDK
+  → ActivitySummary / ActivityDetail
+  → Sync Service
+  → raw_provider_events + activities + sync_runs
+  → Training Context Builder
+  → Deterministic Training Review Service
+  → review-running-training Skill
+  → 通过 JSON Schema 校验的 TrainingReviewResult
+```
+
+各层职责：
+
+| 层 | 负责什么 | 明确不负责什么 |
+|---|---|---|
+| Provider | OAuth、MCP、厂商格式和 FIT 获取 | 不做训练判断 |
+| Parser | 字段、单位、时间和二进制格式转换 | 不写数据库、不调用 LLM |
+| Domain | 定义 RunCrew 统一业务对象 | 不知道 COROS、HTTP、SQLite |
+| Storage | 表结构、查询、幂等保存 | 不解释训练意义 |
+| Service | 确定性业务规则和流程组合 | 不解析厂商原始文本 |
+| Skill | 指导 Agent 选择数据、调用 Service、验证证据 | 不重新计算指标 |
+| 未来 Harness | 状态、权限、预算、Trace、重试和验证 | 不替代领域规则 |
+
+## 3. 用户目前可以使用哪些功能
+
+### 3.1 同步活动
+
+```powershell
+runcrew sync --provider coros --days 30 --detail-limit 1
+```
+
+功能：
+
+- 打开 COROS 官方授权页；
+- 获取最近跑步活动；
+- 转换并写入 SQLite；
+- 重复同步时更新原记录；
+- 尝试补齐一条详情；
+- 详情失败时保留摘要并记录 warning。
+
+### 3.2 查看活动
+
+```powershell
+runcrew activities list
+runcrew activities review --latest --provider coros
+```
+
+功能：
+
+- 查看已经规范化的活动；
+- 查看单次活动摘要；
+- 在有三个以上有效分圈时计算配速变异系数；
+- 返回 `message + evidence + confidence`。
+
+### 3.3 运行 Training Review Skill
+
+```powershell
+runcrew training review --latest --provider coros
+```
+
+已知训练计划时：
+
+```powershell
+runcrew training review --latest --provider coros `
+  --planned-distance-km 8 --planned-duration-minutes 45
+```
+
+固定返回：
+
+1. `training_completion`：实际训练与用户提供计划的完成比例；
+2. `load_change`：最近七天与此前七天的训练负荷变化；
+3. `training_anomaly`：分圈波动或同类型历史配速偏差。
+
+如果缺少计划、训练负荷或历史活动，系统返回 `unknown + requires`，而不是猜测。
+
+## 4. 各阶段实施过程
+
+### M0：COROS MCP 接入 Spike
+
+#### 目标
+
+先证明数据源真实可用，再决定是否围绕它建设项目。
+
+#### 技术实现
+
+- Bearer 授权挑战与 OAuth 元数据发现；
+- 动态 OAuth 客户端注册；
+- Authorization Code + PKCE；
+- MCP `initialize`；
+- MCP `tools/list` 和只读工具调用；
+- 确认中国区服务地址和返回格式。
+
+#### 实施策略
+
+- 先写一次性 Spike，不急着搭完整工程；
+- 验证活动、健康、体能和恢复等代表性工具；
+- 确认数据格式后再决定 Python 项目结构。
+
+#### 关键发现
+
+- COROS MCP 可以连接；
+- 工具主要返回 `content[].text`，不能假设一定有 `structuredContent`；
+- 返回内容可能是格式化文本或多层 JSON 字符串；
+- 设备码授权不适合作为当前默认登录流程。
+
+#### 阶段亮点
+
+避免在接口可用性未知时先做复杂 Agent，降低方向错误成本。
+
+#### 面试表达
+
+> 我没有一开始就搭多 Agent，而是先做数据接入 Spike，验证 OAuth、MCP 协议、工具清单和真实返回格式，以此决定后续架构。
+
+### M1：真实数据竖切
+
+#### 目标
+
+把“能调用 COROS”变成“真实数据可以稳定保存、重复同步和确定性使用”。
+
+#### 技术实现
+
+- Pydantic 领域模型：`ActivitySummary`、`ActivityDetail`、`Lap`、`MetricPoint`；
+- `ActivityProvider` 统一接口；
+- COROS OAuth 客户端和 MCP 客户端；
+- 确定性 COROS Parser；
+- SQLAlchemy + SQLite；
+- `activities`、`raw_provider_events`、`sync_runs` 三张表；
+- 基于 `provider + external_id` 的幂等 upsert；
+- Typer CLI；
+- fixture 离线回归测试；
+- 单次活动确定性复盘。
+
+#### 关键策略
+
+##### Provider 隔离
+
+业务层只看 RunCrew Domain，不知道 COROS 字段和 MCP 工具名。未来增加其他来源时不重写复盘逻辑。
+
+##### 原始数据与规范化数据分层
+
+- 原始数据用于审计、重解析和排查格式变化；
+- 规范化数据用于业务规则和 Skill；
+- 两者通过来源 ID 和 hash 建立证据链。
+
+##### 部分成功
+
+活动列表先提交，详情逐条补全。详情失败时：
+
+- 保留 summary；
+- 记录 `detail_errors`；
+- 标记 `completed_with_warnings`；
+- 不把 summary 伪装成 detail。
+
+#### 遇到的问题
+
+| 问题 | 处理方式 |
+|---|---|
+| COROS 返回格式化文本 | 编写确定性文本 Parser，不让 LLM 临时解释 |
+| 响应可能被 JSON 编码多次 | 增加最多四层的 JSON 解包 |
+| 详情和分圈工具返回服务异常 | 采用部分成功语义，先保存摘要 |
+| 保存 Refresh Token 会扩大风险 | M1 不持久化 Token，每次重新授权 |
+
+#### 阶段亮点
+
+- 真实数据而不是纯 Mock；
+- 失败隔离而不是“全成功或全失败”；
+- 原始数据和规范化数据可审计；
+- 规则先于 LLM，便于测试。
+
+#### 面试表达
+
+> M1 的重点不是页面，而是建立可靠数据边界。我用 Provider 隔离厂商格式，用原始事件和规范化活动双层存储支持审计，用部分成功事务避免详情故障导致整批数据丢失。
+
+### M2：FIT 详情兜底
+
+#### 目标
+
+当 COROS 详情和分圈工具不可用时，通过真实 FIT 恢复分圈和秒级记录。
+
+#### 技术实现
+
+- Garmin 官方 `garmin-fit-sdk`；
+- FIT 文件识别与 CRC 完整性校验；
+- session、lap、record 到 Domain 的确定性映射；
+- HTTPS 强制、60 秒超时、50 MB 大小上限；
+- 过期 URL 和 HTTP 错误分类；
+- `data/private/fit/` 私有缓存；
+- 使用外部活动 ID 的 SHA-256 前缀作为缓存文件名；
+- 无效缓存删除；
+- Garmin Encoder 生成无坐标合成 FIT fixture；
+- COROS 详情 → 分圈 → FIT → summary warning 的降级链。
+
+#### 关键策略
+
+- 先查缓存再申请 FIT URL，减少每日额度消耗；
+- 不把真实 FIT 放进测试目录或 Git；
+- 二进制解析完全交给确定性 SDK，不让 LLM 处理；
+- 下载成功但 CRC/Schema 失败时不保留污染缓存。
+
+#### 遇到的问题
+
+| 问题 | 原因判断 | 解决方案 |
+|---|---|---|
+| COROS `getActivityDetail` 失败 | 外部服务异常 | 继续尝试分圈和 FIT |
+| `queryActivityLapData` 同样失败 | 外部服务异常 | 进入 FIT 降级 |
+| FIT URL 工具返回 `isError=true` | 参数已核对，推断为服务端或权限问题 | 保留摘要；支持用户手动导出 FIT |
+| 第一次错误只有通用 `isError` | 本地错误可观测性不足 | 保留并脱敏服务端错误文本 |
+| 手动 FIT 如何关联活动 | 缓存需要对应 external ID | 使用哈希缓存路径关联最新活动 |
+
+#### 真实验收
+
+- 用户从 COROS App 手动导出一条真实 FIT；
+- FIT 通过 CRC、session、lap、record 解析；
+- 私有缓存进入完整同步链；
+- 同步得到 `detailed=1, detail_errors=0`；
+- 复盘成功产生真实多分圈 evidence。
+
+具体私人指标不写入项目文档。
+
+#### 阶段亮点
+
+- 不依赖单一脆弱详情接口；
+- 有缓存、配额、安全和失败语义；
+- 合成 fixture 与真实 Smoke Test 结合；
+- 外部服务失败时仍可演示完整系统。
+
+#### 面试表达
+
+> COROS 的详情工具真实环境不稳定，我没有伪造详情，而是设计了三级降级链。FIT 使用官方 SDK 做 CRC 和消息解析，真实文件进入 Git 忽略的私有缓存，测试则由 Encoder 生成无坐标合成文件。
+
+### M3：Training Review Skill
+
+#### 目标
+
+把活动复盘从普通 Service 变成 Agent 可以稳定复用、验证和回放的 Skill。
+
+#### 技术实现
+
+- `TrainingReviewRequest` 输入 Schema；
+- `TrainingReviewResult` 输出 Schema；
+- JSON Schema 自动导出；
+- 以目标活动时间为锚点的 Context Builder；
+- 最近七天与此前七天窗口聚合；
+- `input_hash + ruleset_version` 回放身份；
+- 三类固定 finding；
+- 每条 finding 强制非空 evidence；
+- `unknown + requires` 缺失数据契约；
+- `skills/review-running-training/SKILL.md`；
+- `agents/openai.yaml` Skill UI 元数据；
+- CLI 与 fixture/真实本地回放测试。
+
+#### 为什么不直接接 LLM
+
+如果让 LLM 同时负责计算和表达，会出现：
+
+- 同一输入的结论不稳定；
+- 阈值无法单元测试；
+- 缺失数据容易被语言掩盖；
+- 更换模型会改变业务判断。
+
+因此当前职责是：
+
+```text
+确定性 Service：计算指标、选择 level、产生 evidence
+Skill：选择数据、调用 Service、验证 Schema
+未来 LLM：只改写已验证结论，不新增事实
+```
+
+#### 三类 finding
+
+| finding | 输入 | 数据不足时 |
+|---|---|---|
+| training_completion | 实际距离/时长 + 用户提供计划 | `unknown`，要求 planned session |
+| load_change | 连续两个七天窗口的训练负荷 | `unknown`，要求两个窗口都有 load |
+| training_anomaly | 三个以上分圈或三个历史同类活动 | `unknown`，要求分圈或历史基线 |
+
+#### 遇到的问题
+
+| 问题 | 解决方案 | 工程启示 |
+|---|---|---|
+| pytest 无法访问 Windows 用户 Temp | 将 `--basetemp` 固定到 Git 忽略的 `data/private/pytest` | 验证环境也要可复现 |
+| PowerShell 展开 `$review-running-training` | 使用单引号并通过官方生成器重新生成 | Shell 转义是 Harness 风险 |
+| Skill 校验器在 venv 缺少 PyYAML | 使用已有依赖的系统 Python 执行官方校验器 | 区分项目依赖与开发工具依赖 |
+| 中文 SKILL.md 被生成器按 GBK 读取失败 | 使用 `python -X utf8` 运行生成器 | 中文 Windows 必须显式处理编码 |
+| 真实 COROS 没有训练负荷历史 | 输出 `unknown + requires`，不伪造趋势 | 缺数据策略属于产品能力 |
+
+#### 阶段亮点
+
+- Skill 不是一段大 Prompt，而是稳定能力契约；
+- 同一输入可回放；
+- 数据质量和业务结论分离；
+- 规则与 LLM 职责清晰；
+- Skill 和 Schema 已中文化，便于项目作者理解。
+
+#### 面试表达
+
+> 我把 Skill 设计成确定性 Service 的编排层，而不是让大模型自由分析。输入、输出、缺失数据和 evidence 都有 Schema，回放使用输入哈希和规则版本，因此模型升级不会破坏基础判断。
+
+## 5. Agent 工程技术目前做到哪里
+
+| Agent 工程概念 | 当前实现 | 当前结论 |
+|---|---|---|
+| MCP | RunCrew 作为客户端连接 COROS MCP | 已实践真实协议、OAuth 和工具调用 |
+| Skill | `review-running-training` | 已完成第一个可复用 Skill |
+| Context Engineering | 目标活动、同来源历史、目标时间锚定、7/28 天窗口 | 已有确定性上下文选择，但还没有 Token 压缩 |
+| Harness Engineering | 目前只有 CLI、Schema、错误隔离和验证脚本 | 尚无统一 Run、Trace、预算和权限系统 |
+| Loop Engineering | 尚未实现观察—行动—验证—修正状态机 | M4 核心任务 |
+| LLM | 尚未接入训练复盘主链 | 刻意推迟，避免规则不稳定 |
+| Multi-Agent | 尚未实现 | 必须由评测证明必要性 |
+| Evaluation | 有单元测试、fixture、真实 Smoke Test 和确定性回放 | 尚无系统级历史评测集和指标看板 |
+
+## 6. 贯穿项目的核心设计原则
+
+### 6.1 先确定性，后生成式
+
+字段解析、单位转换、CRC、统计指标、阈值和 confidence 都由代码负责。LLM 不弥补本应由 Schema 和规则解决的问题。
+
+### 6.2 每个判断都要有 evidence
+
+不能只输出“最近训练不太稳定”，还要说明使用了多少分圈、变异系数是多少、比较窗口是什么。
+
+### 6.3 缺失数据是一等状态
+
+`unknown` 不是失败，而是明确告诉用户当前不能判断，以及还需要什么数据。
+
+### 6.4 外部失败不能污染内部状态
+
+列表成功、详情失败时保留列表；FIT 无效时不写 detail；单条失败不回滚整批。
+
+### 6.5 隐私默认收紧
+
+- Token 不落盘；
+- 真实数据库、FIT 和调试 payload 不进 Git；
+- 文档不记录真实活动 ID、坐标和个人指标；
+- 错误信息脱敏 URL 和长 ID。
+
+### 6.6 不为展示名词而增加 Agent
+
+只有当单 Agent 评测暴露职责冲突、上下文超限或不同权限边界时，才拆分多 Agent。
+
+## 7. 当前没有实现的功能
+
+以下内容不能在面试中说成已经完成：
+
+- 没有真正调用 LLM 生成训练建议；
+- 没有 Agent 状态机和自动循环；
+- 没有统一 Trace、工具预算、重试策略和退出条件；
+- 没有伤病诊断、营养处方和医疗建议；
+- 没有睡眠、HRV、疼痛 Check-in 的完整数据闭环；
+- 没有训练计划数据库；
+- 没有 Keep Provider；
+- 没有 Web/移动端界面；
+- 没有多 Agent；
+- 没有线上部署；
+- COROS 自动 FIT URL 仍未真实验证成功；
+- 没有 Token 加密缓存和数据库迁移工具。
+
+## 8. 后续范围冻结规则
+
+为了防止项目再次扩大，后续必须遵守：
+
+### M4 只做一个 Review Agent Loop
+
+允许实现：
+
+- 单 Agent；
+- 只使用 `review-running-training` 一个业务 Skill；
+- Run State Schema；
+- Trace/Event Schema；
+- 工具调用预算；
+- 超时与有限重试；
+- 故障注入；
+- 输出 Schema 验证；
+- 明确退出条件；
+- 可选的 LLM narrative。
+
+M4 禁止顺手增加：
+
+- Keep、Strava 等新 Provider；
+- 伤病、营养和睡眠 Agent；
+- 多 Agent；
+- Web UI；
+- 自动修改 COROS 训练计划；
+- 向量数据库或复杂 RAG；
+- 云部署。
+
+### M5 只有满足条件才做多 Agent
+
+必须先有评测证据证明至少一项成立：
+
+- 单 Agent 上下文超限；
+- 训练分析与风险审查需要不同工具权限；
+- 单 Agent 在职责冲突测试中稳定失败；
+- 拆分后关键指标明显改善。
+
+否则继续保持单 Agent。
+
+### M6 才做演示与简历包装
+
+- 历史回放评测集；
+- Trace 展示；
+- 关键成功率和稳定性指标；
+- 最小演示界面；
+- 架构图；
+- 简历描述和面试问答。
+
+## 9. 面试讲解模板
+
+### 30 秒版本
+
+> RunCrew 是我基于真实跑步数据做的 Agent 工程项目。当前完成了 COROS MCP 接入、统一活动 Schema、SQLite 幂等同步、FIT 详情降级和第一个可回放 Training Review Skill。项目的重点不是让大模型自由生成计划，而是让每条训练结论都有 evidence、缺失数据能安全降级，并通过输入哈希和规则版本实现稳定回放。
+
+### 2 分钟版本
+
+> 我是跑步用户，所以选择了一个能长期产生真实反馈的场景。项目先通过 Spike 验证 COROS OAuth 和 MCP，再建立 Provider、Domain、Storage、Service 分层。真实环境中 COROS 详情接口不稳定，我设计了详情、分圈、FIT、summary warning 的降级链，并用 Garmin 官方 SDK 做 CRC 和消息解析。之后我没有马上接 LLM，而是先把训练完成度、负荷变化和异常判断做成确定性 Service，再用 Skill 和 JSON Schema 对外暴露。这样同一输入可以通过 input hash 和 ruleset version 回放，每个 finding 必须有 evidence，缺数据时返回 unknown 而不是编造。下一阶段才会增加单 Agent 状态机、Trace、预算、重试和输出验证。
+
+### 最值得讲的三个难点
+
+1. **外部服务不稳定**：设计部分成功和多级降级，而不是吞错或伪造详情；
+2. **Agent 输出可信度**：把计算放在确定性 Service，Skill 只编排和验证；
+3. **回放与审计**：原始/规范化双层存储、evidence、input hash、规则版本和真实 Smoke Test。
+
+### 面试官可能追问
+
+#### 为什么不用 LangChain/LangGraph？
+
+当前 M0-M3 的核心风险在数据可靠性和领域契约，不在框架编排。先用清晰的 Python 分层和 Schema 建立可测试基线，M4 状态机需求稳定后再决定是否引入框架。
+
+#### 为什么现在还没有 LLM？
+
+因为如果基础指标都交给 LLM，无法判断模型错误还是数据错误。当前先建立确定性 ground truth，后续 LLM 只负责解释，这也为评测提供标准答案。
+
+#### 为什么不用多个 Agent？
+
+多 Agent 会增加上下文传递、延迟、成本和失败面。项目要求先证明单 Agent 存在职责冲突，再拆分。
+
+#### COROS 接口失败是否说明项目不可用？
+
+不会。活动摘要可以部分成功保存，详情有 FIT 私有缓存和手动导出兜底；外部错误会记录 warning，不会污染已有数据。
+
+#### 项目目前最大的不足是什么？
+
+真实历史数据仍少、COROS 训练负荷未映射、训练计划未持久化，并且 M4 Harness/Loop 尚未实现。因此现在应描述为“数据与 Skill 基座完成”，不能描述为完整训练 Agent 产品。
+
+## 10. 代码与文档导航
+
+| 想了解什么 | 位置 |
+|---|---|
+| 项目目标和范围 | `docs/PROJECT_CONTEXT.md` |
+| 当前唯一进度 | `docs/CURRENT_STATE.md` |
+| 完整实施过程和面试说明 | 本文 |
+| 系统分层和数据流 | `docs/ARCHITECTURE.md` |
+| 阶段验收 | `docs/ROADMAP.md` |
+| 历史阶段记录 | `docs/progress/` |
+| 技术决策原因 | `docs/adr/` |
+| AI 开发入口 | `AGENTS.md` |
+| Training Review Skill | `skills/review-running-training/SKILL.md` |
+| Activity Domain | `src/runcrew/domain/activity.py` |
+| Training Review Domain | `src/runcrew/domain/training_review.py` |
+| Context Builder | `src/runcrew/services/training_context.py` |
+| 训练复盘规则 | `src/runcrew/services/training_review.py` |
+| 统一验证入口 | `scripts/verify.py` |
+
+## 11. 当前下一步
+
+唯一下一任务是 M4 的最小单 Agent Loop：
+
+```text
+接收复盘请求
+→ 构建受控上下文
+→ 调用 review-running-training Skill
+→ 验证输出
+→ 可选生成 narrative
+→ 记录 Trace
+→ 成功、降级或失败退出
+```
+
+在 M4 完成以前，不扩展新业务 Agent。

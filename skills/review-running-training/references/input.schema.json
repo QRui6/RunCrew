@@ -14,6 +14,7 @@
             }
           ],
           "default": null,
+          "description": "计划完成的距离，单位为米。",
           "title": "Distance Meters"
         },
         "duration_seconds": {
@@ -27,22 +28,25 @@
             }
           ],
           "default": null,
+          "description": "计划训练的持续时间，单位为秒。",
           "title": "Duration Seconds"
         }
       },
-      "title": "PlannedSession",
+      "title": "计划训练目标",
       "type": "object"
     }
   },
   "additionalProperties": false,
   "properties": {
     "target_activity_id": {
+      "description": "需要复盘的 RunCrew 内部活动 ID。",
       "minLength": 1,
       "title": "Target Activity Id",
       "type": "string"
     },
     "lookback_days": {
       "default": 28,
+      "description": "构建历史上下文时向前回看的天数。",
       "maximum": 90,
       "minimum": 14,
       "title": "Lookback Days",
@@ -57,12 +61,13 @@
           "type": "null"
         }
       ],
-      "default": null
+      "default": null,
+      "description": "用户明确提供的本次训练计划；没有计划时必须留空。"
     }
   },
   "required": [
     "target_activity_id"
   ],
-  "title": "TrainingReviewRequest",
+  "title": "训练复盘输入",
   "type": "object"
 }

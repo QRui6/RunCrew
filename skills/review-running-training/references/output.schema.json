@@ -97,6 +97,7 @@
       "additionalProperties": false,
       "properties": {
         "type": {
+          "description": "结论类型：训练完成度、负荷变化或训练异常。",
           "enum": [
             "training_completion",
             "load_change",
@@ -106,6 +107,7 @@
           "type": "string"
         },
         "level": {
+          "description": "结论等级；数据不足时必须使用 unknown。",
           "enum": [
             "good",
             "normal",
@@ -116,12 +118,14 @@
           "type": "string"
         },
         "message": {
+          "description": "面向用户的简短结论。",
           "minLength": 1,
           "title": "Message",
           "type": "string"
         },
         "evidence": {
           "additionalProperties": true,
+          "description": "支持该结论的结构化证据。",
           "title": "Evidence",
           "type": "object"
         }
@@ -132,33 +136,38 @@
         "message",
         "evidence"
       ],
-      "title": "TrainingFinding",
+      "title": "训练复盘结论",
       "type": "object"
     },
     "TrainingWindowMetrics": {
       "additionalProperties": false,
       "properties": {
         "start": {
+          "description": "时间窗口起点，必须包含时区。",
           "format": "date-time",
           "title": "Start",
           "type": "string"
         },
         "end": {
+          "description": "时间窗口终点，必须包含时区。",
           "format": "date-time",
           "title": "End",
           "type": "string"
         },
         "activity_count": {
+          "description": "窗口内的活动数量。",
           "minimum": 0,
           "title": "Activity Count",
           "type": "integer"
         },
         "distance_meters": {
+          "description": "窗口内累计距离，单位为米。",
           "minimum": 0,
           "title": "Distance Meters",
           "type": "number"
         },
         "duration_seconds": {
+          "description": "窗口内累计时长，单位为秒。",
           "minimum": 0,
           "title": "Duration Seconds",
           "type": "integer"
@@ -174,9 +183,11 @@
             }
           ],
           "default": null,
+          "description": "窗口内可获得的训练负荷之和；没有负荷数据时为空。",
           "title": "Training Load Total"
         },
         "training_load_coverage": {
+          "description": "包含训练负荷字段的活动占比。",
           "maximum": 1,
           "minimum": 0,
           "title": "Training Load Coverage",
@@ -191,7 +202,7 @@
         "duration_seconds",
         "training_load_coverage"
       ],
-      "title": "TrainingWindowMetrics",
+      "title": "训练时间窗口指标",
       "type": "object"
     }
   },
@@ -200,34 +211,42 @@
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "输出 Schema 版本。",
       "title": "Schema Version",
       "type": "string"
     },
     "ruleset_version": {
       "const": "training-review-rules/1.0",
       "default": "training-review-rules/1.0",
+      "description": "生成结论所使用的确定性规则版本。",
       "title": "Ruleset Version",
       "type": "string"
     },
     "input_hash": {
+      "description": "规范化输入的 SHA-256，用于确定性回放。",
       "pattern": "^[0-9a-f]{64}$",
       "title": "Input Hash",
       "type": "string"
     },
     "target_activity_id": {
+      "description": "本次复盘对应的 RunCrew 活动 ID。",
       "title": "Target Activity Id",
       "type": "string"
     },
     "activity_review": {
-      "$ref": "#/$defs/ActivityReview"
+      "$ref": "#/$defs/ActivityReview",
+      "description": "目标活动的单次活动复盘。"
     },
     "current_7d": {
-      "$ref": "#/$defs/TrainingWindowMetrics"
+      "$ref": "#/$defs/TrainingWindowMetrics",
+      "description": "截至目标活动的最近七天指标。"
     },
     "previous_7d": {
-      "$ref": "#/$defs/TrainingWindowMetrics"
+      "$ref": "#/$defs/TrainingWindowMetrics",
+      "description": "此前七天的对照指标。"
     },
     "findings": {
+      "description": "固定包含训练完成度、负荷变化和训练异常三类结论。",
       "items": {
         "$ref": "#/$defs/TrainingFinding"
       },
@@ -237,7 +256,8 @@
       "type": "array"
     },
     "data_quality": {
-      "$ref": "#/$defs/DataQuality"
+      "$ref": "#/$defs/DataQuality",
+      "description": "整体缺失字段与结论置信度。"
     }
   },
   "required": [
@@ -249,6 +269,6 @@
     "findings",
     "data_quality"
   ],
-  "title": "TrainingReviewResult",
+  "title": "训练复盘输出",
   "type": "object"
 }

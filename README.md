@@ -20,6 +20,7 @@ RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前�
 | 想了解什么 | 文件 |
 |---|---|
 | 项目为什么存在 | [项目上下文](docs/PROJECT_CONTEXT.md) |
+| 项目各阶段如何实施、面试如何讲 | [项目实施全景与面试说明](docs/RunCrew-项目实施全景与面试说明.md) |
 | 目前做到哪里、下一步是什么 | [当前状态](docs/CURRENT_STATE.md) |
 | 模块如何协作 | [系统架构](docs/ARCHITECTURE.md) |
 | 后续阶段 | [开发路线图](docs/ROADMAP.md) |

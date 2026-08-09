@@ -7,9 +7,10 @@
 1. `README.md`：项目是什么、如何运行；
 2. `docs/PROJECT_CONTEXT.md`：业务目标、用户价值、范围与非目标；
 3. `docs/CURRENT_STATE.md`：当前唯一有效的进度状态、已知问题、下一步；
-4. `docs/ARCHITECTURE.md`：模块边界、数据流和失败语义；
-5. `docs/ROADMAP.md`：阶段划分和验收标准；
-6. 与当前任务有关的 `docs/adr/` 和 `docs/progress/` 文件。
+4. `docs/RunCrew-项目实施全景与面试说明.md`：阶段实施、错误复盘、技术亮点和范围冻结；
+5. `docs/ARCHITECTURE.md`：模块边界、数据流和失败语义；
+6. `docs/ROADMAP.md`：阶段划分和验收标准；
+7. 与当前任务有关的 `docs/adr/` 和 `docs/progress/` 文件。
 
 发生冲突时，优先级为：
 
@@ -91,4 +92,3 @@ cli.py       人机入口，只做参数编排
 \.venv\Scripts\runcrew.exe sync --provider fixture --days 30 --detail-limit 1
 \.venv\Scripts\runcrew.exe activities review --latest --provider coros
 ```
-

@@ -45,6 +45,8 @@ M1/M2 数据链路已完成；M3 当前可以完成：
 - `review-running-training` Skill 已通过官方 `quick_validate.py`；
 - 同一输入会生成相同 `input_hash` 和结果，回放测试已通过；
 - 真实 COROS 本地活动已通过 Training Review CLI 回放，缺少计划和负荷历史时正确降级，分圈 evidence 仍然保留。
+- 已新增中文《项目实施全景与面试说明》，记录 M0-M3 的技术方案、错误复盘、面试表达和 M4-M6 范围冻结；
+- Training Review Skill、UI 元数据和导出 Schema 的说明已中文化。
 
 ## 当前已知限制
 

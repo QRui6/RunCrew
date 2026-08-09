@@ -15,6 +15,7 @@ REQUIRED_FILES = [
     "SECURITY.md",
     "pyproject.toml",
     "docs/PROJECT_CONTEXT.md",
+    "docs/RunCrew-项目实施全景与面试说明.md",
     "docs/CURRENT_STATE.md",
     "docs/ARCHITECTURE.md",
     "docs/ROADMAP.md",

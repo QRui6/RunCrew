@@ -40,6 +40,22 @@ Model Context Protocol。让 AI 客户端用统一方式发现和调用外部工
 
 支撑结论的数据证据。例如“配速稳定”的证据是分圈数量和配速变异系数。
 
+## Finding
+
+Training Review Skill 输出的一条结构化结论，由类型、等级、中文说明和 evidence 组成。当前固定包含训练完成度、负荷变化和训练异常三类。
+
+## input_hash
+
+对一次训练复盘的规范化输入计算出的 SHA-256。相同输入应得到相同 hash 和结果，用于回放与审计。
+
+## ruleset_version
+
+确定性训练规则的版本号。规则阈值发生变化时应升级版本，避免新旧结果无法区分。
+
+## unknown + requires
+
+数据不足时的标准降级方式。`unknown` 表示当前不能可靠判断，`requires` 明确列出还需要哪些数据；它不是系统异常。
+
 ## Harness Engineering
 
 围绕 Agent 的运行环境工程，包括权限、状态、超时、重试、日志、追踪、预算、审批和故障隔离。
@@ -55,4 +71,3 @@ Model Context Protocol。让 AI 客户端用统一方式发现和调用外部工
 ## ADR
 
 Architecture Decision Record，架构决策记录。用于说明做了什么选择、为什么、代价是什么。
-

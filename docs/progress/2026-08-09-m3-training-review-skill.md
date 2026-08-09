@@ -24,6 +24,7 @@ runcrew training review --latest --provider coros
 - `scripts/export_training_review_schemas.py`：从 Domain 模型导出 JSON Schema；
 - `tests/test_training_review.py`：回放、降级、异常、Schema 和 CLI 测试；
 - `docs/adr/0006-deterministic-training-review-skill.md`：规则与 LLM 分工决策。
+- `docs/RunCrew-项目实施全景与面试说明.md`：M0-M3 实施方案、错误复盘、面试表达和后续范围冻结。
 
 ## 关键决策
 
@@ -37,7 +38,7 @@ runcrew training review --latest --provider coros
 
 ```text
 pytest / scripts/verify.py: 24 passed
-skill-creator quick_validate.py: Skill is valid
+skill-creator quick_validate.py（中文 Windows 使用 python -X utf8）: Skill is valid
 fixture CLI: 三类 finding 均满足 Schema
 真实 COROS 本地回放: 成功；缺失计划/负荷历史时降级，真实分圈 evidence 保留
 ```
@@ -50,6 +51,10 @@ fixture CLI: 三类 finding 均满足 Schema
 - 训练计划没有持久化模型；
 - 当前没有 LLM narrative、Trace、工具预算和状态机；
 - 真实跨周历史仍少，负荷规则主要由人工 fixture 验证。
+
+## 中文可读性补充
+
+Skill 的唯一名称、字段名和命令保留英文以保证工具兼容；`SKILL.md`、UI 元数据、中文错误提示和 JSON Schema 字段说明均已改为中文。官方元数据生成器在中文 Windows 上默认按 GBK 读取文件，使用 `python -X utf8` 解决并通过重新校验。
 
 ## 下一阶段唯一入口
 

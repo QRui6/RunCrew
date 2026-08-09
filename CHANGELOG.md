@@ -11,6 +11,8 @@
 - 增加训练完成度、七天负荷变化和训练异常三类 evidence-backed 规则；
 - 增加 `review-running-training` Skill、JSON Schema 和 CLI；
 - 增加缺失数据降级、回放、负荷异常、Schema 漂移和 CLI 测试。
+- 中文化 Training Review Skill、UI 元数据和 JSON Schema 字段说明；
+- 增加《RunCrew 项目实施全景与面试说明》，记录各阶段方案、亮点、错误、解决方案和范围冻结规则。
 
 ### Verified
 
@@ -61,5 +63,5 @@
 ### Known Issues
 
 - COROS `getActivityDetail` 和 `queryActivityLapData` 当前返回服务端异常；
-- COROS FIT URL 工具当前返回 `isError=true`，所以真实 FIT 和真实分圈复盘尚未验收；
+- COROS FIT URL 工具当前返回 `isError=true`，自动下载仍未验收；手动 FIT 已完成真实分圈复盘验收；
 - 尚未实现 Token 加密缓存和数据库迁移。
