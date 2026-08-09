@@ -72,5 +72,4 @@ RunCrew 是一个使用你自己的长期跑步数据，帮助完成“训练回
 → 必要的多 Agent 协作
 ```
 
-当前仍处于数据与确定性分析阶段。
-
+当前已经完成数据竖切、FIT 详情兜底和第一个确定性 Training Review Skill，下一阶段进入单 Agent Context + Harness + Loop。完整实施过程和范围边界见 [项目实施全景与面试说明](RunCrew-项目实施全景与面试说明.md)。

@@ -8,6 +8,7 @@
 | 2026-08-08 | M1 真实数据竖切 | 完成 | [M1 数据竖切](progress/2026-08-08-m1-data-vertical-slice.md) |
 | 2026-08-08 | 项目记忆与 AI 交接体系 | 完成 | [AI 交接体系](progress/2026-08-08-ai-project-memory.md) |
 | 2026-08-08 | M2 FIT 详情兜底 | 完成 | [M2 FIT 详情兜底](progress/2026-08-08-m2-fit-detail-fallback.md) |
+| 2026-08-09 | M3 Training Review Skill | 完成 | [M3 Training Review Skill](progress/2026-08-09-m3-training-review-skill.md) |
 
 ## 新阶段记录模板
 

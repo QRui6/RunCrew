@@ -1,6 +1,6 @@
 # RunCrew
 
-RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前阶段只实现可靠的数据竖切：Provider 数据接入、统一领域模型、SQLite 持久化和确定性活动复盘。
+RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前已经形成可靠数据竖切和第一个可回放 Training Review Skill。
 
 > AI 或新开发者开始工作时，请先阅读 [AGENTS.md](AGENTS.md)，然后阅读 [当前状态](docs/CURRENT_STATE.md)。
 
@@ -11,6 +11,8 @@ RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前�
 - 通过 `provider + external_id` 幂等同步；
 - COROS 详情失败时按“详情 → 分圈 → FIT”降级，并缓存私有 FIT；
 - 用确定性规则生成可审计的单次跑步复盘；
+- 用 `review-running-training` Skill 复盘训练完成度、七天负荷变化和训练异常；
+- 通过 `input_hash + ruleset_version` 回放同一结论；
 - 使用不含位置的合成 FIT 进行离线开发和回归测试。
 
 ## 文档导航
@@ -18,6 +20,7 @@ RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前�
 | 想了解什么 | 文件 |
 |---|---|
 | 项目为什么存在 | [项目上下文](docs/PROJECT_CONTEXT.md) |
+| 项目各阶段如何实施、面试如何讲 | [项目实施全景与面试说明](docs/RunCrew-项目实施全景与面试说明.md) |
 | 目前做到哪里、下一步是什么 | [当前状态](docs/CURRENT_STATE.md) |
 | 模块如何协作 | [系统架构](docs/ARCHITECTURE.md) |
 | 后续阶段 | [开发路线图](docs/ROADMAP.md) |
@@ -37,6 +40,7 @@ python -m pip install -e ".[dev]"
 .\.venv\Scripts\runcrew.exe status
 .\.venv\Scripts\runcrew.exe activities list
 .\.venv\Scripts\runcrew.exe activities review --latest
+.\.venv\Scripts\runcrew.exe training review --latest --provider fixture
 .\.venv\Scripts\python.exe scripts\verify.py
 ```
 
@@ -58,3 +62,18 @@ runcrew activities review --latest --provider coros
 ```powershell
 .\.venv\Scripts\python.exe scripts\inspect_coros_tool.py queryActivityFitFileDownloadUrls
 ```
+
+## 运行 Training Review Skill
+
+```powershell
+.\.venv\Scripts\runcrew.exe training review --latest --provider coros
+```
+
+如果已知本次训练计划，可以显式传入目标：
+
+```powershell
+.\.venv\Scripts\runcrew.exe training review --latest --provider coros `
+  --planned-distance-km 8 --planned-duration-minutes 45
+```
+
+缺少计划或历史训练负荷时，Skill 会返回 `unknown` 和所需数据，不会猜测结论。

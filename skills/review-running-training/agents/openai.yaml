@@ -1,0 +1,4 @@
+interface:
+  display_name: "跑步训练复盘"
+  short_description: "基于真实跑步数据生成可回放、可验证且证据充分的训练复盘"
+  default_prompt: "使用 $review-running-training 复盘我最近一次跑步及近期训练历史，并为每条结论提供证据。"

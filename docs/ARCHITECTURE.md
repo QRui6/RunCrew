@@ -22,7 +22,16 @@ Sync Service
 Activity Review Service
   │ 确定性规则 + evidence
   ▼
-CLI JSON 输出
+Training Context Builder
+  │ 目标活动时间锚定 + 7/28 天历史 + input_hash
+  ▼
+Training Review Service
+  │ completion / load change / anomaly
+  ▼
+review-running-training Skill
+  │ Schema 验证 + evidence 解释
+  ▼
+CLI JSON 输出 / 未来 Agent Harness
 ```
 
 ## 分层职责
@@ -56,6 +65,12 @@ CLI JSON 输出
 位置：`src/runcrew/cli.py`
 
 负责接收参数和展示结果，不承担解析和业务规则。
+
+### Skill
+
+位置：`skills/review-running-training/`
+
+负责告诉 Agent 如何选择规范化数据、调用确定性 Service、验证输入输出并解释 evidence。Skill 不直接计算指标，也不读取 COROS 原始文本。
 
 ## 数据模型
 
@@ -99,6 +114,9 @@ provider + external_id
 | Parser 无法识别格式 | 明确报错；仅显式调试时保存私有载荷 |
 | 缺少分圈 | 不生成配速稳定性结论 |
 | 缺少部分基础字段 | 降低 data quality confidence |
+| 缺少训练计划 | `training_completion=unknown` 并返回 `requires` |
+| 两个七天窗口缺少训练负荷 | `load_change=unknown`，不推断负荷趋势 |
+| 缺少分圈和同类型历史配速 | `training_anomaly=unknown` |
 
 ## 未来 Agent 边界
 

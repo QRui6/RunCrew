@@ -2,6 +2,31 @@
 
 本项目使用阶段化变更记录。当前处于早期开发阶段，尚未发布稳定版本。
 
+## 2026-08-09
+
+### Added
+
+- 增加 Training Review 输入、计划、窗口、finding 和结果 Schema；
+- 增加以目标活动时间为锚点的 7/28 天 Context Builder 和稳定输入哈希；
+- 增加训练完成度、七天负荷变化和训练异常三类 evidence-backed 规则；
+- 增加 `review-running-training` Skill、JSON Schema 和 CLI；
+- 增加缺失数据降级、回放、负荷异常、Schema 漂移和 CLI 测试。
+- 中文化 Training Review Skill、UI 元数据和 JSON Schema 字段说明；
+- 增加《RunCrew 项目实施全景与面试说明》，记录各阶段方案、亮点、错误、解决方案和范围冻结规则。
+
+### Verified
+
+- M2 通过 PR #1 合并到 `main`；
+- 24 项自动化测试通过；
+- Skill 官方校验器通过；
+- 一条真实 COROS 本地活动成功回放，缺失计划/负荷历史时没有编造结论。
+
+### Known Issues
+
+- COROS 训练负荷尚未进入规范化活动；
+- 训练计划尚未持久化；
+- LLM、Trace、状态机和 Harness 留待 M4。
+
 ## 2026-08-08
 
 ### Added
@@ -38,5 +63,5 @@
 ### Known Issues
 
 - COROS `getActivityDetail` 和 `queryActivityLapData` 当前返回服务端异常；
-- COROS FIT URL 工具当前返回 `isError=true`，所以真实 FIT 和真实分圈复盘尚未验收；
+- COROS FIT URL 工具当前返回 `isError=true`，自动下载仍未验收；手动 FIT 已完成真实分圈复盘验收；
 - 尚未实现 Token 加密缓存和数据库迁移。

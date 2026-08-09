@@ -1,29 +1,28 @@
 # 当前状态
 
 > 本文件是项目当前进度的唯一事实来源。任何 AI 开始工作时必须先读本文件。  
-> 最后更新：2026-08-08
+> 最后更新：2026-08-09
 
 ## 当前里程碑
 
-**M2：FIT 详情兜底——已完成。**
+**M3：Training Review Skill——已完成。**
 
-M1 数据竖切已完成；M2 当前可以完成：
+M1/M2 数据链路已完成；M3 当前可以完成：
 
 ```text
-COROS 详情
-→ 失败时尝试分圈
-→ 再失败时优先读取私有 FIT 缓存
-→ 无缓存时请求单条 FIT URL
-→ HTTPS 限制、大小上限和超时控制
-→ CRC 校验并解析 session/lap/record
-→ 转换为 ActivityDetail
-→ 全部失败则保留 ActivitySummary + warning
+目标 Activity + 同来源历史活动 + 可选训练计划
+→ 以目标活动时间构建 7/28 天上下文
+→ 生成稳定 input_hash
+→ 确定性计算训练完成度、负荷变化和训练异常
+→ 每条 finding 强制携带 evidence
+→ 缺失数据输出 unknown + requires
+→ 通过 Skill 和 JSON Schema 暴露给未来 Agent
 ```
 
 ## 已验证事实
 
 - Python 3.13 本地环境可运行；
-- 自动化测试：19 passed；
+- 自动化测试：24 passed；
 - fixture 首次同步插入 2 条；
 - fixture 第二次同步插入 0 条、更新 2 条；
 - 真实 COROS OAuth + PKCE 成功；
@@ -41,15 +40,24 @@ COROS 详情
 - 一条由用户从 COROS App 手动导出的真实 FIT 已通过 CRC、session、lap 和 record 解析；
 - 真实 FIT 经私有缓存进入完整同步链，验收结果为 `detailed=1, detail_errors=0`；
 - 真实活动复盘已输出基于多分圈计算的 `pace_stability` evidence，数据质量为 high。
+- M2 已通过 GitHub PR #1 合并到 `main`；
+- `TrainingReviewRequest` / `TrainingReviewResult` Schema 已定义并导出；
+- `review-running-training` Skill 已通过官方 `quick_validate.py`；
+- 同一输入会生成相同 `input_hash` 和结果，回放测试已通过；
+- 真实 COROS 本地活动已通过 Training Review CLI 回放，缺少计划和负荷历史时正确降级，分圈 evidence 仍然保留。
+- 已新增中文《项目实施全景与面试说明》，记录 M0-M3 的技术方案、错误复盘、面试表达和 M4-M6 范围冻结；
+- Training Review Skill、UI 元数据和导出 Schema 的说明已中文化。
 
-## 当前已知问题
-
-真实账户测试中，COROS 的自动详情来源仍存在外部限制：
+## 当前已知限制
 
 - `getActivityDetail` 异常；
-- `queryActivityLapData` 返回相同异常。
+- `queryActivityLapData` 返回相同异常；
 - `queryActivityFitFileDownloadUrls` 在参数符合实时 schema 的情况下返回 `isError=true`，没有下发下载 URL；
-- 自动 FIT URL 未能验证，但用户手动导出的真实 FIT 已通过私有缓存完成端到端验收。
+- 自动 FIT URL 未能验证，但用户手动导出的真实 FIT 已通过私有缓存完成端到端验收；
+- 当前 COROS 规范化活动没有训练负荷字段，因此真实 `load_change` 暂时可能为 `unknown`；
+- 训练计划尚未持久化，只能通过 CLI 显式传入距离/时长目标；
+- Skill 尚未接入 LLM；当前只输出经过验证的结构化结果，这是 M3 的刻意边界；
+- 真实数据库历史活动数量仍少，跨周负荷回放主要由合成 fixture 验证。
 
 当前降级行为：
 
@@ -60,9 +68,9 @@ COROS 详情
 
 ## 下一项唯一任务
 
-**M3：实现 Training Review Skill 的最小可回放竖切。**
+**M4：实现单 Agent 的 Context + Harness + Loop 最小竖切。**
 
-具体起点：定义 Skill 的输入/输出 Schema，把现有确定性复盘服务包装成可复用能力；先完成无 LLM 的回放与 evidence 契约，再接入模型。
+具体起点：定义一次 review run 的状态机和 Trace Schema，让 Agent 只能通过 Training Review Skill 获取结论；加入工具预算、超时、重试、退出条件、故障注入和输出验证。
 
 ## 外部额度约束
 
@@ -74,6 +82,7 @@ COROS 详情
 .\.venv\Scripts\python.exe scripts\verify.py
 .\.venv\Scripts\runcrew.exe status
 .\.venv\Scripts\runcrew.exe activities review --latest --provider coros
+.\.venv\Scripts\runcrew.exe training review --latest --provider coros
 ```
 
 ## 私有本地状态

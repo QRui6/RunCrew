@@ -82,6 +82,24 @@ class ActivityRepository:
         )
         return self._to_domain(record) if record else None
 
+    def between(
+        self,
+        start: datetime,
+        end: datetime,
+        *,
+        provider: str | None = None,
+    ) -> list[ActivitySummary | ActivityDetail]:
+        statement = select(ActivityRecord).where(
+            ActivityRecord.started_at > start,
+            ActivityRecord.started_at <= end,
+        )
+        if provider is not None:
+            statement = statement.where(ActivityRecord.provider == provider)
+        records = self.session.scalars(
+            statement.order_by(ActivityRecord.started_at, ActivityRecord.id)
+        ).all()
+        return [self._to_domain(record) for record in records]
+
     def get_by_external_id(
         self, provider: str, external_id: str
     ) -> ActivitySummary | ActivityDetail | None:

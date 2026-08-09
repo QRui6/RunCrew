@@ -15,10 +15,16 @@ REQUIRED_FILES = [
     "SECURITY.md",
     "pyproject.toml",
     "docs/PROJECT_CONTEXT.md",
+    "docs/RunCrew-项目实施全景与面试说明.md",
     "docs/CURRENT_STATE.md",
     "docs/ARCHITECTURE.md",
     "docs/ROADMAP.md",
     "docs/PROGRESS.md",
+    "docs/progress/2026-08-09-m3-training-review-skill.md",
+    "skills/review-running-training/SKILL.md",
+    "skills/review-running-training/agents/openai.yaml",
+    "skills/review-running-training/references/input.schema.json",
+    "skills/review-running-training/references/output.schema.json",
 ]
 
 
@@ -48,4 +54,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
