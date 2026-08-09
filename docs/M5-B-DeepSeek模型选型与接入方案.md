@@ -1,6 +1,6 @@
 # M5-B：DeepSeek 模型选型与接入方案
 
-> 状态：调研与方案完成，代码尚未接入。  
+> 状态：M5-B1 适配器与 Mock 契约已完成；真实 API Smoke、费用和完整模型对照待完成。
 > 最后核对官方文档：2026-08-09。模型能力、名称和价格可能变化，正式调用前必须再次核对。
 
 ## 1. 结论
@@ -124,8 +124,8 @@ Policy 不直接执行工具，也不复制 Harness 的权限逻辑。
 
 ### 5.4 评测顺序
 
-1. 先增加完全 Mock 的适配器契约测试，不产生费用；
-2. 用一条最小合成上下文做一次真实 API Smoke Test；
+1. [已完成] 增加完全 Mock 的适配器契约测试，不产生费用；
+2. [待完成] 用一条最小合成上下文做一次真实 API Smoke Test；
 3. 在现有 12 个合成场景上运行真实模型；
 4. 记录完成率、动作解析错误、Token、费用、延迟和退出原因；
 5. 与确定性 Policy 基线比较；
@@ -142,7 +142,23 @@ Policy 不直接执行工具，也不复制 Harness 的权限逻辑。
 - 非法模型动作不会触发底层工具；
 - 没有真实跑步数据发送给模型；
 - 成本上限和最大输出 Token 有显式配置；
-- 若真实服务不可用，离线 39 项测试仍可独立通过。
+- 若真实服务不可用，离线 48 项测试仍可独立通过。
+
+## 6.1 M5-B1 已实现结果
+
+- `DeepSeekReviewPolicy` 与 `HttpxDeepSeekTransport`；
+- 环境变量配置、`SecretStr` 和官方 HTTPS 主机限制；
+- 非思考模式、普通 Tool Calls 和本地 Action 校验；
+- 网络、429/5xx、非法 JSON、输出截断和资源不足的有限重试；
+- 模型元数据进入白名单 Trace；
+- Evaluation Report 1.1 的模型调用、API 尝试、动作解析错误、Token 和模型耗时指标；
+- 带 `deepseek-pricing/2026-08-09` 版本的费用估算和本地停止门；
+- 只运行一个合成场景、且要求显式付费确认和费用上限的 `runcrew eval deepseek-smoke`；
+- 9 项零费用 Mock/安全/费用门/Smoke CLI 测试，全量 48 项测试通过。
+
+这些结果只证明本地接入代码满足契约，不能替代真实模型 Smoke 和质量评测。
+
+本地费用上限根据 API 返回的 usage 后验计算：它可以阻止同一 Policy 的后续动作，但第一笔请求已经发生，因此不能当作供应商账单硬上限。正式调用仍应使用低余额账户并先核对官方价格。
 
 ## 7. 当前评测基线的一个限制
 
@@ -156,4 +172,3 @@ Policy 不直接执行工具，也不复制 Harness 的权限逻辑。
 - [DeepSeek 思考模式](https://api-docs.deepseek.com/guides/thinking_mode/)
 - [DeepSeek API 更新记录](https://api-docs.deepseek.com/updates/)
 - [DeepSeek-V4 发布说明](https://api-docs.deepseek.com/news/news260424/)
-

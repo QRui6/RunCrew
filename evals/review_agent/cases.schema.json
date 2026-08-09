@@ -39,7 +39,7 @@
           "default": 1.0,
           "description": "整个 Agent Run 的超时秒数。",
           "exclusiveMinimum": 0,
-          "maximum": 10,
+          "maximum": 120,
           "title": "Run Timeout Seconds",
           "type": "number"
         }

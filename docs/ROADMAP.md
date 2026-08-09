@@ -79,11 +79,11 @@
 - [x] 故障注入；
 - [x] Agent 输出可验证。
 
-当前使用确定性 Policy 验证 Harness 和 Loop；真实 LLM Policy、Token/费用预算和模型评测尚未实现，不能在面试中声称已经完成模型自主决策。
+当前默认仍使用确定性 Policy 验证 Harness 和 Loop；DeepSeek 适配器只有 Mock 验证，真实模型、费用预算和模型对照尚未完成，不能在面试中声称已经完成真实模型自主决策。
 
 ## M5：单 Agent 评测与真实 LLM Policy
 
-状态：**进行中（M5-A 已完成；M5-B 选型方案已完成）**
+状态：**进行中（M5-A 与 M5-B1 已完成）**
 
 验收：
 
@@ -91,9 +91,12 @@
 - [x] 完成率、护栏、Schema、事实一致性、工具调用、重试和延迟指标；
 - [x] 版本化 Suite/Report Schema、`suite_hash` 和私有报告；
 - [x] 核对 DeepSeek 官方能力并形成 `deepseek-v4-flash` 非思考模式接入方案；
-- [ ] 一个实现 M4 Action Schema 的真实 LLM Policy；
-- [ ] Mock 适配器契约测试和单次合成数据 API Smoke Test；
-- [ ] Token、费用和动作解析错误指标；
+- [x] 一个实现 M4 Action Schema 的 `DeepSeekReviewPolicy` 适配器；
+- [x] Mock 适配器契约、安全和评测聚合测试；
+- [x] Token、模型调用、API 尝试、动作解析错误和模型耗时指标结构；
+- [x] 受显式确认与费用上限保护的单次合成数据 Smoke 命令；
+- [x] 带价格版本的本地费用估算和后验停止门；
+- [ ] 使用真实 DeepSeek API 执行一次合成数据 Smoke；
 - [ ] 与确定性 Policy 基线对照；
 - [ ] 多 Agent 决策记录。
 

@@ -48,6 +48,10 @@ def test_offline_baseline_passes_all_metrics_and_is_replayable() -> None:
     assert first.metrics.fact_integrity_rate == 1
     assert first.metrics.prohibited_tool_execution_count == 0
     assert first.metrics.average_tool_calls <= 1
+    assert first.metrics.policy_call_count == 0
+    assert first.metrics.total_tokens == 0
+    assert first.metrics.estimated_cost_usd == 0
+    assert first.metrics.estimated_cost_basis is None
     assert first.metrics.termination_reason_counts["completed"] == 3
     assert all(case.passed for case in first.cases)
 
@@ -115,3 +119,32 @@ def test_evaluation_cli_writes_valid_report_only_to_private_directory(
     )
     assert blocked.exit_code != 0
     assert not blocked_path.exists()
+
+
+def test_deepseek_smoke_cli_requires_explicit_confirmation_and_cost_cap(
+    monkeypatch,
+) -> None:
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    missing_confirmation = CliRunner().invoke(app, ["eval", "deepseek-smoke"])
+    assert missing_confirmation.exit_code != 0
+    assert "--confirm-paid-api" in missing_confirmation.output
+
+    missing_cost_cap = CliRunner().invoke(
+        app,
+        ["eval", "deepseek-smoke", "--confirm-paid-api"],
+    )
+    assert missing_cost_cap.exit_code != 0
+    assert "--max-estimated-cost-usd" in missing_cost_cap.output
+
+    missing_key = CliRunner().invoke(
+        app,
+        [
+            "eval",
+            "deepseek-smoke",
+            "--confirm-paid-api",
+            "--max-estimated-cost-usd",
+            "0.01",
+        ],
+    )
+    assert missing_key.exit_code != 0
+    assert "DEEPSEEK_API_KEY" in missing_key.output

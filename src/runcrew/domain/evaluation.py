@@ -56,7 +56,7 @@ class EvaluationRunOverrides(BaseModel):
     run_timeout_seconds: float = Field(
         default=1.0,
         gt=0,
-        le=10,
+        le=120,
         description="整个 Agent Run 的超时秒数。",
     )
 
@@ -139,6 +139,44 @@ class ReviewAgentEvaluationSuite(BaseModel):
         return self
 
 
+class PolicyEvaluationUsage(BaseModel):
+    """一条评测用例中的模型策略开销；确定性 Policy 的各项值均为零。"""
+
+    model_config = ConfigDict(extra="forbid", title="Policy 评测用量")
+
+    policy_calls: int = Field(default=0, ge=0, description="Policy 模型调用次数。")
+    api_attempts: int = Field(default=0, ge=0, description="包含重试的 API 尝试次数。")
+    action_parse_errors: int = Field(
+        default=0,
+        ge=0,
+        description="模型响应无法转换为合法 Action 的次数。",
+    )
+    latency_ms: float = Field(default=0, ge=0, description="模型 API 累计耗时。")
+    prompt_tokens: int = Field(default=0, ge=0, description="输入 Token 数。")
+    prompt_cache_hit_tokens: int = Field(
+        default=0,
+        ge=0,
+        description="命中上下文缓存的输入 Token 数。",
+    )
+    prompt_cache_miss_tokens: int = Field(
+        default=0,
+        ge=0,
+        description="未命中上下文缓存的输入 Token 数。",
+    )
+    completion_tokens: int = Field(default=0, ge=0, description="输出 Token 数。")
+    reasoning_tokens: int = Field(default=0, ge=0, description="思考 Token 数。")
+    total_tokens: int = Field(default=0, ge=0, description="输入与输出 Token 总数。")
+    estimated_cost_usd: float = Field(
+        default=0,
+        ge=0,
+        description="按评测时固定单价估算的美元费用。",
+    )
+    estimated_cost_basis: str | None = Field(
+        default=None,
+        description="费用估算使用的供应商价格版本；未调用模型时为空。",
+    )
+
+
 class ReviewAgentEvaluationCaseResult(BaseModel):
     model_config = ConfigDict(extra="forbid", title="单条 Agent 评测结果")
 
@@ -159,6 +197,10 @@ class ReviewAgentEvaluationCaseResult(BaseModel):
     tool_calls_used: int = Field(ge=0, description="实际逻辑工具调用数。")
     tool_attempts_used: int = Field(ge=0, description="实际工具尝试数。")
     latency_ms: float = Field(ge=0, description="该用例端到端执行耗时。")
+    policy_usage: PolicyEvaluationUsage = Field(
+        default_factory=PolicyEvaluationUsage,
+        description="该用例实际产生的模型调用、解析和 Token 用量。",
+    )
     failure_reasons: list[str] = Field(
         default_factory=list,
         description="未满足预期时的中文原因。",
@@ -195,6 +237,35 @@ class ReviewAgentEvaluationMetrics(BaseModel):
     )
     average_tool_calls: float = Field(ge=0, description="平均逻辑工具调用数。")
     average_tool_attempts: float = Field(ge=0, description="平均工具尝试数。")
+    policy_call_count: int = Field(ge=0, description="全部用例的模型调用总数。")
+    policy_api_attempt_count: int = Field(
+        ge=0,
+        description="包含模型重试在内的 API 尝试总数。",
+    )
+    policy_action_parse_error_count: int = Field(
+        ge=0,
+        description="模型响应无法转换为 Action 的总次数。",
+    )
+    prompt_tokens: int = Field(ge=0, description="模型输入 Token 总数。")
+    prompt_cache_hit_tokens: int = Field(
+        ge=0,
+        description="命中上下文缓存的输入 Token 总数。",
+    )
+    prompt_cache_miss_tokens: int = Field(
+        ge=0,
+        description="未命中上下文缓存的输入 Token 总数。",
+    )
+    completion_tokens: int = Field(ge=0, description="模型输出 Token 总数。")
+    reasoning_tokens: int = Field(ge=0, description="模型思考 Token 总数。")
+    total_tokens: int = Field(ge=0, description="模型 Token 总数。")
+    estimated_cost_usd: float = Field(
+        ge=0,
+        description="全部模型调用的估算美元费用。",
+    )
+    estimated_cost_basis: str | None = Field(
+        description="聚合费用使用的价格版本；未调用模型时为空。",
+    )
+    policy_latency_ms: float = Field(ge=0, description="模型 API 累计耗时。")
     p95_latency_ms: float = Field(ge=0, description="用例端到端耗时 P95。")
     termination_reason_counts: dict[str, int] = Field(
         description="各退出原因出现次数。"
@@ -204,7 +275,7 @@ class ReviewAgentEvaluationMetrics(BaseModel):
 class ReviewAgentEvaluationReport(BaseModel):
     model_config = ConfigDict(extra="forbid", title="训练复盘 Agent 评测报告")
 
-    schema_version: Literal["1.0"] = Field(default="1.0", description="报告版本。")
+    schema_version: Literal["1.1"] = Field(default="1.1", description="报告版本。")
     suite_version: Literal["review-agent-eval/1.0"] = Field(
         description="使用的评测套件版本。"
     )

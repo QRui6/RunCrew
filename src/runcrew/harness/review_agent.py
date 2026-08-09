@@ -186,6 +186,7 @@ class ReviewAgentHarness:
                 raw_action = await self.policy.next_action(context)
                 action = AGENT_ACTION_ADAPTER.validate_python(raw_action)
             except Exception as error:
+                policy_details = self._consume_policy_trace_details()
                 return self._failure_result(
                     run_id=run_id,
                     code="policy_error",
@@ -194,13 +195,15 @@ class ReviewAgentHarness:
                     recorder=recorder,
                     usage=usage,
                     error_type=type(error).__name__,
+                    extra_details=policy_details,
                 )
 
+            policy_details = self._consume_policy_trace_details()
             usage.steps += 1
             recorder.add(
                 state="planning",
                 event="policy_action",
-                details={"action_type": action.type},
+                details={"action_type": action.type, **policy_details},
             )
 
             if isinstance(action, FinishAction):
@@ -455,6 +458,7 @@ class ReviewAgentHarness:
         recorder: _TraceRecorder,
         usage: _Usage,
         error_type: str | None = None,
+        extra_details: dict[str, Any] | None = None,
     ) -> ReviewAgentRunResult:
         if code == "step_budget_exhausted":
             status = "budget_exhausted"
@@ -468,6 +472,8 @@ class ReviewAgentHarness:
         details: dict[str, Any] = {"error_code": code}
         if error_type is not None:
             details["error_type"] = error_type
+        if extra_details:
+            details.update(extra_details)
         recorder.add(
             state="failed",
             event=event,
@@ -493,3 +499,38 @@ class ReviewAgentHarness:
             tool_calls_used=usage.tool_calls,
             tool_attempts_used=usage.tool_attempts,
         )
+
+    def _consume_policy_trace_details(self) -> dict[str, Any]:
+        consume = getattr(self.policy, "consume_trace_details", None)
+        if not callable(consume):
+            return {}
+        try:
+            candidate = consume()
+        except Exception:
+            return {"policy_telemetry_error": "unavailable"}
+        if not isinstance(candidate, dict):
+            return {"policy_telemetry_error": "invalid_type"}
+        allowed_keys = {
+            "policy_provider",
+            "policy_model",
+            "policy_thinking_enabled",
+            "policy_api_attempts",
+            "policy_parse_errors",
+            "policy_latency_ms",
+            "policy_prompt_tokens",
+            "policy_prompt_cache_hit_tokens",
+            "policy_prompt_cache_miss_tokens",
+            "policy_completion_tokens",
+            "policy_reasoning_tokens",
+            "policy_total_tokens",
+            "policy_estimated_cost_usd",
+            "policy_estimated_cost_basis",
+            "policy_finish_reason",
+            "policy_outcome",
+        }
+        return {
+            key: value
+            for key, value in candidate.items()
+            if key in allowed_keys
+            and (value is None or isinstance(value, str | int | float | bool))
+        }

@@ -1,5 +1,103 @@
 {
   "$defs": {
+    "PolicyEvaluationUsage": {
+      "additionalProperties": false,
+      "description": "一条评测用例中的模型策略开销；确定性 Policy 的各项值均为零。",
+      "properties": {
+        "policy_calls": {
+          "default": 0,
+          "description": "Policy 模型调用次数。",
+          "minimum": 0,
+          "title": "Policy Calls",
+          "type": "integer"
+        },
+        "api_attempts": {
+          "default": 0,
+          "description": "包含重试的 API 尝试次数。",
+          "minimum": 0,
+          "title": "Api Attempts",
+          "type": "integer"
+        },
+        "action_parse_errors": {
+          "default": 0,
+          "description": "模型响应无法转换为合法 Action 的次数。",
+          "minimum": 0,
+          "title": "Action Parse Errors",
+          "type": "integer"
+        },
+        "latency_ms": {
+          "default": 0,
+          "description": "模型 API 累计耗时。",
+          "minimum": 0,
+          "title": "Latency Ms",
+          "type": "number"
+        },
+        "prompt_tokens": {
+          "default": 0,
+          "description": "输入 Token 数。",
+          "minimum": 0,
+          "title": "Prompt Tokens",
+          "type": "integer"
+        },
+        "prompt_cache_hit_tokens": {
+          "default": 0,
+          "description": "命中上下文缓存的输入 Token 数。",
+          "minimum": 0,
+          "title": "Prompt Cache Hit Tokens",
+          "type": "integer"
+        },
+        "prompt_cache_miss_tokens": {
+          "default": 0,
+          "description": "未命中上下文缓存的输入 Token 数。",
+          "minimum": 0,
+          "title": "Prompt Cache Miss Tokens",
+          "type": "integer"
+        },
+        "completion_tokens": {
+          "default": 0,
+          "description": "输出 Token 数。",
+          "minimum": 0,
+          "title": "Completion Tokens",
+          "type": "integer"
+        },
+        "reasoning_tokens": {
+          "default": 0,
+          "description": "思考 Token 数。",
+          "minimum": 0,
+          "title": "Reasoning Tokens",
+          "type": "integer"
+        },
+        "total_tokens": {
+          "default": 0,
+          "description": "输入与输出 Token 总数。",
+          "minimum": 0,
+          "title": "Total Tokens",
+          "type": "integer"
+        },
+        "estimated_cost_usd": {
+          "default": 0,
+          "description": "按评测时固定单价估算的美元费用。",
+          "minimum": 0,
+          "title": "Estimated Cost Usd",
+          "type": "number"
+        },
+        "estimated_cost_basis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "费用估算使用的供应商价格版本；未调用模型时为空。",
+          "title": "Estimated Cost Basis"
+        }
+      },
+      "title": "Policy 评测用量",
+      "type": "object"
+    },
     "ReviewAgentEvaluationCaseResult": {
       "additionalProperties": false,
       "properties": {
@@ -92,6 +190,10 @@
           "title": "Latency Ms",
           "type": "number"
         },
+        "policy_usage": {
+          "$ref": "#/$defs/PolicyEvaluationUsage",
+          "description": "该用例实际产生的模型调用、解析和 Token 用量。"
+        },
         "failure_reasons": {
           "description": "未满足预期时的中文原因。",
           "items": {
@@ -173,6 +275,84 @@
           "title": "Average Tool Attempts",
           "type": "number"
         },
+        "policy_call_count": {
+          "description": "全部用例的模型调用总数。",
+          "minimum": 0,
+          "title": "Policy Call Count",
+          "type": "integer"
+        },
+        "policy_api_attempt_count": {
+          "description": "包含模型重试在内的 API 尝试总数。",
+          "minimum": 0,
+          "title": "Policy Api Attempt Count",
+          "type": "integer"
+        },
+        "policy_action_parse_error_count": {
+          "description": "模型响应无法转换为 Action 的总次数。",
+          "minimum": 0,
+          "title": "Policy Action Parse Error Count",
+          "type": "integer"
+        },
+        "prompt_tokens": {
+          "description": "模型输入 Token 总数。",
+          "minimum": 0,
+          "title": "Prompt Tokens",
+          "type": "integer"
+        },
+        "prompt_cache_hit_tokens": {
+          "description": "命中上下文缓存的输入 Token 总数。",
+          "minimum": 0,
+          "title": "Prompt Cache Hit Tokens",
+          "type": "integer"
+        },
+        "prompt_cache_miss_tokens": {
+          "description": "未命中上下文缓存的输入 Token 总数。",
+          "minimum": 0,
+          "title": "Prompt Cache Miss Tokens",
+          "type": "integer"
+        },
+        "completion_tokens": {
+          "description": "模型输出 Token 总数。",
+          "minimum": 0,
+          "title": "Completion Tokens",
+          "type": "integer"
+        },
+        "reasoning_tokens": {
+          "description": "模型思考 Token 总数。",
+          "minimum": 0,
+          "title": "Reasoning Tokens",
+          "type": "integer"
+        },
+        "total_tokens": {
+          "description": "模型 Token 总数。",
+          "minimum": 0,
+          "title": "Total Tokens",
+          "type": "integer"
+        },
+        "estimated_cost_usd": {
+          "description": "全部模型调用的估算美元费用。",
+          "minimum": 0,
+          "title": "Estimated Cost Usd",
+          "type": "number"
+        },
+        "estimated_cost_basis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "聚合费用使用的价格版本；未调用模型时为空。",
+          "title": "Estimated Cost Basis"
+        },
+        "policy_latency_ms": {
+          "description": "模型 API 累计耗时。",
+          "minimum": 0,
+          "title": "Policy Latency Ms",
+          "type": "number"
+        },
         "p95_latency_ms": {
           "description": "用例端到端耗时 P95。",
           "minimum": 0,
@@ -197,6 +377,18 @@
         "prohibited_tool_execution_count",
         "average_tool_calls",
         "average_tool_attempts",
+        "policy_call_count",
+        "policy_api_attempt_count",
+        "policy_action_parse_error_count",
+        "prompt_tokens",
+        "prompt_cache_hit_tokens",
+        "prompt_cache_miss_tokens",
+        "completion_tokens",
+        "reasoning_tokens",
+        "total_tokens",
+        "estimated_cost_usd",
+        "estimated_cost_basis",
+        "policy_latency_ms",
         "p95_latency_ms",
         "termination_reason_counts"
       ],
@@ -207,8 +399,8 @@
   "additionalProperties": false,
   "properties": {
     "schema_version": {
-      "const": "1.0",
-      "default": "1.0",
+      "const": "1.1",
+      "default": "1.1",
       "description": "报告版本。",
       "title": "Schema Version",
       "type": "string"

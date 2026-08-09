@@ -33,6 +33,8 @@ review-running-training Skill
   ▼
 Review Agent Harness
   │ 有界 Context + Action Schema + 权限 + 预算 + 重试 + Trace
+  ├── DeterministicReviewPolicy（离线基线）
+  └── DeepSeekReviewPolicy（非思考 Tool Calls；当前仅 Mock 验证）
   ▼
 CLI Agent Run JSON 输出
   │ 版本化合成场景 + 故障注入 + 预期终态
@@ -89,6 +91,8 @@ Agent Evaluation Runner
 
 当前默认策略为确定性 `DeterministicReviewPolicy`，只会在没有观察时调用 `review_running_training`，获得合法观察后请求结束。未来 LLM Policy 必须实现同一动作协议，不能绕过 Harness。
 
+M5-B1 已新增 `DeepSeekReviewPolicy`：通过官方 Chat Completions + 普通 Tool Calls 选择动作，使用 `httpx`、环境变量和 `SecretStr` 管理调用；模型 API 重试与业务工具重试分离。Harness 只接收模型名、Token、耗时和解析错误等白名单元数据，Prompt、响应正文、Key 和工具参数不进入 Trace。该适配器当前只通过 Mock 契约，尚无真实 API 结果。
+
 ### Evaluation
 
 位置：`src/runcrew/evaluation/` 和 `evals/review_agent/`
@@ -96,6 +100,8 @@ Agent Evaluation Runner
 负责加载版本化无私人数据场景、为 Tool/Policy 注入可重复故障、运行真实 Harness、比较预期终态和确定性业务事实，并聚合任务完成、护栏、Schema、事实一致性、调用成本、延迟和退出原因指标。
 
 评测套件可以进入 Git，生成报告只允许写入 `data/private/`。M5-B 的真实 LLM Policy 必须通过相同 `default_policy_factory` 接口进入评测器，不能创建一套只为模型演示服务的旁路。
+
+Evaluation Report 1.1 已增加通用 Policy Usage：模型调用数、API 尝试、动作解析错误、缓存命中/未命中 Token、输入/输出/思考 Token、带价格版本的估算费用和模型耗时。确定性 Policy 的这些字段固定为零。
 
 ## 数据模型
 

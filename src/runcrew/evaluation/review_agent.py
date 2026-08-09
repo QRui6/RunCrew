@@ -26,6 +26,7 @@ from runcrew.domain.agent import (
     ToolPermission,
 )
 from runcrew.domain.evaluation import (
+    PolicyEvaluationUsage,
     ReviewAgentEvaluationCase,
     ReviewAgentEvaluationCaseResult,
     ReviewAgentEvaluationMetrics,
@@ -140,12 +141,14 @@ async def _evaluate_case(
     started = time.perf_counter()
     result = await harness.run(run_request, tool=tool)
     latency_ms = round((time.perf_counter() - started) * 1000, 3)
+    policy_usage = _policy_usage(policy)
     return _judge_case(
         case,
         result=result,
         expected_result=scenario.expected_result,
         execution_count=execution_count,
         latency_ms=latency_ms,
+        policy_usage=policy_usage,
     )
 
 
@@ -156,6 +159,7 @@ def _judge_case(
     expected_result: TrainingReviewResult,
     execution_count: int,
     latency_ms: float,
+    policy_usage: PolicyEvaluationUsage,
 ) -> ReviewAgentEvaluationCaseResult:
     reasons: list[str] = []
     try:
@@ -209,6 +213,7 @@ def _judge_case(
         tool_calls_used=result.budget.tool_calls_used,
         tool_attempts_used=result.budget.tool_attempts_used,
         latency_ms=latency_ms,
+        policy_usage=policy_usage,
         failure_reasons=reasons,
     )
 
@@ -331,6 +336,11 @@ def _build_metrics(
     latencies = sorted(result.latency_ms for result in results)
     p95_index = max(math.ceil(len(latencies) * 0.95) - 1, 0)
     terminations = Counter(result.actual_termination_reason for result in results)
+    cost_bases = {
+        result.policy_usage.estimated_cost_basis
+        for result in results
+        if result.policy_usage.estimated_cost_basis is not None
+    }
     return ReviewAgentEvaluationMetrics(
         expectation_pass_rate=_rate(sum(result.passed for result in results), len(results)),
         task_completion_rate=_rate(
@@ -357,6 +367,40 @@ def _build_metrics(
             sum(result.tool_attempts_used for result in results) / len(results),
             4,
         ),
+        policy_call_count=sum(
+            result.policy_usage.policy_calls for result in results
+        ),
+        policy_api_attempt_count=sum(
+            result.policy_usage.api_attempts for result in results
+        ),
+        policy_action_parse_error_count=sum(
+            result.policy_usage.action_parse_errors for result in results
+        ),
+        prompt_tokens=sum(result.policy_usage.prompt_tokens for result in results),
+        prompt_cache_hit_tokens=sum(
+            result.policy_usage.prompt_cache_hit_tokens for result in results
+        ),
+        prompt_cache_miss_tokens=sum(
+            result.policy_usage.prompt_cache_miss_tokens for result in results
+        ),
+        completion_tokens=sum(
+            result.policy_usage.completion_tokens for result in results
+        ),
+        reasoning_tokens=sum(
+            result.policy_usage.reasoning_tokens for result in results
+        ),
+        total_tokens=sum(result.policy_usage.total_tokens for result in results),
+        estimated_cost_usd=round(
+            sum(result.policy_usage.estimated_cost_usd for result in results),
+            8,
+        ),
+        estimated_cost_basis=(
+            next(iter(cost_bases)) if len(cost_bases) == 1 else None
+        ),
+        policy_latency_ms=round(
+            sum(result.policy_usage.latency_ms for result in results),
+            3,
+        ),
         p95_latency_ms=latencies[p95_index],
         termination_reason_counts=dict(sorted(terminations.items())),
     )
@@ -373,6 +417,13 @@ def _suite_hash(suite: ReviewAgentEvaluationSuite) -> str:
         separators=(",", ":"),
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _policy_usage(policy: ReviewAgentPolicy) -> PolicyEvaluationUsage:
+    provider = getattr(policy, "evaluation_usage", None)
+    if not callable(provider):
+        return PolicyEvaluationUsage()
+    return PolicyEvaluationUsage.model_validate(provider())
 
 
 def _rate(numerator: int, denominator: int) -> float:

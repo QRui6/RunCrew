@@ -17,6 +17,8 @@ RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前�
 - 输出成功、失败、超时或预算耗尽终态，以及完整脱敏 Trace；
 - 用 12 个版本化离线场景评测任务完成、故障恢复、护栏和预算行为；
 - 输出 Suite Hash、事实一致性、工具执行和调用成本等可比较指标；
+- 提供 `DeepSeekReviewPolicy` 非思考 Tool Calls 适配器，并以 Mock 验证请求、解析、重试、脱敏和 Harness 护栏；
+- 在评测报告 1.1 中统计 Policy 调用、API 尝试、动作解析错误、Token 和模型耗时；
 - 使用不含位置的合成 FIT 进行离线开发和回归测试。
 
 ## 文档导航
@@ -104,4 +106,6 @@ Agent 输出在 Training Review 之外增加 `run_id`、终态、退出原因、
 
 ## 下一阶段模型方案
 
-M5-B 推荐先接入 `deepseek-v4-flash` 非思考模式，只替换动作选择 Policy。模型的 Tool Call 仍必须经过本地 Pydantic、白名单、确认、预算和参数一致性校验。该方案目前只完成调研与设计，尚未实现，也尚未产生真实模型评测结果；详见 [DeepSeek 模型选型与接入方案](docs/M5-B-DeepSeek模型选型与接入方案.md)。
+M5-B1 已实现 `deepseek-v4-flash` 非思考模式适配器，但目前只通过零费用 Mock 契约。模型 Tool Call 仍经过本地 Pydantic、白名单、确认、预算和参数一致性校验。尚未配置 API Key、发起真实请求或产生真实模型评测结果；详见 [DeepSeek 模型选型与接入方案](docs/M5-B-DeepSeek模型选型与接入方案.md)。
+
+真实 Smoke 命令已经实现，但不会自动运行。它只使用一个合成用例，并要求同时传入 `--confirm-paid-api` 和 `--max-estimated-cost-usd`；缺少 Key、确认或费用上限时会在联网前退出。

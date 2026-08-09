@@ -3,9 +3,11 @@ from runcrew.harness.review_agent import (
     RetryableToolError,
     ReviewAgentHarness,
 )
+from runcrew.policies.deepseek import DeepSeekReviewPolicy
 
 __all__ = [
     "DeterministicReviewPolicy",
     "RetryableToolError",
     "ReviewAgentHarness",
+    "DeepSeekReviewPolicy",
 ]

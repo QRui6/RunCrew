@@ -13,6 +13,7 @@ from runcrew.domain.agent import ReviewAgentRunRequest
 from runcrew.domain.training_review import PlannedSession, TrainingReviewRequest
 from runcrew.evaluation import evaluate_review_agent_suite, load_review_agent_suite
 from runcrew.harness import ReviewAgentHarness
+from runcrew.policies import DeepSeekPolicyConfig, DeepSeekPolicyError, DeepSeekReviewPolicy
 from runcrew.services.activity_review import build_activity_review
 from runcrew.services.sync import sync_activities
 from runcrew.services.training_review import execute_training_review
@@ -398,6 +399,81 @@ def evaluate_review_agent(
         raise typer.BadParameter(f"Evaluation suite not found: {cases_path}")
     suite = load_review_agent_suite(cases_path)
     report = asyncio.run(evaluate_review_agent_suite(suite))
+    payload = report.model_dump_json(indent=2)
+    if output_path is not None:
+        private_root = Path("data/private").resolve()
+        resolved_output = output_path.resolve()
+        if not resolved_output.is_relative_to(private_root):
+            raise typer.BadParameter("Evaluation reports must stay under data/private.")
+        resolved_output.parent.mkdir(parents=True, exist_ok=True)
+        resolved_output.write_text(payload + "\n", encoding="utf-8")
+    typer.echo(payload)
+    if not report.meets_baseline:
+        raise typer.Exit(code=1)
+
+
+@evaluation_app.command("deepseek-smoke")
+def evaluate_deepseek_smoke(
+    confirm_paid_api: Annotated[
+        bool,
+        typer.Option(
+            "--confirm-paid-api",
+            help="明确确认本命令会调用 DeepSeek 并产生少量费用。",
+        ),
+    ] = False,
+    max_estimated_cost_usd: Annotated[
+        float | None,
+        typer.Option(
+            "--max-estimated-cost-usd",
+            min=0.000001,
+            max=1,
+            help="本次 Policy 允许的估算费用上限（美元），必须显式提供。",
+        ),
+    ] = None,
+    cases_path: Annotated[
+        Path,
+        typer.Option("--cases", help="评测用例 JSON 路径。"),
+    ] = Path("evals/review_agent/cases.json"),
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", help="可选报告路径，只允许写入 data/private。"),
+    ] = None,
+) -> None:
+    if not confirm_paid_api:
+        raise typer.BadParameter("必须显式传入 --confirm-paid-api 才允许外部模型调用。")
+    if max_estimated_cost_usd is None:
+        raise typer.BadParameter("必须显式设置 --max-estimated-cost-usd。")
+    if not cases_path.is_file():
+        raise typer.BadParameter(f"Evaluation suite not found: {cases_path}")
+    try:
+        config = DeepSeekPolicyConfig.from_env().model_copy(
+            update={"max_estimated_cost_usd": max_estimated_cost_usd}
+        )
+    except DeepSeekPolicyError as error:
+        raise typer.BadParameter(str(error)) from error
+
+    suite = load_review_agent_suite(cases_path)
+    smoke_case = next(
+        (case for case in suite.cases if case.id == "complete_training_review"),
+        None,
+    )
+    if smoke_case is None:
+        raise typer.BadParameter("Evaluation suite 缺少 complete_training_review。")
+    smoke_case = smoke_case.model_copy(
+        update={
+            "run": smoke_case.run.model_copy(
+                update={"run_timeout_seconds": 60.0}
+            )
+        }
+    )
+    smoke_suite = suite.model_copy(update={"cases": [smoke_case]})
+    report = asyncio.run(
+        evaluate_review_agent_suite(
+            smoke_suite,
+            default_policy_factory=lambda: DeepSeekReviewPolicy(config),
+            policy_name=f"{config.model}-live-nonthinking-smoke",
+        )
+    )
     payload = report.model_dump_json(indent=2)
     if output_path is not None:
         private_root = Path("data/private").resolve()

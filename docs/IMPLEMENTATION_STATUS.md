@@ -5,12 +5,12 @@
 请按以下顺序阅读：
 
 1. [CURRENT_STATE.md](CURRENT_STATE.md)：唯一当前事实来源，回答“现在做到哪里、限制和下一步是什么”；
-2. [RunCrew-项目实施全景与面试说明.md](RunCrew-项目实施全景与面试说明.md)：完整记录 M0-M5-A 的实现方案、技术策略、亮点、错误和面试表达；
+2. [RunCrew-项目实施全景与面试说明.md](RunCrew-项目实施全景与面试说明.md)：完整记录 M0-M5-B1 的实现方案、技术策略、亮点、错误和面试表达；
 3. [PROGRESS.md](PROGRESS.md)：各阶段不可变的历史交接索引；
 4. [ROADMAP.md](ROADMAP.md)：后续阶段和验收条件；
 5. [adr/README.md](adr/README.md)：关键架构选择及其原因。
 
-当前一句话状态：M5-A 单 Agent 离线评测基线已完成，12/12 场景和全部 39 项自动化测试通过；真实 LLM Policy、模型费用评测和多 Agent 尚未实现。
+当前一句话状态：M5-A 离线基线和 M5-B1 DeepSeek Policy、Mock 契约、费用门与单用例 Smoke 命令已完成，12/12 确定性场景和全部 48 项自动化测试通过；真实 DeepSeek Smoke、完整模型对照和多 Agent 尚未实现。
 
 常用验收命令：
 

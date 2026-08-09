@@ -11,6 +11,7 @@
 | 2026-08-09 | M3 Training Review Skill | 完成 | [M3 Training Review Skill](progress/2026-08-09-m3-training-review-skill.md) |
 | 2026-08-09 | M4 训练复盘单 Agent Loop | 完成 | [M4 单 Agent Loop](progress/2026-08-09-m4-review-agent-loop.md) |
 | 2026-08-09 | M5-A 单 Agent 离线评测基线 | 完成 | [M5-A 离线评测基线](progress/2026-08-09-m5-agent-evaluation-baseline.md) |
+| 2026-08-09 | M5-B1 DeepSeek Policy 适配器与 Mock 契约 | 完成 | [M5-B1 DeepSeek Policy 适配器](progress/2026-08-09-m5b-deepseek-policy-adapter.md) |
 
 ## 新阶段记录模板
 

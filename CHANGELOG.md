@@ -6,6 +6,12 @@
 
 ### Added
 
+- 增加 `DeepSeekReviewPolicy`、官方 HTTPS Chat Completions Transport、环境配置、非思考 Tool Calls 解析和有限 API 重试；
+- 增加 Policy Trace 白名单，记录模型名、模式、API 尝试、动作解析错误、Token 和耗时，不记录 Prompt、响应正文、Key 或工具参数；
+- Evaluation Report 升级至 1.1，增加按用例和聚合的模型调用与 Token 指标；
+- 增加受显式付费确认与估算费用上限保护的单条合成 DeepSeek Smoke 命令；
+- 增加带价格版本的费用估算和 Policy 费用停止门；
+- 增加 9 项 DeepSeek Mock 契约、安全、脱敏、费用门和 Smoke CLI 测试；
 - 增加 M5-B DeepSeek 模型选型与接入方案，明确模型、模式、数据边界、Harness 校验、失败处理和验收标准；
 - 增加 `review-agent-eval/1.0` 版本化离线评测套件，包含 12 个任务、韧性、护栏和预算场景；
 - 增加 Evaluation Case、Suite、Metrics 和 Report Schema，以及 Schema 导出脚本；
@@ -29,7 +35,7 @@
 
 - M3 PR #2 与 M4 PR #3 已依次合并到 `main`；
 - M5-A 离线基线 12/12 场景通过，正确性指标均为 100%，越权后工具执行数为 0；
-- 全部自动化测试增至 39 项；
+- 全部自动化测试增至 48 项；
 - M4 单 Agent 成功路径和故障路径通过 10 项专项测试；
 - fixture 端到端 Agent CLI 验收成功，Trace 完整记录 2 步策略决策和 1 次工具调用；
 - M2 通过 PR #1 合并到 `main`；
@@ -39,8 +45,8 @@
 
 ### Known Issues
 
-- DeepSeek 当前只完成调研和设计，尚未配置 Key、发起真实请求或得到模型评测结果；
-- 当前使用确定性 Policy；真实 LLM Policy、Token/费用和动作解析错误评测尚未实现；
+- DeepSeek 适配器和 Mock 契约已完成，但尚未配置 Key、发起真实请求或得到模型评测结果；
+- 当前正式基线仍使用确定性 Policy；费用估算和真实模型对照尚未实现；
 - Agent Trace 尚未持久化；
 - COROS 训练负荷尚未进入规范化活动；
 - 训练计划尚未持久化；
