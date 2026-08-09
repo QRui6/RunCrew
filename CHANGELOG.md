@@ -6,6 +6,12 @@
 
 ### Added
 
+- 将产品主入口从只读 Dashboard 改为围绕个人跑步数据连续追问的本地聊天工作区，原页面保留为 `/engineering` 工程观测台；
+- 增加 Activity 选择、会话创建、消息 POST、历史加载和 SQLite 持久化；
+- 首次提问复用 `ReviewAgentHarness → review_running_training` 生成并保存 evidence/Trace 快照，后续追问不重复计算；
+- 增加最近8条消息/单条1200字符的上下文窗口、离线证据回答和 DeepSeek JSON 回答策略；
+- 增加回答 evidence 引用白名单、置信度/缺失数据契约、医疗诊断措辞校验、Token/费用展示和64 KB请求上限；
+- 增加3项聊天持久化、真实 HTTP 契约、DeepSeek Mock 与上下文裁剪测试；
 - 增加 `runcrew demo` 本地只读 Dashboard，集中展示 Activity、Training Review evidence、Agent 预算/Trace 和 Same-Hash 模型对照；
 - 增加无第三方 Web 依赖的回环 HTTP 服务、展示 DTO、响应式单页和静态资源 Wheel 配置；
 - 演示 API 只接受 GET，浏览器 DTO 排除 Provider 外部 ID、raw payload、坐标和 Token；
@@ -44,6 +50,8 @@
 
 ### Verified
 
+- 跑步聊天首问和追问持久化、同一 evidence 快照复用、脱敏 DTO 与 DeepSeek JSON 契约通过自动化测试；
+- 全量自动化测试增至59项，两个前端脚本均通过 JavaScript 语法检查；
 - 本机已有 COROS 规范化数据通过只读 Dashboard 验收：Agent succeeded、3条 finding、9个 Trace 事件、Same-Hash 成立；
 - 全量自动化测试增至56项；
 - v1.1 最终 DeepSeek 与确定性基线使用相同 Suite Hash `2b89473f...`，双方均为 12/12 满足预期；

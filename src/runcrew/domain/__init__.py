@@ -8,11 +8,23 @@ from runcrew.domain.activity import (
     SportType,
 )
 from runcrew.domain.review import ActivityReview, DataQuality, ReviewObservation
+from runcrew.domain.chat import (
+    ChatAnswer,
+    ChatConversation,
+    ChatMessage,
+    ChatTurnResult,
+    ChatTurnUsage,
+)
 
 __all__ = [
     "ActivityDetail",
     "ActivityReview",
     "ActivitySummary",
+    "ChatAnswer",
+    "ChatConversation",
+    "ChatMessage",
+    "ChatTurnResult",
+    "ChatTurnUsage",
     "DataQuality",
     "Lap",
     "MetricPoint",
@@ -21,4 +33,3 @@ __all__ = [
     "SourceRef",
     "SportType",
 ]
-

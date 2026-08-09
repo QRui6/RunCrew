@@ -1,6 +1,6 @@
 # RunCrew
 
-RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前已经形成可靠数据竖切、可回放 Training Review Skill、具备有界上下文与 Trace 的单 Agent Loop、真实 LLM 同题评测，以及本地只读演示界面。
+RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前已经形成可靠数据竖切、可回放 Training Review Skill、具备有界上下文与 Trace 的单 Agent Loop、真实 LLM 同题评测，以及可以围绕个人跑步数据连续追问的本地聊天产品。
 
 > AI 或新开发者开始工作时，请先阅读 [AGENTS.md](AGENTS.md)，然后阅读 [当前状态](docs/CURRENT_STATE.md)。
 
@@ -19,7 +19,11 @@ RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前�
 - 输出 Suite Hash、事实一致性、工具执行和调用成本等可比较指标；
 - 提供 `DeepSeekReviewPolicy` 非思考 Tool Calls 适配器，并以 Mock 验证请求、解析、重试、脱敏和 Harness 护栏；
 - 在评测报告 1.1 中统计 Policy 调用、API 尝试、动作解析错误、Token 和模型耗时；
-- 通过本地只读 Dashboard 展示活动、Skill evidence、Agent Trace 和 Same-Hash 评测对照；
+- 在本地聊天工作区选择一场跑步，围绕活动和最近训练连续追问；
+- 首轮对话运行 Training Review Agent 并保存证据快照，后续只携带最近 8 条消息；
+- 离线回答默认可用；显式开启后可把脱敏上下文交给 DeepSeek 生成结构化回答；
+- 对话、回答 evidence、置信度和缺失数据持久化到本机 SQLite；
+- 原只读 Dashboard 保留为工程观测台，展示 Skill evidence、Agent Trace 和 Same-Hash 评测对照；
 - 使用不含位置的合成 FIT 进行离线开发和回归测试。
 
 ## 文档导航
@@ -57,20 +61,21 @@ python -m pip install -e ".[dev]"
 
 默认数据库位于 `data/runcrew.db`。真实 COROS 接入位于统一 Provider 接口之下，业务层不依赖 COROS 的原始文本格式。
 
-## 启动本地演示界面
+## 启动本地产品
 
 ```powershell
 .\.venv\Scripts\runcrew.exe demo
 ```
 
-默认打开 `http://127.0.0.1:8766`。页面可以切换 COROS/fixture、设置可选训练目标并重新执行只读 Agent 回放，展示：
+默认打开 `http://127.0.0.1:8766`。根页面是跑步数据聊天工作区，可以：
 
-- 最新活动与最近跑量；
-- 三类 Training Review finding、evidence、置信度和输入 Hash；
-- Agent 终态、预算和逐步脱敏 Trace；
-- 确定性 Policy 与 DeepSeek 的 v1.1 Same-Hash 评测对照。
+- 选择具体跑步并创建持久化对话；
+- 询问本次完成度、七天负荷、配速异常、证据或缺失数据；
+- 围绕同一份证据快照连续追问；
+- 查看回答引用的 evidence、置信度、缺失数据、Token 和估算费用；
+- 显式开启 DeepSeek 回答，或在没有 Key 时使用离线证据回答。
 
-服务只绑定本机回环地址，只提供 GET，不读取 Provider 原始事件、外部活动 ID 或坐标。停止服务请在终端按 `Ctrl+C`。不希望自动打开浏览器时使用：
+原来的工程展示页位于 `http://127.0.0.1:8766/engineering`。服务只绑定本机回环地址；聊天 API 允许写入本地会话，但不会向浏览器返回 Provider 外部 ID、原始事件、坐标或 Token。停止服务请在终端按 `Ctrl+C`。不希望自动打开浏览器时使用：
 
 ```powershell
 .\.venv\Scripts\runcrew.exe demo --no-open-browser

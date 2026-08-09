@@ -45,7 +45,9 @@ Agent Evaluation Runner
 私有 Evaluation Report
   │ 只读取规范化活动、脱敏 Trace 与私有报告
   ▼
-Local Read-only Demo（127.0.0.1）
+Local Chat Product（127.0.0.1）
+  ├── 对话工作区：Activity → evidence snapshot → bounded history → answer
+  └── 工程观测台：Activity → Skill → Trace → Evaluation
 ```
 
 ## 分层职责
@@ -80,13 +82,25 @@ Local Read-only Demo（127.0.0.1）
 
 负责接收参数和展示结果，不承担解析和业务规则。
 
-### Web Demo
+### Web Product
 
 位置：`src/runcrew/web/`
 
-使用 Python 标准库 HTTP Server 提供单页本地演示，不增加 Web 框架依赖。`DemoDashboardService` 只读取规范化活动和最终评测报告，并通过现有 `ReviewAgentHarness` 重新执行确定性只读回放；HTTP 层只接受 GET，固定绑定 `127.0.0.1`。
+使用 Python 标准库 HTTP Server 提供本地聊天产品和工程观测台，不增加 Web 框架依赖，并固定绑定 `127.0.0.1`。`ChatService` 负责活动选择、会话持久化、首轮 Training Review Agent、证据快照和有界历史；`DemoDashboardService` 继续只读聚合活动、Trace 和最终评测报告。
 
-浏览器只接收展示所需字段，不接收 Provider 外部 ID、原始 payload、坐标、Token 或完整数据库对象。静态页面、数据契约与 HTTP 适配层分离，可独立测试。
+聊天 POST API 只接收内部活动 ID、用户消息和显式模型开关。浏览器不接收 Provider 外部 ID、原始 payload、坐标、Token 或完整数据库对象；启用 DeepSeek 时只发送规范化活动视图、确定性复盘、最近 8 条消息和当前问题。静态页面、领域契约、Service 与 HTTP 适配层分离，可独立测试。
+
+一次聊天轮次的数据流为：
+
+```text
+选择 Activity → 创建 Conversation
+→ 首问触发 ReviewAgentHarness → review_running_training
+→ 保存 immutable TrainingReviewResult + Trace 快照
+→ Offline / DeepSeek GroundedChatPolicy
+→ ChatAnswer JSON Schema + evidence ref 校验 + 医疗措辞边界
+→ 保存消息、模型、置信度、缺失数据和本轮用量
+→ 后续追问复用快照，只保留最近 8 条消息进入模型上下文
+```
 
 ### Skill
 
@@ -144,6 +158,10 @@ provider + external_id
 - `completed`；
 - `completed_with_warnings`；
 - `failed`。
+
+### chat_conversations / chat_messages
+
+`chat_conversations` 把一次连续对话绑定到一个 RunCrew 内部活动 ID，并保存首次 Agent 运行产生的 Training Review 与脱敏 Trace 快照。`chat_messages` 按顺序保存用户/助手消息、evidence 引用、置信度、缺失数据、模型和用量。两张表只存在于本地 SQLite，不提交 Git。
 
 ## 失败语义
 

@@ -10,9 +10,9 @@
 
 一句话结论：
 
-> RunCrew 已经完成“真实跑步数据接入 → 统一数据模型 → 私有存储 → FIT 详情恢复 → 确定性复盘 → 可回放 Training Review Skill → 有界单 Agent Loop → 版本化评测基线 → DeepSeek Policy → v1.1 同 Hash 完整模型对照”。多 Agent 没有评测必要性，产品化界面尚未完成。
+> RunCrew 已经完成“真实跑步数据接入 → 统一数据模型 → 私有存储 → FIT 详情恢复 → 确定性复盘 → 可回放 Training Review Skill → 有界单 Agent Loop → 版本化评测基线 → DeepSeek 同 Hash 对照 → 跑步数据连续对话 MVP”。多 Agent 仍没有评测必要性。
 
-当前里程碑是 **M5 与 M6-A 已完成，下一阶段 M6-B 演示脚本、架构图与简历表达**。
+当前里程碑是 **M6-A1 工程观测台与 M6-A2 连续对话 MVP 已完成，下一阶段 M6-A3 多轮聊天评测**。
 
 | 能力 | 当前状态 | 说明 |
 |---|---|---|
@@ -25,11 +25,11 @@
 | 单次活动确定性复盘 | 已完成 | 输出配速稳定性及 evidence |
 | Training Review Skill | 已完成 | 输出完成度、负荷变化、训练异常三类 finding |
 | 可回放上下文 | 已完成 | 使用目标活动时间、`input_hash` 和规则版本 |
-| LLM Policy / 自然语言总结 | 部分完成 | DeepSeek 适配器和 Mock 已完成，真实 API 与自然语言总结未完成 |
+| LLM Policy / 自然语言总结 | 已形成两条链路 | Review Policy 已真实评测；聊天回答支持离线与 DeepSeek JSON 契约，真实多轮评测待做 |
 | Agent 状态机、Trace、预算和重试 | 已完成 | 支持权限、确认、重试、两级超时、故障注入和明确终态 |
 | 单 Agent 离线评测 | 已完成并扩展 | 12 个场景达到确定性基线，Report 1.1 已支持模型调用、解析、Token 和耗时指标 |
 | 多 Agent 编排 | 未实现 | 只有 M5 评测证明单 Agent 不够时才条件式增加 |
-| Web 界面和简历演示 | 未实现 | 属于 M6 |
+| Web 产品界面 | MVP 已完成 | 可选择活动、创建会话、发送消息、连续追问和查看 evidence；工程观测台保留 |
 | 伤病、营养、睡眠完整 Agent | 不在当前范围 | 防止重新变成“大而全”项目 |
 
 ## 2. 当前完整技术链路
@@ -620,13 +620,13 @@ estimated_cost_usd=0.00016426
 
 以下内容不能在面试中说成已经完成：
 
-- DeepSeek Policy 只有 Mock 验证，没有真实 API 结果、LLM 生成说明、费用预算和模型行为对照；
-- Trace 尚未持久化或做成可视化看板；
+- 聊天 DeepSeek 回答只有 Mock 契约验证，尚无真实多轮结果和对抗评测；
+- CLI Agent Trace 尚未独立持久化；聊天只持久化首次 Review Agent 的 Trace 快照；
 - 没有伤病诊断、营养处方和医疗建议；
 - 没有睡眠、HRV、疼痛 Check-in 的完整数据闭环；
 - 没有训练计划数据库；
 - 没有 Keep Provider；
-- 没有 Web/移动端界面；
+- 没有移动端和线上多用户 Web；本地聊天 MVP 已完成；
 - 没有多 Agent；
 - 没有线上部署；
 - COROS 自动 FIT URL 仍未真实验证成功；
@@ -687,11 +687,12 @@ M5 只允许增加：
 
 否则继续保持单 Agent。
 
-### M6 才做演示与简历包装
+### M6 做真实产品交互与面试交付
 
 - Trace 展示；
 - 关键成功率和稳定性指标；
-- 最小演示界面；
+- 跑步数据连续对话 MVP；
+- 多轮聊天评测；
 - 架构图；
 - 简历描述和面试问答。
 
@@ -764,7 +765,7 @@ M5 只允许增加：
 
 ## 11. 当前下一步
 
-M5-B3 与 M6-A 已完成，下一任务是 M6-B 面试交付材料：
+M5-B3、M6-A1 与 M6-A2 已完成，下一任务是 M6-A3 多轮聊天评测：
 
 ```text
 [已完成] 增加受确认和共享总费用门保护的完整 Suite 命令
@@ -772,10 +773,12 @@ M5-B3 与 M6-A 已完成，下一任务是 M6-B 面试交付材料：
 → [已完成] v1.0 同 Hash 复跑，发现1秒预算导致网络模型统一超时
 → [已完成] 升级 v1.1，为全部 Policy 固定15秒预算并建立新基线
 → [已完成] DeepSeek v1.1 同 Hash 复跑12/12
-→ [已完成] 本地只读 Dashboard 展示 Activity → Skill → Agent Loop → Trace → Evaluation 对照
-→ [下一步] 形成5分钟演示脚本、架构图和简历表达
+→ [已完成] 本地工程观测台展示 Activity → Skill → Agent Loop → Trace → Evaluation 对照
+→ [已完成] 跑步数据连续对话 MVP：活动选择 → 首轮 Agent → evidence 快照 → 有界追问
+→ [下一步] 多轮合成聊天评测与一次显式付费真实 DeepSeek 验收
+```
 
-### M6-A：本地只读演示 Dashboard
+### M6-A1：本地工程观测 Dashboard
 
 M6-A 没有增加新业务 Agent，而是把 M1-M5 已经完成的工程链路做成可解释产品面。`runcrew demo` 使用 Python 标准库启动本地服务，只绑定 `127.0.0.1`，页面提供 Provider 筛选、可选训练目标和只读 Agent 回放。
 
@@ -785,11 +788,21 @@ M6-A 没有增加新业务 Agent，而是把 M1-M5 已经完成的工程链路�
 
 面试表达：
 
-> 我没有在评测完成后继续堆业务 Agent，而是做了一个本地只读演示面，把真实活动、确定性 evidence、Agent Trace 和同 Hash 模型对照放在一起。页面数据仍通过原有 Service 和 Harness 产生，不复制业务规则；服务只绑定回环地址，浏览器拿不到 Provider 外部 ID 和原始运动数据。
-→ 脚本化异常/护栏场景继续复用真实 Harness
-→ 记录完成率、终态、Token、费用、延迟和事实一致性
-→ 与确定性 Policy 基线比较
-→ 用评测证据决定是否需要多 Agent
-```
+> 我先做了工程观测台，把真实活动、确定性 evidence、Agent Trace 和同 Hash 模型对照放在一起。用户评审后发现它更像展示页而非产品，因此我没有掩盖这个偏差，而是将它降级为 `/engineering`，继续复用其可观测能力。
+
+### M6-A2：围绕跑步数据连续对话
+
+用户指出只读 Dashboard 不能真正交互后，产品主入口被重新定义为聊天工作区，而不是继续给 Dashboard 增加表面筛选。一次会话固定绑定一个内部 Activity：首次提问真实运行既有 `ReviewAgentHarness → review_running_training`，把合法 `TrainingReviewResult` 与脱敏 Trace 保存为 evidence 快照；后续追问复用同一快照，只携带最近8条消息。
+
+回答层有两个可替换 Policy：默认 `OfflineGroundedChatPolicy` 保证没有 Key 时仍可使用；用户显式开启后，`DeepSeekGroundedChatPolicy` 只接收规范化活动视图、确定性复盘、受限历史和当前问题，并必须返回 `ChatAnswer` JSON。Service 再校验 evidence 引用只能来自三类 finding，拒绝越界医疗诊断措辞，并持久化模型、Token、费用、置信度与缺失数据。
+
+当前 59 项测试覆盖会话持久化、两轮追问、证据快照复用、POST 路由、外部 ID 脱敏、DeepSeek JSON 契约和8条上下文裁剪。没有在本阶段发送新的真实活动或调用收费 API，因此“真实多轮 DeepSeek 稳定性”留给 M6-A3 评测。
+
+这次调整的面试价值在于：
+
+- 能区分“工程观测台”和“用户产品”，并根据用户反馈修正里程碑定义；
+- 连续对话不是把全部历史塞进 Prompt，而是 immutable evidence snapshot + bounded recent history；
+- LLM 负责解释与对话，指标和事实仍来自确定性 Skill；
+- 付费模型由用户显式开启，外部上下文边界与本地持久化边界清晰。
 
 在评测证明单 Agent 存在职责冲突以前，不扩展新业务 Agent。

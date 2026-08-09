@@ -103,7 +103,7 @@ def demo_command(
     ] = 8766,
     database_path: Annotated[
         Path,
-        typer.Option("--db", help="只读展示使用的 SQLite 数据库路径。"),
+        typer.Option("--db", help="活动与本地对话使用的 SQLite 数据库路径。"),
     ] = Path("data/runcrew.db"),
     evaluation_directory: Annotated[
         Path,
@@ -117,7 +117,7 @@ def demo_command(
         ),
     ] = True,
 ) -> None:
-    """启动只绑定 127.0.0.1 的本地只读演示界面。"""
+    """启动只绑定 127.0.0.1 的跑步数据对话与工程观测界面。"""
     serve_demo(
         port=port,
         database_path=database_path,

@@ -16,6 +16,7 @@
 | 2026-08-09 | M5-B3a 完整评测运行器与共享费用门 | 完成 | [M5-B3a 完整评测运行器](progress/2026-08-09-m5b3a-full-suite-runner.md) |
 | 2026-08-09 | M5-B3 DeepSeek 完整同题评测 | 完成 | [M5-B3 完整运行审计](progress/2026-08-09-m5b3b-first-full-suite.md) |
 | 2026-08-09 | M6-A 本地只读演示 Dashboard | 完成 | [M6-A 本地演示界面](progress/2026-08-09-m6a-local-demo-dashboard.md) |
+| 2026-08-09 | M6-A2 跑步数据连续对话 MVP | 完成 | [M6-A2 连续对话](progress/2026-08-09-m6a2-running-chat.md) |
 
 ## 新阶段记录模板
 

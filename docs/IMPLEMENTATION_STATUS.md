@@ -5,12 +5,12 @@
 请按以下顺序阅读：
 
 1. [CURRENT_STATE.md](CURRENT_STATE.md)：唯一当前事实来源，回答“现在做到哪里、限制和下一步是什么”；
-2. [RunCrew-项目实施全景与面试说明.md](RunCrew-项目实施全景与面试说明.md)：完整记录 M0-M5-B3 的实现方案、技术策略、亮点、错误和面试表达；
+2. [RunCrew-项目实施全景与面试说明.md](RunCrew-项目实施全景与面试说明.md)：完整记录 M0-M6-A2 的实现方案、技术策略、亮点、错误和面试表达；
 3. [PROGRESS.md](PROGRESS.md)：各阶段不可变的历史交接索引；
 4. [ROADMAP.md](ROADMAP.md)：后续阶段和验收条件；
 5. [adr/README.md](adr/README.md)：关键架构选择及其原因。
 
-当前一句话状态：56项自动化测试通过；M6-A 本地只读 Dashboard 已完成，可以展示 Activity、Skill evidence、Agent Trace 和 Same-Hash 模型对照；下一步制作演示脚本、架构图与简历材料。
+当前一句话状态：59项自动化测试通过；M6-A2 本地跑步数据连续对话 MVP 已完成，原 Dashboard 保留为工程观测台；下一步建立多轮聊天评测并做一次合成数据真实 DeepSeek 验收。
 
 常用验收命令：
 

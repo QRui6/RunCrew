@@ -2,14 +2,22 @@ from __future__ import annotations
 
 import hashlib
 import json
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Mapping
 
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from runcrew.domain.activity import ActivityDetail, ActivitySummary
-from runcrew.storage.models import ActivityRecord, RawProviderEvent, SyncRunRecord
+from runcrew.domain.chat import ChatAnswer, ChatConversation, ChatMessage, ChatTurnUsage
+from runcrew.storage.models import (
+    ActivityRecord,
+    ChatConversationRecord,
+    ChatMessageRecord,
+    RawProviderEvent,
+    SyncRunRecord,
+)
 
 
 def serialize_raw(payload: Mapping[str, Any]) -> tuple[str, str]:
@@ -177,3 +185,144 @@ class SyncRunRepository:
         record.status = "failed"
         record.completed_at = datetime.now(timezone.utc)
         record.error_message = str(error)[:2000]
+
+
+class ChatRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def create(self, *, target_activity_id: str, title: str, lookback_days: int) -> ChatConversationRecord:
+        now = datetime.now(timezone.utc)
+        record = ChatConversationRecord(
+            id=str(uuid.uuid4()),
+            target_activity_id=target_activity_id,
+            title=title[:80],
+            lookback_days=lookback_days,
+            created_at=now,
+            updated_at=now,
+        )
+        self.session.add(record)
+        self.session.flush()
+        return record
+
+    def get_record(self, conversation_id: str) -> ChatConversationRecord | None:
+        return self.session.get(ChatConversationRecord, conversation_id)
+
+    def list(self, limit: int = 20) -> list[ChatConversation]:
+        records = self.session.scalars(
+            select(ChatConversationRecord)
+            .order_by(desc(ChatConversationRecord.updated_at))
+            .limit(limit)
+        ).all()
+        return [self._to_domain(record, include_messages=False) for record in records]
+
+    def get(self, conversation_id: str) -> ChatConversation | None:
+        record = self.get_record(conversation_id)
+        return self._to_domain(record) if record is not None else None
+
+    def messages(self, conversation_id: str, *, limit: int = 50) -> list[ChatMessage]:
+        records = self.session.scalars(
+            select(ChatMessageRecord)
+            .where(ChatMessageRecord.conversation_id == conversation_id)
+            .order_by(ChatMessageRecord.id.desc())
+            .limit(limit)
+        ).all()
+        return [self._message_to_domain(item) for item in reversed(records)]
+
+    def add_user_message(self, conversation_id: str, content: str) -> ChatMessageRecord:
+        return self._add_message(conversation_id=conversation_id, role="user", content=content)
+
+    def add_assistant_message(
+        self,
+        conversation_id: str,
+        answer: ChatAnswer,
+        *,
+        usage: ChatTurnUsage,
+        trace_id: str | None,
+    ) -> ChatMessageRecord:
+        return self._add_message(
+            conversation_id=conversation_id,
+            role="assistant",
+            content=answer.answer,
+            model=usage.model,
+            evidence_refs=answer.evidence_refs,
+            confidence=answer.confidence,
+            missing_data=answer.missing_data,
+            trace_id=trace_id,
+            usage=usage,
+        )
+
+    def _add_message(
+        self,
+        *,
+        conversation_id: str,
+        role: str,
+        content: str,
+        model: str | None = None,
+        evidence_refs: list[str] | None = None,
+        confidence: str | None = None,
+        missing_data: list[str] | None = None,
+        trace_id: str | None = None,
+        usage: ChatTurnUsage | None = None,
+    ) -> ChatMessageRecord:
+        record = ChatMessageRecord(
+            conversation_id=conversation_id,
+            role=role,
+            content=content,
+            model=model,
+            evidence_refs_json=json.dumps(evidence_refs or [], ensure_ascii=False),
+            confidence=confidence,
+            missing_data_json=json.dumps(missing_data or [], ensure_ascii=False),
+            trace_id=trace_id,
+            usage_json=usage.model_dump_json() if usage is not None else None,
+        )
+        self.session.add(record)
+        conversation = self.get_record(conversation_id)
+        if conversation is not None:
+            conversation.updated_at = datetime.now(timezone.utc)
+        self.session.flush()
+        return record
+
+    def _to_domain(
+        self,
+        record: ChatConversationRecord,
+        *,
+        include_messages: bool = True,
+    ) -> ChatConversation:
+        messages = self.messages(record.id) if include_messages else []
+        message_count = (
+            len(messages)
+            if include_messages
+            else int(
+                self.session.scalar(
+                    select(func.count())
+                    .select_from(ChatMessageRecord)
+                    .where(ChatMessageRecord.conversation_id == record.id)
+                )
+                or 0
+            )
+        )
+        return ChatConversation(
+            id=record.id,
+            target_activity_id=record.target_activity_id,
+            title=record.title,
+            created_at=record.created_at,
+            updated_at=record.updated_at,
+            review_input_hash=record.review_input_hash,
+            message_count=message_count,
+            messages=messages,
+        )
+
+    @staticmethod
+    def _message_to_domain(record: ChatMessageRecord) -> ChatMessage:
+        return ChatMessage(
+            id=record.id,
+            role=record.role,
+            content=record.content,
+            created_at=record.created_at,
+            model=record.model,
+            evidence_refs=json.loads(record.evidence_refs_json),
+            confidence=record.confidence,
+            missing_data=json.loads(record.missing_data_json),
+            trace_id=record.trace_id,
+        )

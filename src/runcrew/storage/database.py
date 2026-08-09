@@ -22,7 +22,9 @@ class Database:
 
     def create_schema(self) -> None:
         Base.metadata.create_all(self.engine)
+        if self.engine.dialect.name == "sqlite":
+            with self.engine.begin() as connection:
+                connection.exec_driver_sql("PRAGMA optimize")
 
     def session(self) -> Session:
         return self.session_factory()
-

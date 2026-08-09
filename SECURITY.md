@@ -21,9 +21,12 @@ RunCrew 处理运动、睡眠、心率、HRV、恢复、位置等私人数据。
 - FIT 只写入 `data/private/fit/`，缓存文件名是 LabelId 的单向摘要；
 - 下载错误不会输出签名 URL，工具错误会脱敏 URL 和长数字 ID；
 - 测试 FIT 由 Garmin Encoder 人工生成，不含坐标或真实用户指标。
-- 本地演示服务强制绑定 `127.0.0.1`，不提供公网监听参数；
-- 演示 API 只接受 GET，不返回 Provider 外部 ID、原始 payload、坐标或 Token；
-- 演示响应设置 CSP、禁止 MIME 嗅探、不缓存 API 数据。
+- 本地产品服务强制绑定 `127.0.0.1`，不提供公网监听参数；
+- 工程观测 API 只接受 GET；聊天 POST API 限制 JSON 正文为 64 KB；
+- 浏览器 DTO 不返回 Provider 外部 ID、原始 payload、坐标或 Token；
+- DeepSeek 只有用户在界面显式开启后才调用，只发送规范化活动、确定性 evidence、最近 8 条消息和当前问题；
+- DeepSeek 回答必须通过 `ChatAnswer` Schema、evidence 引用白名单和医疗诊断措辞校验；
+- 会话历史只保存在本机 SQLite，响应设置 CSP、禁止 MIME 嗅探且 API 不缓存。
 
 ## 尚未实现
 
@@ -32,6 +35,8 @@ RunCrew 处理运动、睡眠、心率、HRV、恢复、位置等私人数据。
 - 数据保留期限；
 - 数据库静态加密；
 - 自动化密钥扫描。
+- 对话导出、删除和保留期限；
+- 真实模型多轮提示注入评测。
 
 在实现 Token 持久化前必须先创建 ADR 和威胁模型，不能把 Refresh Token 直接写入 `.env` 或 SQLite。
 
