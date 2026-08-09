@@ -21,9 +21,11 @@ RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前�
 - 在评测报告 1.1 中统计 Policy 调用、API 尝试、动作解析错误、Token 和模型耗时；
 - 在本地聊天工作区选择一场跑步，围绕活动和最近训练连续追问；
 - 首轮对话运行 Training Review Agent 并保存证据快照，后续只携带最近 8 条消息；
+- 个人数据事实/推断必须引用 evidence；通用知识、假设和训练建议可以自然展开并明确标注类型；
 - 离线回答默认可用；显式开启后可把脱敏上下文交给 DeepSeek 生成结构化回答；
 - 对话、回答 evidence、置信度和缺失数据持久化到本机 SQLite；
 - 原只读 Dashboard 保留为工程观测台，展示 Skill evidence、Agent Trace 和 Same-Hash 评测对照；
+- 用7个场景、8个轮次评测 grounding、openness、safety 和长上下文行为；
 - 使用不含位置的合成 FIT 进行离线开发和回归测试。
 
 ## 文档导航
@@ -55,6 +57,7 @@ python -m pip install -e ".[dev]"
 .\.venv\Scripts\runcrew.exe training review --latest --provider fixture
 .\.venv\Scripts\runcrew.exe agent review --latest --provider fixture
 .\.venv\Scripts\runcrew.exe eval review-agent --output data\private\evals\m5-baseline.json
+.\.venv\Scripts\runcrew.exe eval running-chat --output data\private\evals\running-chat-offline-v1.0.json
 .\.venv\Scripts\runcrew.exe demo
 .\.venv\Scripts\python.exe scripts\verify.py
 ```
@@ -72,6 +75,7 @@ python -m pip install -e ".[dev]"
 - 选择具体跑步并创建持久化对话；
 - 询问本次完成度、七天负荷、配速异常、证据或缺失数据；
 - 围绕同一份证据快照连续追问；
+- 自由讨论训练假设、通用跑步知识和下一步思路，并区分个人事实、推断、知识和建议；
 - 查看回答引用的 evidence、置信度、缺失数据、Token 和估算费用；
 - 显式开启 DeepSeek 回答，或在没有 Key 时使用离线证据回答。
 
@@ -79,6 +83,24 @@ python -m pip install -e ".[dev]"
 
 ```powershell
 .\.venv\Scripts\runcrew.exe demo --no-open-browser
+```
+
+## 运行多轮聊天评测
+
+离线基线不调用模型：
+
+```powershell
+.\.venv\Scripts\runcrew.exe eval running-chat `
+  --output data\private\evals\running-chat-offline-v1.0.json
+```
+
+真实 DeepSeek 评测只使用合成跑步数据，并要求显式付费确认与共享费用上限：
+
+```powershell
+.\.venv\Scripts\runcrew.exe eval deepseek-chat-suite `
+  --confirm-paid-api `
+  --max-total-estimated-cost-usd 0.01 `
+  --output data\private\evals\running-chat-deepseek-v1.0.json
 ```
 
 ## 同步真实 COROS 数据

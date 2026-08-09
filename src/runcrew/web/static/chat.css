@@ -67,6 +67,9 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .bubble p { margin: 0; white-space: pre-wrap; line-height: 1.75; font-size: 14px; }
 .answer-meta { margin-top: 13px; padding-top: 11px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px; }
 .answer-meta span { padding: 6px 8px; border-radius: 7px; background: #eff0e9; color: var(--muted); font: 700 9px/1 monospace; }
+.message-followups { margin-top: 11px; display: flex; flex-wrap: wrap; gap: 6px; }
+.message-followups button { padding: 7px 9px; border: 1px solid var(--line); border-radius: 99px; color: var(--ink); background: transparent; cursor: pointer; font-size: 9px; }
+.message-followups button:hover { border-color: var(--acid-deep); background: rgba(201,255,56,.14); }
 .typing .bubble { display: flex; gap: 5px; align-items: center; height: 47px; }
 .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--acid-deep); animation: bounce 1s infinite alternate; }
 .typing i:nth-child(2) { animation-delay: .16s; }.typing i:nth-child(3) { animation-delay: .32s; }

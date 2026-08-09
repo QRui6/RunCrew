@@ -1,4 +1,6 @@
 const state = { activities: [], conversations: [], selectedActivityId: null, activeConversationId: null, sending: false };
+const responseModeLabels = { data_analysis: "个人数据分析", mixed_coaching: "数据＋训练思路", general_knowledge: "通用跑步知识", clarification: "需要补充信息", safety_redirect: "安全边界" };
+const claimKindLabels = { observed_fact: "数据事实", data_inference: "基于数据的推断", general_knowledge: "通用知识", coaching_suggestion: "可选建议" };
 const $ = (selector) => document.querySelector(selector);
 const elements = {
   activities: $("#activity-list"), conversations: $("#conversation-list"), messages: $("#messages"),
@@ -97,8 +99,14 @@ function appendMessage(message) {
   const content = document.createElement("p"); content.textContent = message.content; bubble.append(content);
   if (message.role === "assistant") {
     const meta = document.createElement("div"); meta.className = "answer-meta";
-    [...(message.evidence_refs || []).map((item) => `依据 · ${item}`), ...(message.confidence ? [`置信度 · ${message.confidence}`] : []), ...(message.missing_data || []).slice(0, 2).map((item) => `缺失 · ${item}`)].forEach((value) => { const span = document.createElement("span"); span.textContent = value; meta.append(span); });
+    const claimKinds = [...new Set((message.grounded_claims || []).map((claim) => claimKindLabels[claim.kind] || claim.kind))];
+    [...(message.response_mode ? [responseModeLabels[message.response_mode] || message.response_mode] : []), ...claimKinds, ...(message.evidence_refs || []).map((item) => `依据 · ${item}`), ...(message.confidence ? [`置信度 · ${message.confidence}`] : []), ...(message.missing_data || []).slice(0, 2).map((item) => `缺失 · ${item}`)].forEach((value) => { const span = document.createElement("span"); span.textContent = value; meta.append(span); });
     if (meta.childNodes.length) bubble.append(meta);
+    if ((message.follow_up_suggestions || []).length) {
+      const followups = document.createElement("div"); followups.className = "message-followups";
+      message.follow_up_suggestions.forEach((value) => { const button = document.createElement("button"); button.type = "button"; button.textContent = value; button.addEventListener("click", () => { elements.input.value = value; elements.input.focus(); }); followups.append(button); });
+      bubble.append(followups);
+    }
   }
   row.append(avatar, bubble); elements.messages.append(row);
 }

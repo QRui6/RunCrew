@@ -250,6 +250,7 @@ class ChatRepository:
             missing_data=answer.missing_data,
             trace_id=trace_id,
             usage=usage,
+            answer=answer,
         )
 
     def _add_message(
@@ -264,6 +265,7 @@ class ChatRepository:
         missing_data: list[str] | None = None,
         trace_id: str | None = None,
         usage: ChatTurnUsage | None = None,
+        answer: ChatAnswer | None = None,
     ) -> ChatMessageRecord:
         record = ChatMessageRecord(
             conversation_id=conversation_id,
@@ -274,7 +276,18 @@ class ChatRepository:
             confidence=confidence,
             missing_data_json=json.dumps(missing_data or [], ensure_ascii=False),
             trace_id=trace_id,
-            usage_json=usage.model_dump_json() if usage is not None else None,
+            usage_json=(
+                json.dumps(
+                    {
+                        "usage": usage.model_dump(mode="json"),
+                        "answer": answer.model_dump(mode="json") if answer else None,
+                    },
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                )
+                if usage is not None
+                else None
+            ),
         )
         self.session.add(record)
         conversation = self.get_record(conversation_id)
@@ -315,6 +328,13 @@ class ChatRepository:
 
     @staticmethod
     def _message_to_domain(record: ChatMessageRecord) -> ChatMessage:
+        answer_metadata: dict[str, Any] = {}
+        if record.usage_json:
+            parsed_metadata = json.loads(record.usage_json)
+            if isinstance(parsed_metadata, dict) and isinstance(
+                parsed_metadata.get("answer"), dict
+            ):
+                answer_metadata = parsed_metadata["answer"]
         return ChatMessage(
             id=record.id,
             role=record.role,
@@ -325,4 +345,9 @@ class ChatRepository:
             confidence=record.confidence,
             missing_data=json.loads(record.missing_data_json),
             trace_id=record.trace_id,
+            response_mode=answer_metadata.get("response_mode"),
+            grounded_claims=answer_metadata.get("grounded_claims", []),
+            follow_up_suggestions=answer_metadata.get(
+                "follow_up_suggestions", []
+            ),
         )

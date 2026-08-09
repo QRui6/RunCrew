@@ -3,11 +3,40 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 ChatRole = Literal["user", "assistant"]
 ChatConfidence = Literal["high", "medium", "low"]
+ChatResponseMode = Literal[
+    "data_analysis",
+    "mixed_coaching",
+    "general_knowledge",
+    "clarification",
+    "safety_redirect",
+]
+ChatClaimKind = Literal[
+    "observed_fact",
+    "data_inference",
+    "general_knowledge",
+    "coaching_suggestion",
+]
+
+
+class ChatClaim(BaseModel):
+    """回答中的依据说明；正文保持自然，这里只承载可审计的事实边界。"""
+
+    model_config = ConfigDict(extra="forbid", title="跑步对话论断")
+
+    statement: str = Field(min_length=1, max_length=500)
+    kind: ChatClaimKind
+    evidence_refs: list[str] = Field(default_factory=list, max_length=3)
+
+    @model_validator(mode="after")
+    def require_evidence_for_personal_claims(self) -> ChatClaim:
+        if self.kind in {"observed_fact", "data_inference"} and not self.evidence_refs:
+            raise ValueError("个人数据事实和数据推断必须引用 evidence")
+        return self
 
 
 class ChatMessage(BaseModel):
@@ -22,6 +51,9 @@ class ChatMessage(BaseModel):
     confidence: ChatConfidence | None = None
     missing_data: list[str] = Field(default_factory=list)
     trace_id: str | None = None
+    response_mode: ChatResponseMode | None = None
+    grounded_claims: list[ChatClaim] = Field(default_factory=list)
+    follow_up_suggestions: list[str] = Field(default_factory=list)
 
 
 class ChatConversation(BaseModel):
@@ -42,7 +74,9 @@ class ChatAnswer(BaseModel):
 
     model_config = ConfigDict(extra="forbid", title="跑步 Agent 回答")
 
-    answer: str = Field(min_length=1, max_length=3000)
+    answer: str = Field(min_length=1, max_length=5000)
+    response_mode: ChatResponseMode = "data_analysis"
+    grounded_claims: list[ChatClaim] = Field(default_factory=list, max_length=8)
     evidence_refs: list[str] = Field(default_factory=list, max_length=3)
     confidence: ChatConfidence
     missing_data: list[str] = Field(default_factory=list, max_length=8)
@@ -60,6 +94,35 @@ class ChatAnswer(BaseModel):
         if any(phrase in value for phrase in prohibited):
             raise ValueError("回答包含越界医疗诊断表述")
         return value
+
+    @model_validator(mode="after")
+    def align_free_answer_with_grounding(self) -> ChatAnswer:
+        # 兼容 M6-A2 已保存的回答：旧数据只有聚合 evidence_refs。
+        if not self.grounded_claims and self.evidence_refs:
+            self.grounded_claims = [
+                ChatClaim(
+                    statement=self.answer[:500],
+                    kind="observed_fact",
+                    evidence_refs=self.evidence_refs,
+                )
+            ]
+        claim_refs = list(
+            dict.fromkeys(
+                ref
+                for claim in self.grounded_claims
+                for ref in claim.evidence_refs
+            )
+        )
+        if not self.evidence_refs:
+            self.evidence_refs = claim_refs
+        elif not set(claim_refs).issubset(self.evidence_refs):
+            raise ValueError("论断引用必须包含在回答 evidence_refs 中")
+        if self.response_mode in {"data_analysis", "mixed_coaching"} and not any(
+            claim.kind in {"observed_fact", "data_inference"}
+            for claim in self.grounded_claims
+        ):
+            raise ValueError("数据分析或混合建议至少需要一条有依据的个人数据论断")
+        return self
 
 
 class ChatTurnUsage(BaseModel):

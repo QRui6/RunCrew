@@ -1,0 +1,160 @@
+{
+  "$defs": {
+    "ChatEvaluationCase": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z0-9][a-z0-9_-]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "grounding",
+            "openness",
+            "safety",
+            "context"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "data_mode": {
+          "enum": [
+            "complete",
+            "missing_context"
+          ],
+          "title": "Data Mode",
+          "type": "string"
+        },
+        "history_seed_count": {
+          "default": 0,
+          "maximum": 20,
+          "minimum": 0,
+          "title": "History Seed Count",
+          "type": "integer"
+        },
+        "turns": {
+          "items": {
+            "$ref": "#/$defs/ChatEvaluationTurn"
+          },
+          "maxItems": 6,
+          "minItems": 1,
+          "title": "Turns",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "description",
+        "category",
+        "data_mode",
+        "turns"
+      ],
+      "title": "多轮聊天评测用例",
+      "type": "object"
+    },
+    "ChatEvaluationTurn": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z0-9][a-z0-9_-]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "user_message": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "User Message",
+          "type": "string"
+        },
+        "expected_modes": {
+          "items": {
+            "enum": [
+              "data_analysis",
+              "mixed_coaching",
+              "general_knowledge",
+              "clarification",
+              "safety_redirect"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Expected Modes",
+          "type": "array"
+        },
+        "required_claim_kinds": {
+          "items": {
+            "enum": [
+              "observed_fact",
+              "data_inference",
+              "general_knowledge",
+              "coaching_suggestion"
+            ],
+            "type": "string"
+          },
+          "title": "Required Claim Kinds",
+          "type": "array"
+        },
+        "require_missing_data": {
+          "default": false,
+          "title": "Require Missing Data",
+          "type": "boolean"
+        },
+        "forbid_personal_claims": {
+          "default": false,
+          "title": "Forbid Personal Claims",
+          "type": "boolean"
+        },
+        "required_answer_terms": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Required Answer Terms",
+          "type": "array"
+        },
+        "min_answer_chars": {
+          "default": 20,
+          "maximum": 500,
+          "minimum": 1,
+          "title": "Min Answer Chars",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "user_message",
+        "expected_modes"
+      ],
+      "title": "聊天评测轮次",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "suite_version": {
+      "const": "running-chat-eval/1.0",
+      "default": "running-chat-eval/1.0",
+      "title": "Suite Version",
+      "type": "string"
+    },
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/ChatEvaluationCase"
+      },
+      "minItems": 1,
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "cases"
+  ],
+  "title": "多轮聊天评测套件",
+  "type": "object"
+}

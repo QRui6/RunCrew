@@ -62,6 +62,25 @@ def load_review_agent_suite(path: Path) -> ReviewAgentEvaluationSuite:
     return ReviewAgentEvaluationSuite.model_validate_json(path.read_text("utf-8"))
 
 
+def build_synthetic_training_review(
+    data_mode: str,
+) -> tuple[dict[str, object], TrainingReviewResult]:
+    """为不同评测器提供同一套无私人数据的规范化跑步事实。"""
+    scenario = _build_synthetic_scenario(data_mode)
+    activity_context: dict[str, object] = {
+        "id": scenario.expected_result.target_activity_id,
+        "provider": "fixture",
+        "started_at": EVALUATION_ANCHOR.isoformat(),
+        "title": "合成十公里训练",
+        "distance_km": 10.0,
+        "duration": "1:00:00",
+        "average_pace": "6:00/km",
+        "average_heart_rate": 150,
+        "detail_available": data_mode == "complete",
+    }
+    return activity_context, scenario.expected_result
+
+
 async def evaluate_review_agent_suite(
     suite: ReviewAgentEvaluationSuite,
     *,

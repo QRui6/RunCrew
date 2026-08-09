@@ -1,0 +1,294 @@
+{
+  "$defs": {
+    "ChatEvaluationMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "turn_pass_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Turn Pass Rate",
+          "type": "number"
+        },
+        "schema_valid_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Schema Valid Rate",
+          "type": "number"
+        },
+        "grounding_pass_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Grounding Pass Rate",
+          "type": "number"
+        },
+        "openness_pass_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Openness Pass Rate",
+          "type": "number"
+        },
+        "safety_pass_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Safety Pass Rate",
+          "type": "number"
+        },
+        "total_tokens": {
+          "minimum": 0,
+          "title": "Total Tokens",
+          "type": "integer"
+        },
+        "estimated_cost_usd": {
+          "minimum": 0,
+          "title": "Estimated Cost Usd",
+          "type": "number"
+        },
+        "policy_latency_ms": {
+          "minimum": 0,
+          "title": "Policy Latency Ms",
+          "type": "number"
+        }
+      },
+      "required": [
+        "turn_pass_rate",
+        "schema_valid_rate",
+        "grounding_pass_rate",
+        "openness_pass_rate",
+        "safety_pass_rate",
+        "total_tokens",
+        "estimated_cost_usd",
+        "policy_latency_ms"
+      ],
+      "title": "聊天评测聚合指标",
+      "type": "object"
+    },
+    "ChatEvaluationTurnResult": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "title": "Case Id",
+          "type": "string"
+        },
+        "turn_id": {
+          "title": "Turn Id",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "grounding",
+            "openness",
+            "safety",
+            "context"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "schema_valid": {
+          "title": "Schema Valid",
+          "type": "boolean"
+        },
+        "actual_mode": {
+          "anyOf": [
+            {
+              "enum": [
+                "data_analysis",
+                "mixed_coaching",
+                "general_knowledge",
+                "clarification",
+                "safety_redirect"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actual Mode"
+        },
+        "claim_kinds": {
+          "items": {
+            "enum": [
+              "observed_fact",
+              "data_inference",
+              "general_knowledge",
+              "coaching_suggestion"
+            ],
+            "type": "string"
+          },
+          "title": "Claim Kinds",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "missing_data_count": {
+          "minimum": 0,
+          "title": "Missing Data Count",
+          "type": "integer"
+        },
+        "answer_chars": {
+          "minimum": 0,
+          "title": "Answer Chars",
+          "type": "integer"
+        },
+        "usage": {
+          "$ref": "#/$defs/ChatTurnUsage"
+        },
+        "failure_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Failure Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "case_id",
+        "turn_id",
+        "category",
+        "passed",
+        "schema_valid",
+        "missing_data_count",
+        "answer_chars",
+        "usage"
+      ],
+      "title": "聊天评测轮次结果",
+      "type": "object"
+    },
+    "ChatTurnUsage": {
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "enum": [
+            "offline",
+            "deepseek"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "prompt_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Prompt Tokens",
+          "type": "integer"
+        },
+        "completion_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Completion Tokens",
+          "type": "integer"
+        },
+        "total_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Total Tokens",
+          "type": "integer"
+        },
+        "latency_ms": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Latency Ms",
+          "type": "number"
+        },
+        "estimated_cost_usd": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Estimated Cost Usd",
+          "type": "number"
+        }
+      },
+      "required": [
+        "provider",
+        "model"
+      ],
+      "title": "对话轮次用量",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "suite_version": {
+      "const": "running-chat-eval/1.0",
+      "title": "Suite Version",
+      "type": "string"
+    },
+    "suite_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Suite Hash",
+      "type": "string"
+    },
+    "policy_name": {
+      "minLength": 1,
+      "title": "Policy Name",
+      "type": "string"
+    },
+    "total_cases": {
+      "minimum": 1,
+      "title": "Total Cases",
+      "type": "integer"
+    },
+    "total_turns": {
+      "minimum": 1,
+      "title": "Total Turns",
+      "type": "integer"
+    },
+    "passed_turns": {
+      "minimum": 0,
+      "title": "Passed Turns",
+      "type": "integer"
+    },
+    "failed_turns": {
+      "minimum": 0,
+      "title": "Failed Turns",
+      "type": "integer"
+    },
+    "meets_baseline": {
+      "title": "Meets Baseline",
+      "type": "boolean"
+    },
+    "metrics": {
+      "$ref": "#/$defs/ChatEvaluationMetrics"
+    },
+    "turns": {
+      "items": {
+        "$ref": "#/$defs/ChatEvaluationTurnResult"
+      },
+      "minItems": 1,
+      "title": "Turns",
+      "type": "array"
+    }
+  },
+  "required": [
+    "suite_version",
+    "suite_hash",
+    "policy_name",
+    "total_cases",
+    "total_turns",
+    "passed_turns",
+    "failed_turns",
+    "meets_baseline",
+    "metrics",
+    "turns"
+  ],
+  "title": "多轮聊天评测报告",
+  "type": "object"
+}

@@ -5,8 +5,8 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from pydantic import SecretStr, ValidationError
 import pytest
+from pydantic import SecretStr, ValidationError
 
 from runcrew.domain.activity import (
     ActivityDetail,
@@ -18,7 +18,7 @@ from runcrew.domain.activity import (
 )
 from runcrew.domain.chat import ChatAnswer, ChatTurnUsage
 from runcrew.policies.chat import DeepSeekGroundedChatPolicy
-from runcrew.policies.deepseek import DeepSeekPolicyConfig
+from runcrew.policies.deepseek import DeepSeekPolicyConfig, DeepSeekPolicyError
 from runcrew.services.chat import ChatService
 from runcrew.storage.database import Database
 from runcrew.storage.models import ChatConversationRecord
@@ -104,8 +104,11 @@ def test_chat_service_persists_continuous_grounded_conversation(tmp_path: Path) 
     assert len(second.conversation.messages) == 4
     assert first.review_trace
     assert first.answer.evidence_refs == ["training_completion"]
+    assert first.answer.response_mode == "data_analysis"
     assert second.answer.missing_data
     assert second.context_message_count == 2
+    assert second.conversation.messages[1].response_mode == "data_analysis"
+    assert second.conversation.messages[1].grounded_claims
     assert all(item.model != "deepseek-v4-flash" for item in second.conversation.messages)
     with database.session() as session:
         record = session.get(ChatConversationRecord, conversation.id)
@@ -196,6 +199,14 @@ class _DeepSeekTransport:
                         "content": json.dumps(
                             {
                                 "answer": "分圈波动处于正常范围。",
+                                "response_mode": "data_analysis",
+                                "grounded_claims": [
+                                    {
+                                        "statement": "分圈波动处于正常范围",
+                                        "kind": "observed_fact",
+                                        "evidence_refs": ["training_anomaly"],
+                                    }
+                                ],
                                 "evidence_refs": ["training_anomaly"],
                                 "confidence": "high",
                                 "missing_data": [],
@@ -246,8 +257,10 @@ def test_deepseek_chat_policy_uses_json_contract_and_bounded_context(tmp_path: P
     )
 
     assert answer.evidence_refs == ["training_anomaly"]
+    assert answer.grounded_claims[0].kind == "observed_fact"
     assert usage.total_tokens == 130
     assert transport.payload["response_format"] == {"type": "json_object"}
+    assert "general_knowledge" in transport.payload["messages"][0]["content"]
     sent_context = json.loads(transport.payload["messages"][1]["content"])
     assert len(sent_context["conversation_history"]) == 8
     assert "secret-provider" not in transport.payload["messages"][1]["content"]
@@ -257,3 +270,64 @@ def test_deepseek_chat_policy_uses_json_contract_and_bounded_context(tmp_path: P
             evidence_refs=[],
             confidence="low",
         )
+    with pytest.raises(ValidationError, match="至少需要一条"):
+        ChatAnswer(
+            answer="没有任何个人数据依据，却声称在分析个人表现。",
+            response_mode="data_analysis",
+            confidence="high",
+        )
+
+
+class _InvalidDeepSeekTransport:
+    async def complete(self, payload):
+        del payload
+        return {
+            "model": "deepseek-v4-flash",
+            "choices": [
+                {
+                    "finish_reason": "stop",
+                    "message": {"content": '{"answer":"结构不完整"}'},
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 80,
+                "completion_tokens": 10,
+                "total_tokens": 90,
+            },
+        }
+
+
+def test_failed_deepseek_chat_response_still_records_usage(tmp_path: Path) -> None:
+    database_path, _ = _database(tmp_path)
+    service = ChatService(database_path=database_path)
+    conversation = service.create_conversation(activity_id="target")
+    offline = asyncio.run(
+        service.send_message(conversation_id=conversation.id, content="先复盘一下")
+    )
+    database = Database(f"sqlite:///{database_path.as_posix()}")
+    with database.session() as session:
+        record = session.get(ChatConversationRecord, conversation.id)
+        from runcrew.domain.training_review import TrainingReviewResult
+
+        review = TrainingReviewResult.model_validate_json(record.review_snapshot_json)
+    policy = DeepSeekGroundedChatPolicy(
+        DeepSeekPolicyConfig(
+            api_key=SecretStr("test-key"),
+            max_api_retries=0,
+        ),
+        transport=_InvalidDeepSeekTransport(),
+    )
+
+    with pytest.raises(DeepSeekPolicyError):
+        asyncio.run(
+            policy.answer(
+                question="继续",
+                activity_context={"id": "target"},
+                review=review,
+                history=offline.conversation.messages,
+            )
+        )
+
+    usage = policy.consume_last_usage()
+    assert usage.total_tokens == 90
+    assert usage.estimated_cost_usd > 0

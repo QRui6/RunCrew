@@ -6,6 +6,13 @@
 
 ### Added
 
+- 将聊天回答升级为五种 response mode 与四类分层论断，个人事实/推断强制 evidence，通用知识/建议保留表达自由；
+- 增加 `running-chat-eval/1.0`：7个合成场景、8个连续轮次，覆盖 grounding、openness、safety 和长历史；
+- 增加聊天评测 Suite/Report Schema、离线运行器、聚合指标和 Schema 导出脚本；
+- 增加 `eval running-chat` 与受显式付费确认、共享费用门保护的 `eval deepseek-chat-suite`；
+- 聊天界面新增回答模式、论断类型和可点击后续问题；
+- DeepSeek 聊天无效回答现在仍记录已返回 Token 和估算费用；
+- 增加7项聊天评测、自由度退化、CLI安全门、上下文和失败用量测试；
 - 将产品主入口从只读 Dashboard 改为围绕个人跑步数据连续追问的本地聊天工作区，原页面保留为 `/engineering` 工程观测台；
 - 增加 Activity 选择、会话创建、消息 POST、历史加载和 SQLite 持久化；
 - 首次提问复用 `ReviewAgentHarness → review_running_training` 生成并保存 evidence/Trace 快照，后续追问不重复计算；
@@ -50,6 +57,9 @@
 
 ### Verified
 
+- `running-chat-eval/1.0` 离线基线7场景8轮全部通过，grounding、openness、safety、schema均为100%；
+- 聊天 Suite Hash 为 `ab097079836d0fa2c1227da0e84dfa32be5bd40538d15e52c47d2580d265fe94`；
+- 全量自动化测试增至66项；M6-A3a没有调用真实 DeepSeek；
 - 跑步聊天首问和追问持久化、同一 evidence 快照复用、脱敏 DTO 与 DeepSeek JSON 契约通过自动化测试；
 - 全量自动化测试增至59项，两个前端脚本均通过 JavaScript 语法检查；
 - 本机已有 COROS 规范化数据通过只读 Dashboard 验收：Agent succeeded、3条 finding、9个 Trace 事件、Same-Hash 成立；

@@ -97,10 +97,13 @@ Local Chat Product（127.0.0.1）
 → 首问触发 ReviewAgentHarness → review_running_training
 → 保存 immutable TrainingReviewResult + Trace 快照
 → Offline / DeepSeek GroundedChatPolicy
-→ ChatAnswer JSON Schema + evidence ref 校验 + 医疗措辞边界
+→ 自由正文 + response_mode + 分层 grounded_claims
+→ 个人事实/推断 evidence 校验；通用知识/建议保持开放；医疗措辞边界
 → 保存消息、模型、置信度、缺失数据和本轮用量
 → 后续追问复用快照，只保留最近 8 条消息进入模型上下文
 ```
+
+聊天回答不采用“所有句子都必须引用”的做法。`observed_fact` 与 `data_inference` 必须绑定合法 finding；`general_knowledge` 与 `coaching_suggestion` 可以没有个人 evidence。这样既避免模型编造用户事实，也不会把通用知识和训练思路压成机械的报告复述。`running-chat-eval/1.0` 分别评测事实依据、开放表达、安全和长历史聚焦。
 
 ### Skill
 

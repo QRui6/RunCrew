@@ -11,10 +11,16 @@ from runcrew.providers.fixture import FixtureActivityProvider
 from runcrew.providers.coros import CorosActivityProvider
 from runcrew.domain.agent import ReviewAgentRunRequest
 from runcrew.domain.training_review import PlannedSession, TrainingReviewRequest
-from runcrew.evaluation import evaluate_review_agent_suite, load_review_agent_suite
+from runcrew.evaluation import (
+    evaluate_chat_suite,
+    evaluate_review_agent_suite,
+    load_chat_evaluation_suite,
+    load_review_agent_suite,
+)
 from runcrew.harness import ReviewAgentHarness
 from runcrew.policies import (
     DeepSeekCostBudget,
+    DeepSeekGroundedChatPolicy,
     DeepSeekPolicyConfig,
     DeepSeekPolicyError,
     DeepSeekReviewPolicy,
@@ -587,6 +593,99 @@ def evaluate_deepseek_suite(
     typer.echo(payload)
     if not report.meets_baseline:
         raise typer.Exit(code=1)
+
+
+@evaluation_app.command("running-chat")
+def evaluate_running_chat(
+    cases_path: Annotated[
+        Path,
+        typer.Option("--cases", help="多轮聊天评测用例 JSON 路径。"),
+    ] = Path("evals/running_chat/cases.json"),
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", help="可选报告路径，只允许写入 data/private。"),
+    ] = None,
+) -> None:
+    """运行不调用外部模型的自由对话契约基线。"""
+    if not cases_path.is_file():
+        raise typer.BadParameter(f"Chat evaluation suite not found: {cases_path}")
+    suite = load_chat_evaluation_suite(cases_path)
+    report = asyncio.run(evaluate_chat_suite(suite))
+    payload = report.model_dump_json(indent=2)
+    _write_private_evaluation(output_path, payload)
+    typer.echo(payload)
+    if not report.meets_baseline:
+        raise typer.Exit(code=1)
+
+
+@evaluation_app.command("deepseek-chat-suite")
+def evaluate_deepseek_chat_suite(
+    confirm_paid_api: Annotated[
+        bool,
+        typer.Option(
+            "--confirm-paid-api",
+            help="明确确认本命令会发送合成聊天上下文并产生少量费用。",
+        ),
+    ] = False,
+    max_total_estimated_cost_usd: Annotated[
+        float | None,
+        typer.Option(
+            "--max-total-estimated-cost-usd",
+            min=0.000001,
+            max=1,
+            help="整套多轮聊天评测共享的估算费用上限（美元）。",
+        ),
+    ] = None,
+    cases_path: Annotated[
+        Path,
+        typer.Option("--cases", help="多轮聊天评测用例 JSON 路径。"),
+    ] = Path("evals/running_chat/cases.json"),
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", help="可选报告路径，只允许写入 data/private。"),
+    ] = None,
+) -> None:
+    """在无私人数据的同一套多轮题目上评测真实 DeepSeek。"""
+    if not confirm_paid_api:
+        raise typer.BadParameter("必须显式传入 --confirm-paid-api 才允许聊天模型评测。")
+    if max_total_estimated_cost_usd is None:
+        raise typer.BadParameter("必须显式设置 --max-total-estimated-cost-usd。")
+    if not cases_path.is_file():
+        raise typer.BadParameter(f"Chat evaluation suite not found: {cases_path}")
+    try:
+        config = DeepSeekPolicyConfig.from_env().model_copy(
+            update={"max_estimated_cost_usd": max_total_estimated_cost_usd}
+        )
+    except DeepSeekPolicyError as error:
+        raise typer.BadParameter(str(error)) from error
+    cost_budget = DeepSeekCostBudget(max_total_estimated_cost_usd)
+    suite = load_chat_evaluation_suite(cases_path)
+    report = asyncio.run(
+        evaluate_chat_suite(
+            suite,
+            policy_factory=lambda: DeepSeekGroundedChatPolicy(
+                config,
+                cost_budget=cost_budget,
+            ),
+            policy_name=f"{config.model}-live-flexible-chat-suite",
+        )
+    )
+    payload = report.model_dump_json(indent=2)
+    _write_private_evaluation(output_path, payload)
+    typer.echo(payload)
+    if not report.meets_baseline:
+        raise typer.Exit(code=1)
+
+
+def _write_private_evaluation(output_path: Path | None, payload: str) -> None:
+    if output_path is None:
+        return
+    private_root = Path("data/private").resolve()
+    resolved_output = output_path.resolve()
+    if not resolved_output.is_relative_to(private_root):
+        raise typer.BadParameter("Evaluation reports must stay under data/private.")
+    resolved_output.parent.mkdir(parents=True, exist_ok=True)
+    resolved_output.write_text(payload + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

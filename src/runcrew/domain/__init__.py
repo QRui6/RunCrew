@@ -10,10 +10,15 @@ from runcrew.domain.activity import (
 from runcrew.domain.review import ActivityReview, DataQuality, ReviewObservation
 from runcrew.domain.chat import (
     ChatAnswer,
+    ChatClaim,
     ChatConversation,
     ChatMessage,
     ChatTurnResult,
     ChatTurnUsage,
+)
+from runcrew.domain.chat_evaluation import (
+    ChatEvaluationReport,
+    ChatEvaluationSuite,
 )
 
 __all__ = [
@@ -21,7 +26,10 @@ __all__ = [
     "ActivityReview",
     "ActivitySummary",
     "ChatAnswer",
+    "ChatClaim",
     "ChatConversation",
+    "ChatEvaluationReport",
+    "ChatEvaluationSuite",
     "ChatMessage",
     "ChatTurnResult",
     "ChatTurnUsage",
