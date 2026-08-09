@@ -43,6 +43,7 @@ M1-M3 数据与 Skill 基座已完成；M4 当前可以完成：
 - 真实活动复盘已输出基于多分圈计算的 `pace_stability` evidence，数据质量为 high。
 - M2 已通过 GitHub PR #1 合并到 `main`；
 - M3 GitHub PR #2 仍为 open；M4 分支基于 M3 最新提交开发，合并顺序必须是 M3 → M4；
+- M4 GitHub PR #3 已创建，base 为 `feat/m3-training-review-skill`；
 - `TrainingReviewRequest` / `TrainingReviewResult` Schema 已定义并导出；
 - `review-running-training` Skill 已通过官方 `quick_validate.py`；
 - 同一输入会生成相同 `input_hash` 和结果，回放测试已通过；

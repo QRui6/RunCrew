@@ -4,6 +4,7 @@
 - 状态：完成
 - 分支：`feat/m4-review-agent-loop`
 - 基线：M3 PR #2 最新提交 `b5c43f6`
+- Pull Request：GitHub PR #3，基线为 M3 分支，必须在 PR #2 之后合并
 
 ## 1. 本阶段目标
 
