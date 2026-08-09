@@ -17,11 +17,17 @@ from runcrew.domain.activity import (
     SourceRef,
     SportType,
 )
-from runcrew.domain.agent import REVIEW_TOOL_NAME, ReviewAgentRunRequest
+from runcrew.domain.agent import (
+    REVIEW_TOOL_NAME,
+    ReviewAgentContext,
+    ReviewAgentRunRequest,
+    ToolPermission,
+)
 from runcrew.domain.training_review import PlannedSession, TrainingReviewRequest
 from runcrew.harness import ReviewAgentHarness
 from runcrew.evaluation import evaluate_review_agent_suite, load_review_agent_suite
 from runcrew.policies import (
+    DeepSeekCostBudget,
     DeepSeekPolicyConfig,
     DeepSeekPolicyError,
     DeepSeekReviewPolicy,
@@ -423,3 +429,53 @@ def test_estimated_cost_cap_stops_before_tool_execution() -> None:
     assert executed is False
     assert result.trace[-1].details["policy_estimated_cost_usd"] > 0.000001
     assert result.trace[-1].details["policy_outcome"] == "failed"
+
+
+def test_cost_budget_is_shared_across_policy_instances() -> None:
+    request = review_request()
+    shared_budget = DeepSeekCostBudget(max_estimated_cost_usd=0.000005)
+
+    def make_policy() -> tuple[DeepSeekReviewPolicy, QueueTransport]:
+        transport = QueueTransport(
+            completion(
+                finish_reason="tool_calls",
+                tool_name=REVIEW_TOOL_NAME,
+                arguments=request.model_dump_json(),
+            )
+        )
+        policy = DeepSeekReviewPolicy(
+            policy_config(max_estimated_cost_usd=0.000005),
+            cost_budget=shared_budget,
+            transport=transport,
+        )
+        return policy, transport
+
+    context = ReviewAgentContext(
+        user_request=request,
+        tool_permissions=[ToolPermission(name=REVIEW_TOOL_NAME)],
+        step=0,
+        remaining_steps=4,
+        remaining_tool_calls=1,
+    )
+
+    first_policy, first_transport = make_policy()
+    first_action = asyncio.run(first_policy.next_action(context))
+
+    assert first_action.type == "call_tool"
+    assert len(first_transport.payloads) == 1
+    assert shared_budget.consumed_estimated_cost_usd == pytest.approx(0.00000365)
+
+    second_policy, second_transport = make_policy()
+    with pytest.raises(DeepSeekPolicyError, match="共享估算费用超过上限"):
+        asyncio.run(second_policy.next_action(context))
+
+    assert len(second_transport.payloads) == 1
+    assert second_policy.telemetry[-1].outcome == "failed"
+    assert second_policy.telemetry[-1].estimated_cost_usd == pytest.approx(0.00000365)
+    assert shared_budget.consumed_estimated_cost_usd > 0.000005
+
+    third_policy, third_transport = make_policy()
+    with pytest.raises(DeepSeekPolicyError, match="共享估算费用预算已经耗尽"):
+        asyncio.run(third_policy.next_action(context))
+
+    assert third_transport.payloads == []

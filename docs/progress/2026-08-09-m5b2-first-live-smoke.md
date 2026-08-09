@@ -1,7 +1,7 @@
 # M5-B2：第一次 DeepSeek 真实合成 Smoke
 
 - 日期：2026-08-09
-- 状态：进行中（首次调用完成，兼容修复待复验）
+- 状态：完成
 - 模型：`deepseek-v4-flash`
 - 模式：非思考
 - 数据：`complete_training_review` 合成用例
@@ -52,6 +52,26 @@ assistant(tool_calls=[...])
 
 Mock 完整 Loop 测试现在明确断言第二轮消息角色顺序、Tool Call ID、Tool Result Observation 和剩余工具预算。全量 48 项测试通过。
 
+## 5.1 第二次真实复验
+
+```text
+真实模型请求：2
+API 尝试：2
+动作解析错误：0
+输入 Token：2294
+  - 缓存命中：1664
+  - 缓存未命中：630
+输出 Token：255
+总 Token：2549
+估算费用：0.00016426 USD
+模型累计耗时：4663.993 ms
+业务工具执行：1
+事实一致性：True
+最终状态：succeeded / completed
+```
+
+第二次真实结果证明标准 assistant/tool 消息链修复有效。Token 总数虽然略高于第一次，但大量输入命中缓存，因此估算费用从 0.00036106 美元下降到 0.00016426 美元。
+
 ## 6. 工程价值
 
 - 真实服务暴露了 Mock 仅验证响应格式、没有验证模型对消息语义理解的问题；
@@ -61,12 +81,12 @@ Mock 完整 Loop 测试现在明确断言第二轮消息角色顺序、Tool Call
 
 ## 7. 下一步唯一入口
 
-使用同一合成用例、同一模型和相同 0.01 美元本地费用门重新运行 Smoke。只有终态变为 `succeeded / completed` 且事实一致性通过，M5-B2 才能标记完成。
+M5-B3 使用完整 `review-agent-eval/1.0` 套件运行真实 DeepSeek 对照，统计正常任务、韧性、护栏、预算、Token、费用和延迟，并与确定性 Policy 基线比较。
 
 ## 8. 外部额度与私人数据
 
 - 本次估算费用为 0.00036106 美元；
-- 报告位于 `data/private/evals/deepseek-smoke.json`；
+- 第二次成功复验估算费用为 0.00016426 美元；
+- 两份报告位于 `data/private/evals/deepseek-smoke-attempt-1.json` 和 `deepseek-smoke-attempt-2-success.json`；
 - API Key 未写入文件、Trace 或 Git；
 - 输入为版本化合成数据，没有读取真实 COROS 数据库或 FIT。
-

@@ -148,3 +148,19 @@ def test_deepseek_smoke_cli_requires_explicit_confirmation_and_cost_cap(
     )
     assert missing_key.exit_code != 0
     assert "DEEPSEEK_API_KEY" in missing_key.output
+
+
+def test_deepseek_suite_cli_requires_explicit_confirmation_and_shared_cost_cap(
+    monkeypatch,
+) -> None:
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    missing_confirmation = CliRunner().invoke(app, ["eval", "deepseek-suite"])
+    assert missing_confirmation.exit_code != 0
+    assert "--confirm-paid-api" in missing_confirmation.output
+
+    missing_cost_cap = CliRunner().invoke(
+        app,
+        ["eval", "deepseek-suite", "--confirm-paid-api"],
+    )
+    assert missing_cost_cap.exit_code != 0
+    assert "--max-total-estimated-cost-usd" in missing_cost_cap.output

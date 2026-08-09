@@ -10,9 +10,9 @@
 
 一句话结论：
 
-> RunCrew 已经完成“真实跑步数据接入 → 统一数据模型 → 私有存储 → FIT 详情恢复 → 确定性复盘 → 可回放 Training Review Skill → 有界单 Agent Loop → 版本化离线评测基线 → DeepSeek Policy 适配器与 Mock 契约”，但真实模型 Smoke、完整模型对照、多 Agent 和产品化界面尚未实现。
+> RunCrew 已经完成“真实跑步数据接入 → 统一数据模型 → 私有存储 → FIT 详情恢复 → 确定性复盘 → 可回放 Training Review Skill → 有界单 Agent Loop → 版本化离线评测基线 → DeepSeek Policy 适配器 → 单用例真实 Loop”，完整模型对照、多 Agent 和产品化界面尚未完成。
 
-当前里程碑是 **M5-A 与 M5-B1 完成，M5 整体进行中**。
+当前里程碑是 **M5-A、M5-B1 与 M5-B2 完成，M5 整体进行中**。
 
 | 能力 | 当前状态 | 说明 |
 |---|---|---|
@@ -439,7 +439,7 @@ created
 - Policy 与 Harness 解耦，未来真实 LLM 复用同一动作协议；
 - 工具只能通过白名单进入，Agent 不能直接访问 COROS；
 - Trace、错误、预算和终态均有 Schema；
-- 48 项测试可以离线验证成功、故障路径、模型适配器契约和评测退化，不依赖 API Key。
+- 50 项测试可以离线验证成功、故障路径、模型适配器契约和评测退化，不依赖 API Key。
 
 #### 面试表达
 
@@ -553,7 +553,19 @@ system
 → tool(tool_call_id=..., validated observation)
 ```
 
-Mock 回归会检查消息角色顺序、`tool_call_id`、Observation 和剩余预算。真实同用例复验尚未完成，所以当前仍不能声称真实 LLM Loop 已通过。
+Mock 回归会检查消息角色顺序、`tool_call_id`、Observation 和剩余预算。第二次真实同用例复验已经达到：
+
+```text
+terminal=succeeded / completed
+fact_integrity=True
+tool_attempts_used=1
+policy_calls=2
+action_parse_errors=0
+total_tokens=2549
+estimated_cost_usd=0.00016426
+```
+
+成功尝试有 1664 个输入 Token 命中缓存、630 个未命中缓存，所以虽然总 Token 略高，估算费用仍低于第一次失败尝试。当前可以声称单用例真实 LLM Loop 已通过，但还不能把它扩展为完整模型稳定性结论。
 
 #### 这次失败的工程价值
 
@@ -571,9 +583,9 @@ Mock 回归会检查消息角色顺序、`tool_call_id`、Observation 和剩余�
 | Context Engineering | 领域上下文 + 有界 Agent Context，只暴露请求、权限、合法观察和剩余预算 | 已有分层和裁剪，尚无 Token 级压缩 |
 | Harness Engineering | 统一 Run、权限、确认、预算、重试、两级超时、验证和 Trace | M4 最小竖切已完成 |
 | Loop Engineering | `call_tool → observation → finish` 有限状态循环和明确退出条件 | M4 最小竖切已完成 |
-| LLM | 已完成首次真实调用和首轮 Tool Call；标准多轮消息修复待复验 | 当前不能声称完整真实模型 Loop 已验收 |
+| LLM | `deepseek-v4-flash` 单用例标准 Tool Calls Loop 已真实通过 | 完整 12 场景模型对照尚未完成 |
 | Multi-Agent | 尚未实现 | 必须由评测证明必要性 |
-| Evaluation | 12 场景版本化 Suite、48 项测试、Suite Hash、任务/护栏/事实/Token/费用/延迟指标 | 已有首份真实失败报告，成功模型基线尚未建立 |
+| Evaluation | 12 场景版本化 Suite、50 项测试、Suite Hash、任务/护栏/事实/Token/费用/延迟指标 | 完整真实运行器与共享费用门已就绪，模型基线尚未建立 |
 
 ## 6. 贯穿项目的核心设计原则
 
@@ -723,7 +735,7 @@ M5 只允许增加：
 
 #### 项目目前最大的不足是什么？
 
-真实历史数据仍少、COROS 训练负荷未映射、训练计划未持久化，DeepSeek 目前只有 Mock 适配器，真实模型 Smoke、费用指标和完整模型对照尚未实现。因此现在可以描述为“数据、Skill、单 Agent Harness、离线评测基线和 LLM 适配器契约已完成”，但不能描述为真实大模型已经验收、已经上线的智能训练产品或多 Agent 系统。
+真实历史数据仍少、COROS 训练负荷未映射、训练计划未持久化，DeepSeek 目前只完成单用例真实 Loop，完整模型对照尚未运行。因此现在可以描述为“数据、Skill、单 Agent Harness、离线评测基线、LLM 接入和单用例真实闭环已完成”，但不能描述为生产级大模型已经验收、已经上线的智能训练产品或多 Agent 系统。
 
 ## 10. 代码与文档导航
 
@@ -752,15 +764,13 @@ M5 只允许增加：
 
 ## 11. 当前下一步
 
-唯一下一任务是按 [DeepSeek 模型选型与接入方案](M5-B-DeepSeek模型选型与接入方案.md) 完成 M5-B2 单条合成 Smoke：
+唯一下一任务是 M5-B3 完整 12 场景 DeepSeek 对照：
 
 ```text
-用户本机配置 Key，并显式确认付费调用与费用上限
-→ 执行已经实现的 complete_training_review 单用例 Smoke 命令
-→ 使用 deepseek-v4-flash 非思考模式发送合成 ReviewAgentContext
-→ 验证 call_tool / finish、Trace、Token、延迟和脱敏
-→ 增加费用估算
-→ 在相同 12 个场景上运行
+[已完成] 增加受确认和共享总费用门保护的完整 Suite 命令
+→ [下一步] 使用 deepseek-v4-flash 非思考模式运行所有 default Policy 场景
+→ 脚本化异常/护栏场景继续复用真实 Harness
+→ 记录完成率、终态、Token、费用、延迟和事实一致性
 → 与确定性 Policy 基线比较
 → 用评测证据决定是否需要多 Agent
 ```

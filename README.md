@@ -93,7 +93,7 @@ runcrew activities review --latest --provider coros
 .\.venv\Scripts\runcrew.exe agent review --latest --provider coros
 ```
 
-Agent 输出在 Training Review 之外增加 `run_id`、终态、退出原因、预算使用和 Trace。当前默认 Policy 是确定性的，用于离线验证 Harness 和 Loop；真实 LLM Policy 尚未接入，不能把当前版本描述成已经由大模型自主决策。
+Agent 输出在 Training Review 之外增加 `run_id`、终态、退出原因、预算使用和 Trace。默认 CLI 仍使用确定性 Policy；DeepSeek Policy 已完成单用例真实验证，但完整评测尚未建立，因此不能把当前版本描述成稳定的生产级大模型系统。
 
 ## 运行 Agent 离线评测
 
@@ -106,6 +106,13 @@ Agent 输出在 Training Review 之外增加 `run_id`、终态、退出原因、
 
 ## 下一阶段模型方案
 
-M5-B1 已实现 `deepseek-v4-flash` 非思考模式适配器。第一次真实合成 Smoke 已完成鉴权和首轮 Tool Call，但第二轮模型重复调用工具并被 Harness 安全拦截；标准 assistant/tool 多轮消息修复已通过 Mock，真实复验待完成。详见 [DeepSeek 模型选型与接入方案](docs/M5-B-DeepSeek模型选型与接入方案.md)。
+M5-B2 已通过 `deepseek-v4-flash` 非思考模式真实合成 Smoke：标准 assistant/tool 消息链完成 `call_tool → observation → finish`，事实一致性通过且工具只执行一次。第一次失败及修复过程也已保留；完整 12 场景真实模型对照尚未运行。详见 [DeepSeek 模型选型与接入方案](docs/M5-B-DeepSeek模型选型与接入方案.md)。
 
-真实 Smoke 命令已经实现，但不会自动运行。它只使用一个合成用例，并要求同时传入 `--confirm-paid-api` 和 `--max-estimated-cost-usd`；缺少 Key、确认或费用上限时会在联网前退出。
+完整 Suite 命令已经实现但不会自动运行。它复用 12 个合成场景，并要求同时传入 `--confirm-paid-api` 和共享总费用上限；缺少 Key、确认或费用上限时会在联网前退出：
+
+```powershell
+.\.venv\Scripts\runcrew.exe eval deepseek-suite `
+  --confirm-paid-api `
+  --max-total-estimated-cost-usd 0.01 `
+  --output data\private\evals\deepseek-suite.json
+```

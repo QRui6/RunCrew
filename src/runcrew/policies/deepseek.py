@@ -55,6 +55,29 @@ class DeepSeekTransportError(DeepSeekPolicyError):
         self.retryable = retryable
 
 
+@dataclass(slots=True)
+class DeepSeekCostBudget:
+    """可在多个 Policy 实例之间共享的后验估算费用门。"""
+
+    max_estimated_cost_usd: float
+    consumed_estimated_cost_usd: float = 0.0
+
+    def __post_init__(self) -> None:
+        if not 0 < self.max_estimated_cost_usd <= 1:
+            raise ValueError("DeepSeek 估算费用上限必须大于 0 且不超过 1 美元")
+
+    def ensure_available(self) -> None:
+        if self.consumed_estimated_cost_usd >= self.max_estimated_cost_usd:
+            raise DeepSeekPolicyError("DeepSeek 共享估算费用预算已经耗尽。")
+
+    def consume(self, estimated_cost_usd: float) -> bool:
+        self.consumed_estimated_cost_usd = round(
+            self.consumed_estimated_cost_usd + estimated_cost_usd,
+            8,
+        )
+        return self.consumed_estimated_cost_usd <= self.max_estimated_cost_usd
+
+
 class DeepSeekPolicyConfig(BaseModel):
     """只保存调用所需配置；SecretStr 防止 Key 被 repr 或错误信息泄露。"""
 
@@ -326,6 +349,10 @@ class _RetryableResponseError(DeepSeekPolicyError):
     pass
 
 
+class _CostBudgetExceeded(DeepSeekPolicyError):
+    pass
+
+
 class DeepSeekReviewPolicy:
     """使用 DeepSeek 选择动作，但把执行权和最终校验留给 Harness。"""
 
@@ -334,9 +361,13 @@ class DeepSeekReviewPolicy:
         config: DeepSeekPolicyConfig,
         *,
         transport: DeepSeekChatTransport | None = None,
+        cost_budget: DeepSeekCostBudget | None = None,
     ) -> None:
         self.config = config
         self._transport = transport or HttpxDeepSeekTransport(config)
+        self._cost_budget = cost_budget or DeepSeekCostBudget(
+            config.max_estimated_cost_usd
+        )
         self.telemetry: list[DeepSeekPolicyTelemetry] = []
         self._pending_trace_details: dict[str, Any] = {}
         self._initial_user_message: str | None = None
@@ -348,6 +379,7 @@ class DeepSeekReviewPolicy:
             self._pending_trace_details = {}
             self._assistant_tool_call_message = None
             self._initial_user_message = self._context_message(context)
+        self._cost_budget.ensure_available()
         payload = self._build_payload(context)
         started = time.perf_counter()
         usage = _UsageAccumulator()
@@ -363,6 +395,14 @@ class DeepSeekReviewPolicy:
                 response = _ChatCompletion.model_validate(raw_response)
                 response_model = response.model
                 usage.add(response.usage)
+                response_usage = _UsageAccumulator()
+                response_usage.add(response.usage)
+                if not self._cost_budget.consume(
+                    _estimate_cost_usd(self.config.model, response_usage)
+                ):
+                    raise _CostBudgetExceeded(
+                        "DeepSeek 共享估算费用超过上限，已停止后续动作。"
+                    )
                 finish_reason = response.choices[0].finish_reason
                 action, selected_tool_call = self._parse_action(response)
             except DeepSeekTransportError as error:
@@ -376,26 +416,10 @@ class DeepSeekReviewPolicy:
                 if attempts <= self.config.max_api_retries:
                     continue
                 break
+            except _CostBudgetExceeded as error:
+                last_error = error
+                break
             else:
-                call_cost = _estimate_cost_usd(self.config.model, usage)
-                previous_cost = sum(
-                    item.estimated_cost_usd for item in self.telemetry
-                )
-                if previous_cost + call_cost > self.config.max_estimated_cost_usd:
-                    telemetry = self._record_telemetry(
-                        started=started,
-                        attempts=attempts,
-                        parse_errors=parse_errors,
-                        usage=usage,
-                        response_model=response_model,
-                        finish_reason=finish_reason,
-                        action_type=None,
-                        outcome="failed",
-                    )
-                    self._pending_trace_details = telemetry.to_trace_details()
-                    raise DeepSeekPolicyError(
-                        "DeepSeek 估算费用超过本次 Policy 上限，已停止后续动作。"
-                    )
                 telemetry = self._record_telemetry(
                     started=started,
                     attempts=attempts,
@@ -426,6 +450,10 @@ class DeepSeekReviewPolicy:
             outcome="failed",
         )
         self._pending_trace_details = telemetry.to_trace_details()
+        if isinstance(last_error, _CostBudgetExceeded):
+            raise DeepSeekPolicyError(
+                "DeepSeek 共享估算费用超过上限，已停止后续动作。"
+            ) from last_error
         raise DeepSeekPolicyError(
             "DeepSeek 未能在重试预算内返回合法 Agent 动作。"
         ) from last_error

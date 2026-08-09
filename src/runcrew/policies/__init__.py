@@ -1,4 +1,5 @@
 from runcrew.policies.deepseek import (
+    DeepSeekCostBudget,
     DeepSeekPolicyConfig,
     DeepSeekPolicyError,
     DeepSeekPolicyTelemetry,
@@ -8,6 +9,7 @@ from runcrew.policies.deepseek import (
 )
 
 __all__ = [
+    "DeepSeekCostBudget",
     "DeepSeekPolicyConfig",
     "DeepSeekPolicyError",
     "DeepSeekPolicyTelemetry",

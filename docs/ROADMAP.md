@@ -79,7 +79,7 @@
 - [x] 故障注入；
 - [x] Agent 输出可验证。
 
-当前默认仍使用确定性 Policy 验证 Harness 和 Loop；DeepSeek 适配器只有 Mock 验证，真实模型、费用预算和模型对照尚未完成，不能在面试中声称已经完成真实模型自主决策。
+当前默认 CLI 仍使用确定性 Policy；DeepSeek 单用例真实 Loop 已验收，但完整模型对照尚未完成，不能把一次成功 Smoke 描述成模型稳定性结论。
 
 ## M5：单 Agent 评测与真实 LLM Policy
 
@@ -96,10 +96,12 @@
 - [x] Token、模型调用、API 尝试、动作解析错误和模型耗时指标结构；
 - [x] 受显式确认与费用上限保护的单次合成数据 Smoke 命令；
 - [x] 带价格版本的本地费用估算和后验停止门；
-- [ ] 使用真实 DeepSeek API 完成一次成功的合成数据 Smoke；
+- [x] 使用真实 DeepSeek API 完成一次成功的合成数据 Smoke；
 - [x] 验证真实 API 鉴权、非思考模型、首轮 Tool Call、Token 和费用返回；
 - [x] 第一次真实失败时由 Harness 阻止重复工具执行；
-- [ ] 使用标准 assistant/tool 消息链复验并得到 `succeeded / completed`；
+- [x] 使用标准 assistant/tool 消息链复验并得到 `succeeded / completed`；
+- [x] 增加完整 Suite 命令和跨用例共享的总费用停止门；
+- [ ] 运行完整 12 场景 DeepSeek Suite 并保存私有报告；
 - [ ] 与确定性 Policy 基线对照；
 - [ ] 多 Agent 决策记录。
 

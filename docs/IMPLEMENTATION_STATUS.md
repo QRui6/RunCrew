@@ -10,7 +10,7 @@
 4. [ROADMAP.md](ROADMAP.md)：后续阶段和验收条件；
 5. [adr/README.md](adr/README.md)：关键架构选择及其原因。
 
-当前一句话状态：M5-A 与 M5-B1 已完成，48 项自动化测试通过；第一次真实 DeepSeek 合成 Smoke 已验证鉴权和首轮 Tool Call，第二轮重复调用的标准消息修复待复验，完整模型对照和多 Agent 尚未实现。
+当前一句话状态：M5-A、M5-B1 和 M5-B2 已完成，50 项自动化测试通过；DeepSeek 单用例真实 Loop 已通过，完整 12 场景运行器及共享总费用门已就绪，真实对照尚未运行。
 
 常用验收命令：
 
@@ -19,4 +19,5 @@
 .\.venv\Scripts\runcrew.exe training review --latest --provider fixture
 .\.venv\Scripts\runcrew.exe agent review --latest --provider fixture
 .\.venv\Scripts\runcrew.exe eval review-agent --output data\private\evals\m5-baseline.json
+.\.venv\Scripts\runcrew.exe eval deepseek-suite --help
 ```
