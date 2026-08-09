@@ -9,5 +9,6 @@
 | [ADR-0005](0005-official-garmin-fit-sdk.md) | 接受 | 使用 Garmin 官方 Python FIT SDK |
 | [ADR-0006](0006-deterministic-training-review-skill.md) | 接受 | Skill 只编排确定性训练复盘 |
 | [ADR-0007](0007-bounded-review-agent-loop.md) | 接受 | 使用有界动作协议实现单 Agent Loop |
+| [ADR-0008](0008-versioned-offline-agent-evaluation.md) | 接受 | 先建立版本化离线评测基线再接入真实 LLM |
 
 新 ADR 使用四位编号，必须记录背景、决策、原因、后果和替代方案。

@@ -72,4 +72,4 @@ RunCrew 是一个使用你自己的长期跑步数据，帮助完成“训练回
 → 必要的多 Agent 协作
 ```
 
-当前已经完成数据竖切、FIT 详情兜底、确定性 Training Review Skill 和单 Agent Context + Harness + Loop。下一步先建立回放评测基线并接入真实 LLM Policy，在评测证明必要以前不拆分多 Agent。完整实施过程和范围边界见 [项目实施全景与面试说明](RunCrew-项目实施全景与面试说明.md)。
+当前已经完成数据竖切、FIT 详情兜底、确定性 Training Review Skill、单 Agent Context + Harness + Loop，以及 12 场景离线评测基线。下一步只接入一个真实 LLM Policy，并与确定性基线对照；在评测证明必要以前不拆分多 Agent。完整实施过程和范围边界见 [项目实施全景与面试说明](RunCrew-项目实施全景与面试说明.md)。

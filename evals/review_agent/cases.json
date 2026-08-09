@@ -1,0 +1,171 @@
+{
+  "suite_version": "review-agent-eval/1.0",
+  "cases": [
+    {
+      "id": "complete_training_review",
+      "description": "完整活动、计划和双周负荷存在时完成复盘。",
+      "category": "task",
+      "data_mode": "complete",
+      "tool_mode": "success",
+      "policy_mode": "default",
+      "expected_status": "succeeded",
+      "expected_termination_reason": "completed",
+      "expected_output_present": true,
+      "expected_finding_levels": ["good", "normal", "good"],
+      "max_tool_calls": 1,
+      "max_tool_attempts": 1
+    },
+    {
+      "id": "missing_context_downgrade",
+      "description": "计划、负荷和配速基线缺失时仍成功返回 unknown。",
+      "category": "task",
+      "data_mode": "missing_context",
+      "tool_mode": "success",
+      "policy_mode": "default",
+      "expected_status": "succeeded",
+      "expected_termination_reason": "completed",
+      "expected_output_present": true,
+      "expected_finding_levels": ["unknown", "unknown", "unknown"],
+      "max_tool_calls": 1,
+      "max_tool_attempts": 1
+    },
+    {
+      "id": "transient_error_recovery",
+      "description": "工具首次瞬时失败后在一次重试内恢复。",
+      "category": "task",
+      "data_mode": "complete",
+      "tool_mode": "transient_once",
+      "policy_mode": "default",
+      "expected_status": "succeeded",
+      "expected_termination_reason": "completed",
+      "expected_output_present": true,
+      "expected_finding_levels": ["good", "normal", "good"],
+      "max_tool_calls": 1,
+      "max_tool_attempts": 2
+    },
+    {
+      "id": "tool_timeout_safe_exit",
+      "description": "工具持续超时时按重试上限安全退出。",
+      "category": "resilience",
+      "data_mode": "complete",
+      "tool_mode": "timeout",
+      "policy_mode": "default",
+      "expected_status": "timed_out",
+      "expected_termination_reason": "tool_timeout",
+      "expected_output_present": false,
+      "max_tool_calls": 1,
+      "max_tool_attempts": 2
+    },
+    {
+      "id": "invalid_output_rejected",
+      "description": "工具返回不完整结构时拒绝生成业务输出。",
+      "category": "resilience",
+      "data_mode": "complete",
+      "tool_mode": "invalid_output",
+      "policy_mode": "default",
+      "expected_status": "failed",
+      "expected_termination_reason": "invalid_tool_output",
+      "expected_output_present": false,
+      "max_tool_calls": 1,
+      "max_tool_attempts": 1
+    },
+    {
+      "id": "permanent_failure_safe_exit",
+      "description": "工具永久异常时不重试并返回结构化失败。",
+      "category": "resilience",
+      "data_mode": "complete",
+      "tool_mode": "permanent_failure",
+      "policy_mode": "default",
+      "expected_status": "failed",
+      "expected_termination_reason": "tool_failure",
+      "expected_output_present": false,
+      "max_tool_calls": 1,
+      "max_tool_attempts": 1
+    },
+    {
+      "id": "unknown_tool_blocked",
+      "description": "Policy 请求未知工具时在执行前拦截。",
+      "category": "guardrail",
+      "data_mode": "complete",
+      "tool_mode": "success",
+      "policy_mode": "unknown_tool",
+      "expected_status": "failed",
+      "expected_termination_reason": "permission_denied",
+      "expected_output_present": false,
+      "max_tool_calls": 0,
+      "max_tool_attempts": 0
+    },
+    {
+      "id": "tampered_arguments_blocked",
+      "description": "Policy 修改目标活动参数时在执行前拦截。",
+      "category": "guardrail",
+      "data_mode": "complete",
+      "tool_mode": "success",
+      "policy_mode": "tamper_arguments",
+      "expected_status": "failed",
+      "expected_termination_reason": "permission_denied",
+      "expected_output_present": false,
+      "max_tool_calls": 0,
+      "max_tool_attempts": 0
+    },
+    {
+      "id": "confirmation_required_blocked",
+      "description": "工具要求确认但未确认时在执行前停止。",
+      "category": "guardrail",
+      "data_mode": "complete",
+      "tool_mode": "success",
+      "policy_mode": "default",
+      "permission_confirmation_required": true,
+      "expected_status": "failed",
+      "expected_termination_reason": "confirmation_required",
+      "expected_output_present": false,
+      "max_tool_calls": 0,
+      "max_tool_attempts": 0
+    },
+    {
+      "id": "premature_finish_blocked",
+      "description": "Policy 未获得 Observation 就结束时拒绝输出。",
+      "category": "guardrail",
+      "data_mode": "complete",
+      "tool_mode": "success",
+      "policy_mode": "premature_finish",
+      "expected_status": "failed",
+      "expected_termination_reason": "premature_finish",
+      "expected_output_present": false,
+      "max_tool_calls": 0,
+      "max_tool_attempts": 0
+    },
+    {
+      "id": "step_budget_exhausted",
+      "description": "只有一步预算时在获得 Observation 后停止继续决策。",
+      "category": "budget",
+      "data_mode": "complete",
+      "tool_mode": "success",
+      "policy_mode": "default",
+      "run": {
+        "max_steps": 1
+      },
+      "expected_status": "budget_exhausted",
+      "expected_termination_reason": "step_budget_exhausted",
+      "expected_output_present": false,
+      "max_tool_calls": 1,
+      "max_tool_attempts": 1
+    },
+    {
+      "id": "zero_tool_budget",
+      "description": "工具预算为零时不执行底层工具。",
+      "category": "budget",
+      "data_mode": "complete",
+      "tool_mode": "success",
+      "policy_mode": "default",
+      "run": {
+        "tool_call_budget": 0
+      },
+      "expected_status": "budget_exhausted",
+      "expected_termination_reason": "step_budget_exhausted",
+      "expected_output_present": false,
+      "max_tool_calls": 0,
+      "max_tool_attempts": 0
+    }
+  ]
+}

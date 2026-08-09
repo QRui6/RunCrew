@@ -11,6 +11,7 @@ from runcrew.providers.fixture import FixtureActivityProvider
 from runcrew.providers.coros import CorosActivityProvider
 from runcrew.domain.agent import ReviewAgentRunRequest
 from runcrew.domain.training_review import PlannedSession, TrainingReviewRequest
+from runcrew.evaluation import evaluate_review_agent_suite, load_review_agent_suite
 from runcrew.harness import ReviewAgentHarness
 from runcrew.services.activity_review import build_activity_review
 from runcrew.services.sync import sync_activities
@@ -28,9 +29,11 @@ app = typer.Typer(
 activities_app = typer.Typer(help="Inspect and review normalized activities.")
 training_app = typer.Typer(help="Run replayable training review skills.")
 agent_app = typer.Typer(help="运行带 Trace、预算和退出条件的单 Agent。")
+evaluation_app = typer.Typer(help="运行可回放的 Agent 离线评测。")
 app.add_typer(activities_app, name="activities")
 app.add_typer(training_app, name="training")
 app.add_typer(agent_app, name="agent")
+app.add_typer(evaluation_app, name="eval")
 
 
 def database_url(database_path: Path) -> str:
@@ -374,6 +377,37 @@ def run_review_agent(
     result = asyncio.run(ReviewAgentHarness().run(run_request, tool=review_tool))
     typer.echo(result.model_dump_json(indent=2))
     if result.status != "succeeded":
+        raise typer.Exit(code=1)
+
+
+@evaluation_app.command("review-agent")
+def evaluate_review_agent(
+    cases_path: Annotated[
+        Path,
+        typer.Option("--cases", help="评测用例 JSON 路径。"),
+    ] = Path("evals/review_agent/cases.json"),
+    output_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            help="可选报告路径；为保护未来真实评测数据，只允许写入 data/private。",
+        ),
+    ] = None,
+) -> None:
+    if not cases_path.is_file():
+        raise typer.BadParameter(f"Evaluation suite not found: {cases_path}")
+    suite = load_review_agent_suite(cases_path)
+    report = asyncio.run(evaluate_review_agent_suite(suite))
+    payload = report.model_dump_json(indent=2)
+    if output_path is not None:
+        private_root = Path("data/private").resolve()
+        resolved_output = output_path.resolve()
+        if not resolved_output.is_relative_to(private_root):
+            raise typer.BadParameter("Evaluation reports must stay under data/private.")
+        resolved_output.parent.mkdir(parents=True, exist_ok=True)
+        resolved_output.write_text(payload + "\n", encoding="utf-8")
+    typer.echo(payload)
+    if not report.meets_baseline:
         raise typer.Exit(code=1)
 
 

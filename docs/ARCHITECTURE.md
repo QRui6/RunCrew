@@ -35,6 +35,12 @@ Review Agent Harness
   │ 有界 Context + Action Schema + 权限 + 预算 + 重试 + Trace
   ▼
 CLI Agent Run JSON 输出
+  │ 版本化合成场景 + 故障注入 + 预期终态
+  ▼
+Agent Evaluation Runner
+  │ 事实一致性 + 护栏执行检查 + 聚合指标
+  ▼
+私有 Evaluation Report
 ```
 
 ## 分层职责
@@ -82,6 +88,14 @@ CLI Agent Run JSON 输出
 负责一次 Agent Run 的状态循环、工具白名单、确认门、步骤和调用预算、有限重试、两级超时、输出校验、脱敏 Trace 和终止状态。策略层只接收 `ReviewAgentContext`，不能读取 Provider 原始数据或直接访问数据库。
 
 当前默认策略为确定性 `DeterministicReviewPolicy`，只会在没有观察时调用 `review_running_training`，获得合法观察后请求结束。未来 LLM Policy 必须实现同一动作协议，不能绕过 Harness。
+
+### Evaluation
+
+位置：`src/runcrew/evaluation/` 和 `evals/review_agent/`
+
+负责加载版本化无私人数据场景、为 Tool/Policy 注入可重复故障、运行真实 Harness、比较预期终态和确定性业务事实，并聚合任务完成、护栏、Schema、事实一致性、调用成本、延迟和退出原因指标。
+
+评测套件可以进入 Git，生成报告只允许写入 `data/private/`。M5-B 的真实 LLM Policy 必须通过相同 `default_policy_factory` 接口进入评测器，不能创建一套只为模型演示服务的旁路。
 
 ## 数据模型
 

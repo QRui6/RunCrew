@@ -10,9 +10,9 @@
 
 一句话结论：
 
-> RunCrew 已经完成“真实跑步数据接入 → 统一数据模型 → 私有存储 → FIT 详情恢复 → 确定性复盘 → 可回放 Training Review Skill → 有界单 Agent Loop”，但真实 LLM Policy、多 Agent 和产品化界面尚未实现。
+> RunCrew 已经完成“真实跑步数据接入 → 统一数据模型 → 私有存储 → FIT 详情恢复 → 确定性复盘 → 可回放 Training Review Skill → 有界单 Agent Loop → 版本化离线评测基线”，但真实 LLM Policy、多 Agent 和产品化界面尚未实现。
 
-当前里程碑是 **M4 完成**。
+当前里程碑是 **M5-A 完成，M5 整体进行中**。
 
 | 能力 | 当前状态 | 说明 |
 |---|---|---|
@@ -27,6 +27,7 @@
 | 可回放上下文 | 已完成 | 使用目标活动时间、`input_hash` 和规则版本 |
 | LLM Policy / 自然语言总结 | 未实现 | 当前先用确定性 Policy 验证 Harness，LLM 不参与指标计算 |
 | Agent 状态机、Trace、预算和重试 | 已完成 | 支持权限、确认、重试、两级超时、故障注入和明确终态 |
+| 单 Agent 离线评测 | 已完成 | 12 个场景，任务、护栏、Schema 和事实一致性指标均达到基线 |
 | 多 Agent 编排 | 未实现 | 只有 M5 评测证明单 Agent 不够时才条件式增加 |
 | Web 界面和简历演示 | 未实现 | 属于 M6 |
 | 伤病、营养、睡眠完整 Agent | 不在当前范围 | 防止重新变成“大而全”项目 |
@@ -53,6 +54,8 @@ COROS 官方服务
   → Action / Observation Loop
   → 权限 + 确认 + 预算 + 重试 + 超时 + Trace
   → 通过 Agent Run Schema 校验的终态输出
+  → 12 场景 Agent Evaluation Runner
+  → Suite Hash + 任务/护栏/事实/成本/延迟指标
 ```
 
 各层职责：
@@ -133,6 +136,15 @@ runcrew agent review --latest --provider coros
 - 失败时稳定错误代码和是否值得重试，不输出潜在敏感的异常正文。
 
 当前默认 Policy 是确定性的。它用于证明 Harness 和 Loop 的工程边界，不等于已经调用真实大模型。
+
+### 3.5 运行单 Agent 离线评测
+
+```powershell
+runcrew eval review-agent `
+  --output data/private/evals/m5-baseline.json
+```
+
+评测不读取真实跑步数据库，也不调用 COROS 或 LLM。它执行 12 个版本化场景，输出正常任务完成率、护栏通过率、Schema 通过率、事实一致率、工具调用/尝试、P95 延迟和退出原因分布。报告只能写入 Git 忽略的 `data/private/`。
 
 ## 4. 各阶段实施过程
 
@@ -426,11 +438,56 @@ created
 - Policy 与 Harness 解耦，未来真实 LLM 复用同一动作协议；
 - 工具只能通过白名单进入，Agent 不能直接访问 COROS；
 - Trace、错误、预算和终态均有 Schema；
-- 34 项测试可以离线验证成功和故障路径，不依赖 API Key。
+- 39 项测试可以离线验证成功、故障路径和评测退化，不依赖 API Key。
 
 #### 面试表达
 
 > M4 我没有立即依赖 Agent 框架，而是先把最小状态机写清楚。Policy 只能输出 call_tool 或 finish，Harness 负责权限、确认、预算、重试、超时和输出校验；工具结果作为 Observation 回到下一轮，所有路径都有脱敏 Trace 和明确终态。默认确定性 Policy 用于建立离线基线，未来 LLM 只替换动作选择层。
+
+### M5-A：单 Agent 离线评测基线
+
+#### 目标
+
+在接入真实 LLM 前回答三个问题：Harness 是否稳定、故障时是否安全、未来模型结果是否可以与统一基线比较。
+
+#### 技术实现
+
+- `review-agent-eval/1.0` 版本化 Suite；
+- 12 个任务、韧性、护栏和预算场景；
+- Case、Metrics、Report Pydantic Schema；
+- Suite/Report JSON Schema 导出与漂移测试；
+- 合成完整活动和缺数活动；
+- 可替换 `default_policy_factory`；
+- Tool 与 Policy 故障注入；
+- 确定性事实对象级对比；
+- 工具是否在护栏后真实执行的旁路检查；
+- `suite_hash` 和私有 JSON 报告。
+
+#### 为什么故障用例不算“任务失败”
+
+超时、非法输出和越权用例的目标本来就是验证系统能否安全退出。因此报告分开统计：正常任务看 `task_completion_rate`，护栏看 `guardrail_pass_rate`，所有场景再看 `expectation_pass_rate`。这样不会为了追求表面上的 100% 成功率而吞掉错误。
+
+#### 当前基线
+
+```text
+12/12 场景满足预期
+task_completion_rate=1.0
+guardrail_pass_rate=1.0
+schema_valid_rate=1.0
+fact_integrity_rate=1.0
+prohibited_tool_execution_count=0
+```
+
+#### 阶段亮点
+
+- 不是只测试最终文本，而是测试终态、事实、预算和底层工具副作用；
+- 题集用哈希标识，未来不同模型必须在相同输入上比较；
+- 评测器已经预留真实 LLM Policy 注入口，但当前不产生 API 费用；
+- 报告默认私有，避免未来真实评测数据误提交。
+
+#### 面试表达
+
+> 接 LLM 前我先建立了 12 场景离线评测基线，把正常任务完成和异常安全退出分开计分。除了 Schema 和最终状态，我还比较 Agent 输出是否修改确定性工具事实，并检测越权被拒绝后底层工具是否仍执行。评测套件有稳定 hash，后续 LLM 或多 Agent 必须在同一题集上对照。
 
 ## 5. Agent 工程技术目前做到哪里
 
@@ -443,7 +500,7 @@ created
 | Loop Engineering | `call_tool → observation → finish` 有限状态循环和明确退出条件 | M4 最小竖切已完成 |
 | LLM | Policy 接口已预留，真实模型尚未接入 | 当前不能声称模型已经自主决策 |
 | Multi-Agent | 尚未实现 | 必须由评测证明必要性 |
-| Evaluation | 有 34 项单元/集成测试、fixture、真实 Smoke Test、确定性回放和故障注入 | 尚无系统级历史评测集和模型指标看板 |
+| Evaluation | 12 场景版本化 Suite、39 项测试、Suite Hash、任务/护栏/事实/成本/延迟指标 | 离线基线已完成，尚无真实模型 Token/费用结果 |
 
 ## 6. 贯穿项目的核心设计原则
 
@@ -524,11 +581,12 @@ M4 禁止顺手增加：
 
 M5 只允许增加：
 
-- 不含私人数据的历史回放评测集；
-- 完成率、非法动作率、工具调用数、重试数、延迟和模型费用指标；
-- 一个实现相同 Action Schema 的真实 LLM Policy；
-- LLM 与确定性 Policy 的对照结果；
-- 是否需要多 Agent 的书面决策门。
+- [x] 不含私人数据的离线回放评测集；
+- [x] 完成率、护栏、工具调用数、重试数和延迟指标；
+- [ ] 一个实现相同 Action Schema 的真实 LLM Policy；
+- [ ] Token、费用和动作解析错误指标；
+- [ ] LLM 与确定性 Policy 的对照结果；
+- [ ] 是否需要多 Agent 的书面决策门。
 
 ### 只有满足条件才做多 Agent
 
@@ -553,17 +611,17 @@ M5 只允许增加：
 
 ### 30 秒版本
 
-> RunCrew 是我基于真实跑步数据做的 Agent 工程项目。当前完成了 COROS MCP 接入、统一活动 Schema、SQLite 幂等同步、FIT 详情降级、可回放 Training Review Skill，以及具备权限、预算、重试、Trace 和退出条件的单 Agent Loop。训练指标由确定性 Service 计算，Agent 只通过白名单 Skill 获取结论，因此每条结论都有 evidence，缺失数据也不会被模型编造。
+> RunCrew 是我基于真实跑步数据做的 Agent 工程项目。当前完成了 COROS MCP 接入、统一活动 Schema、FIT 详情降级、可回放 Training Review Skill、带权限和预算的单 Agent Loop，以及 12 场景离线评测基线。训练指标由确定性 Service 计算，Agent 只通过白名单 Skill 获取结论；评测同时检查事实一致性和越权后工具是否执行。
 
 ### 2 分钟版本
 
-> 我是跑步用户，所以选择了一个能长期产生真实反馈的场景。项目先通过 Spike 验证 COROS OAuth 和 MCP，再建立 Provider、Domain、Storage、Service 分层。真实环境中 COROS 详情接口不稳定，我设计了详情、分圈、FIT、summary warning 的降级链，并用 Garmin 官方 SDK 做 CRC 和消息解析。之后我把训练完成度、负荷变化和异常判断做成确定性 Service，再通过 Skill 和 JSON Schema 暴露。M4 增加单 Agent Loop：Policy 只能输出 call_tool 或 finish，Harness 统一做工具白名单、确认、步骤和调用预算、有限重试、两级超时、输出校验和脱敏 Trace。默认确定性 Policy 用来建立可离线回归的基线，真实 LLM 以后只替换动作选择层，不修改领域结论。
+> 我是跑步用户，所以选择了一个能长期产生真实反馈的场景。项目先通过 Spike 验证 COROS OAuth 和 MCP，再建立 Provider、Domain、Storage、Service 分层。真实环境中 COROS 详情接口不稳定，我设计了详情、分圈、FIT、summary warning 的降级链，并用 Garmin 官方 SDK 做 CRC 和消息解析。之后我把训练完成度、负荷变化和异常判断做成确定性 Service，再通过 Skill 和 JSON Schema 暴露。M4 增加单 Agent Loop：Policy 只能输出 call_tool 或 finish，Harness 统一做白名单、确认、预算、重试、超时、校验和 Trace。M5-A 又建立 12 个版本化场景，把正常任务和异常安全退出分开计分，并检查模型层是否修改工具事实、护栏后底层工具是否仍执行。真实 LLM 后续只替换 Policy 层，并在同一题集上与确定性基线比较。
 
 ### 最值得讲的三个难点
 
 1. **外部服务不稳定**：设计部分成功和多级降级，而不是吞错或伪造详情；
 2. **Agent 输出可信度**：把计算放在确定性 Service，Skill 只编排和验证；
-3. **受控 Agent 运行**：用有界 Context、动作 Schema、白名单、预算、故障注入和 Trace 防止越权与无限循环。
+3. **可验证 Agent 评测**：用版本化场景、Suite Hash、事实一致性和工具副作用检查衡量编排质量。
 
 ### 面试官可能追问
 
@@ -589,7 +647,7 @@ M5 只允许增加：
 
 #### 项目目前最大的不足是什么？
 
-真实历史数据仍少、COROS 训练负荷未映射、训练计划未持久化，真实 LLM Policy 和系统级评测集也尚未实现。因此现在可以描述为“数据、Skill 和单 Agent Harness 已完成”，但不能描述为已经上线的智能训练产品或多 Agent 系统。
+真实历史数据仍少、COROS 训练负荷未映射、训练计划未持久化，真实 LLM Policy、Token/费用指标和真实模型对照尚未实现。因此现在可以描述为“数据、Skill、单 Agent Harness 和离线评测基线已完成”，但不能描述为已经上线的智能训练产品或多 Agent 系统。
 
 ## 10. 代码与文档导航
 
@@ -610,17 +668,21 @@ M5 只允许增加：
 | Context Builder | `src/runcrew/services/training_context.py` |
 | 训练复盘规则 | `src/runcrew/services/training_review.py` |
 | 单 Agent Harness 与 Loop | `src/runcrew/harness/review_agent.py` |
+| 评测 Suite 与 Schema | `evals/review_agent/` |
+| Agent Evaluation Domain | `src/runcrew/domain/evaluation.py` |
+| 离线评测运行器 | `src/runcrew/evaluation/review_agent.py` |
 | 统一验证入口 | `scripts/verify.py` |
 
 ## 11. 当前下一步
 
-唯一下一任务是建立单 Agent 历史回放评测基线：
+唯一下一任务是接入一个真实 LLM Policy：
 
 ```text
-构造不含私人数据的代表性 Run 用例
-→ 回放成功、缺数据、瞬时错误、越权和超时场景
-→ 统计完成率、非法动作率、工具调用数、重试数和延迟
-→ 接入一个真实 LLM Policy
+确定模型供应商、模型名和费用上限
+→ 将 ReviewAgentContext 转为受控模型输入
+→ 强制模型输出 call_tool / finish Action Schema
+→ 记录 Token、费用、延迟和动作解析错误
+→ 在相同 12 个场景上运行
 → 与确定性 Policy 基线比较
 → 用评测证据决定是否需要多 Agent
 ```

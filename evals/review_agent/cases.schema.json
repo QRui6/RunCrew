@@ -1,0 +1,240 @@
+{
+  "$defs": {
+    "EvaluationRunOverrides": {
+      "additionalProperties": false,
+      "properties": {
+        "max_steps": {
+          "default": 4,
+          "description": "最大策略步骤数。",
+          "maximum": 12,
+          "minimum": 1,
+          "title": "Max Steps",
+          "type": "integer"
+        },
+        "tool_call_budget": {
+          "default": 1,
+          "description": "业务工具逻辑调用预算。",
+          "maximum": 3,
+          "minimum": 0,
+          "title": "Tool Call Budget",
+          "type": "integer"
+        },
+        "max_retries": {
+          "default": 1,
+          "description": "工具重试次数。",
+          "maximum": 3,
+          "minimum": 0,
+          "title": "Max Retries",
+          "type": "integer"
+        },
+        "tool_timeout_seconds": {
+          "default": 0.01,
+          "description": "单次工具尝试超时秒数；离线评测使用短超时。",
+          "exclusiveMinimum": 0,
+          "maximum": 5,
+          "title": "Tool Timeout Seconds",
+          "type": "number"
+        },
+        "run_timeout_seconds": {
+          "default": 1.0,
+          "description": "整个 Agent Run 的超时秒数。",
+          "exclusiveMinimum": 0,
+          "maximum": 10,
+          "title": "Run Timeout Seconds",
+          "type": "number"
+        }
+      },
+      "title": "评测运行参数覆盖",
+      "type": "object"
+    },
+    "ReviewAgentEvaluationCase": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "稳定、可用于报告对比的用例 ID。",
+          "pattern": "^[a-z0-9][a-z0-9_-]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "description": {
+          "description": "面向人的中文场景说明。",
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "category": {
+          "description": "任务、韧性、护栏或预算场景。",
+          "enum": [
+            "task",
+            "resilience",
+            "guardrail",
+            "budget"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "data_mode": {
+          "description": "使用完整或缺失上下文数据。",
+          "enum": [
+            "complete",
+            "missing_context"
+          ],
+          "title": "Data Mode",
+          "type": "string"
+        },
+        "tool_mode": {
+          "description": "注入的工具行为。",
+          "enum": [
+            "success",
+            "transient_once",
+            "timeout",
+            "invalid_output",
+            "permanent_failure"
+          ],
+          "title": "Tool Mode",
+          "type": "string"
+        },
+        "policy_mode": {
+          "description": "注入的策略行为。",
+          "enum": [
+            "default",
+            "unknown_tool",
+            "tamper_arguments",
+            "premature_finish"
+          ],
+          "title": "Policy Mode",
+          "type": "string"
+        },
+        "permission_confirmation_required": {
+          "default": false,
+          "description": "是否把唯一工具配置为需要用户确认。",
+          "title": "Permission Confirmation Required",
+          "type": "boolean"
+        },
+        "confirmed_tools": {
+          "description": "本用例预先获得用户确认的工具集合。",
+          "items": {
+            "type": "string"
+          },
+          "title": "Confirmed Tools",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "run": {
+          "$ref": "#/$defs/EvaluationRunOverrides",
+          "description": "覆盖 Harness 默认预算和超时。"
+        },
+        "expected_status": {
+          "description": "期望的 Agent Run 终态。",
+          "enum": [
+            "succeeded",
+            "failed",
+            "timed_out",
+            "budget_exhausted"
+          ],
+          "title": "Expected Status",
+          "type": "string"
+        },
+        "expected_termination_reason": {
+          "description": "期望的明确退出原因。",
+          "enum": [
+            "completed",
+            "policy_error",
+            "permission_denied",
+            "confirmation_required",
+            "tool_failure",
+            "tool_timeout",
+            "invalid_tool_output",
+            "premature_finish",
+            "step_budget_exhausted",
+            "run_timeout"
+          ],
+          "title": "Expected Termination Reason",
+          "type": "string"
+        },
+        "expected_output_present": {
+          "description": "期望是否产生合法业务输出。",
+          "title": "Expected Output Present",
+          "type": "boolean"
+        },
+        "expected_finding_levels": {
+          "anyOf": [
+            {
+              "items": {
+                "enum": [
+                  "good",
+                  "normal",
+                  "attention",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "成功任务期望的三个 finding 等级；非成功场景为空。",
+          "title": "Expected Finding Levels"
+        },
+        "max_tool_calls": {
+          "description": "该场景允许观察到的最大逻辑工具调用数。",
+          "maximum": 3,
+          "minimum": 0,
+          "title": "Max Tool Calls",
+          "type": "integer"
+        },
+        "max_tool_attempts": {
+          "description": "该场景允许观察到的最大工具尝试数。",
+          "maximum": 4,
+          "minimum": 0,
+          "title": "Max Tool Attempts",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "description",
+        "category",
+        "data_mode",
+        "tool_mode",
+        "policy_mode",
+        "expected_status",
+        "expected_termination_reason",
+        "expected_output_present",
+        "max_tool_calls",
+        "max_tool_attempts"
+      ],
+      "title": "训练复盘 Agent 评测用例",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "suite_version": {
+      "const": "review-agent-eval/1.0",
+      "default": "review-agent-eval/1.0",
+      "description": "评测用例集合版本。",
+      "title": "Suite Version",
+      "type": "string"
+    },
+    "cases": {
+      "description": "按固定顺序执行的离线评测用例。",
+      "items": {
+        "$ref": "#/$defs/ReviewAgentEvaluationCase"
+      },
+      "minItems": 1,
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "cases"
+  ],
+  "title": "训练复盘 Agent 评测套件",
+  "type": "object"
+}

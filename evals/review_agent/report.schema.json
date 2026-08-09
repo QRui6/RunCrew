@@ -1,0 +1,284 @@
+{
+  "$defs": {
+    "ReviewAgentEvaluationCaseResult": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "description": "对应评测用例 ID。",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "category": {
+          "description": "评测类别。",
+          "enum": [
+            "task",
+            "resilience",
+            "guardrail",
+            "budget"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "passed": {
+          "description": "实际行为是否满足全部预期。",
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "actual_status": {
+          "description": "实际 Agent Run 终态。",
+          "enum": [
+            "succeeded",
+            "failed",
+            "timed_out",
+            "budget_exhausted"
+          ],
+          "title": "Actual Status",
+          "type": "string"
+        },
+        "actual_termination_reason": {
+          "description": "实际退出原因。",
+          "enum": [
+            "completed",
+            "policy_error",
+            "permission_denied",
+            "confirmation_required",
+            "tool_failure",
+            "tool_timeout",
+            "invalid_tool_output",
+            "premature_finish",
+            "step_budget_exhausted",
+            "run_timeout"
+          ],
+          "title": "Actual Termination Reason",
+          "type": "string"
+        },
+        "schema_valid": {
+          "description": "Run Result 是否可再次通过 Schema 校验。",
+          "title": "Schema Valid",
+          "type": "boolean"
+        },
+        "fact_integrity": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "成功输出是否与确定性工具结果完全一致；不适用时为空。",
+          "title": "Fact Integrity"
+        },
+        "prohibited_tool_executed": {
+          "description": "被权限或参数护栏拒绝后，底层工具是否仍被错误执行。",
+          "title": "Prohibited Tool Executed",
+          "type": "boolean"
+        },
+        "tool_calls_used": {
+          "description": "实际逻辑工具调用数。",
+          "minimum": 0,
+          "title": "Tool Calls Used",
+          "type": "integer"
+        },
+        "tool_attempts_used": {
+          "description": "实际工具尝试数。",
+          "minimum": 0,
+          "title": "Tool Attempts Used",
+          "type": "integer"
+        },
+        "latency_ms": {
+          "description": "该用例端到端执行耗时。",
+          "minimum": 0,
+          "title": "Latency Ms",
+          "type": "number"
+        },
+        "failure_reasons": {
+          "description": "未满足预期时的中文原因。",
+          "items": {
+            "type": "string"
+          },
+          "title": "Failure Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "case_id",
+        "category",
+        "passed",
+        "actual_status",
+        "actual_termination_reason",
+        "schema_valid",
+        "fact_integrity",
+        "prohibited_tool_executed",
+        "tool_calls_used",
+        "tool_attempts_used",
+        "latency_ms"
+      ],
+      "title": "单条 Agent 评测结果",
+      "type": "object"
+    },
+    "ReviewAgentEvaluationMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "expectation_pass_rate": {
+          "description": "全部用例预期通过率。",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Expectation Pass Rate",
+          "type": "number"
+        },
+        "task_completion_rate": {
+          "description": "正常任务场景中成功完成并输出合法结果的比例。",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Task Completion Rate",
+          "type": "number"
+        },
+        "guardrail_pass_rate": {
+          "description": "护栏场景按预期拦截且未执行底层工具的比例。",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Guardrail Pass Rate",
+          "type": "number"
+        },
+        "schema_valid_rate": {
+          "description": "Agent Run 结果 Schema 通过率。",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Schema Valid Rate",
+          "type": "number"
+        },
+        "fact_integrity_rate": {
+          "description": "成功输出与确定性工具事实完全一致的比例。",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Fact Integrity Rate",
+          "type": "number"
+        },
+        "prohibited_tool_execution_count": {
+          "description": "被护栏拒绝后底层工具仍执行的次数。",
+          "minimum": 0,
+          "title": "Prohibited Tool Execution Count",
+          "type": "integer"
+        },
+        "average_tool_calls": {
+          "description": "平均逻辑工具调用数。",
+          "minimum": 0,
+          "title": "Average Tool Calls",
+          "type": "number"
+        },
+        "average_tool_attempts": {
+          "description": "平均工具尝试数。",
+          "minimum": 0,
+          "title": "Average Tool Attempts",
+          "type": "number"
+        },
+        "p95_latency_ms": {
+          "description": "用例端到端耗时 P95。",
+          "minimum": 0,
+          "title": "P95 Latency Ms",
+          "type": "number"
+        },
+        "termination_reason_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "各退出原因出现次数。",
+          "title": "Termination Reason Counts",
+          "type": "object"
+        }
+      },
+      "required": [
+        "expectation_pass_rate",
+        "task_completion_rate",
+        "guardrail_pass_rate",
+        "schema_valid_rate",
+        "fact_integrity_rate",
+        "prohibited_tool_execution_count",
+        "average_tool_calls",
+        "average_tool_attempts",
+        "p95_latency_ms",
+        "termination_reason_counts"
+      ],
+      "title": "Agent 评测指标",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "description": "报告版本。",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "suite_version": {
+      "const": "review-agent-eval/1.0",
+      "description": "使用的评测套件版本。",
+      "title": "Suite Version",
+      "type": "string"
+    },
+    "suite_hash": {
+      "description": "规范化评测套件的 SHA-256，用于复现。",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Suite Hash",
+      "type": "string"
+    },
+    "policy_name": {
+      "description": "被评测 Policy 名称。",
+      "minLength": 1,
+      "title": "Policy Name",
+      "type": "string"
+    },
+    "total_cases": {
+      "description": "用例总数。",
+      "minimum": 1,
+      "title": "Total Cases",
+      "type": "integer"
+    },
+    "passed_cases": {
+      "description": "满足全部预期的用例数。",
+      "minimum": 0,
+      "title": "Passed Cases",
+      "type": "integer"
+    },
+    "failed_cases": {
+      "description": "未满足预期的用例数。",
+      "minimum": 0,
+      "title": "Failed Cases",
+      "type": "integer"
+    },
+    "meets_baseline": {
+      "description": "是否满足当前离线基线门槛。",
+      "title": "Meets Baseline",
+      "type": "boolean"
+    },
+    "metrics": {
+      "$ref": "#/$defs/ReviewAgentEvaluationMetrics",
+      "description": "聚合指标。"
+    },
+    "cases": {
+      "description": "逐用例结果。",
+      "items": {
+        "$ref": "#/$defs/ReviewAgentEvaluationCaseResult"
+      },
+      "minItems": 1,
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "suite_version",
+    "suite_hash",
+    "policy_name",
+    "total_cases",
+    "passed_cases",
+    "failed_cases",
+    "meets_baseline",
+    "metrics",
+    "cases"
+  ],
+  "title": "训练复盘 Agent 评测报告",
+  "type": "object"
+}

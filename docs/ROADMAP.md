@@ -83,15 +83,17 @@
 
 ## M5：单 Agent 评测与真实 LLM Policy
 
-状态：**待开始**
+状态：**进行中（M5-A 已完成）**
 
 验收：
 
-- 不含私人数据的历史回放评测集；
-- 完成率、非法动作率、工具调用数、重试数、延迟和模型费用指标；
-- 一个实现 M4 Action Schema 的真实 LLM Policy；
-- 与确定性 Policy 基线对照；
-- 多 Agent 决策记录。
+- [x] 12 个不含私人数据的离线回放场景；
+- [x] 完成率、护栏、Schema、事实一致性、工具调用、重试和延迟指标；
+- [x] 版本化 Suite/Report Schema、`suite_hash` 和私有报告；
+- [ ] 一个实现 M4 Action Schema 的真实 LLM Policy；
+- [ ] Token、费用和动作解析错误指标；
+- [ ] 与确定性 Policy 基线对照；
+- [ ] 多 Agent 决策记录。
 
 只有评测证明职责冲突、上下文负担或权限边界无法由单 Agent 稳定处理时，才增加训练分析、恢复分析或风险审查 Agent；否则继续保持单 Agent。
 

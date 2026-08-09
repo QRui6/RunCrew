@@ -6,6 +6,11 @@
 
 ### Added
 
+- 增加 `review-agent-eval/1.0` 版本化离线评测套件，包含 12 个任务、韧性、护栏和预算场景；
+- 增加 Evaluation Case、Suite、Metrics 和 Report Schema，以及 Schema 导出脚本；
+- 增加 Agent 评测运行器、可替换 Policy 工厂、故障注入、事实一致性和工具执行判分；
+- 增加 `runcrew eval review-agent` CLI，并限制报告只能写入 `data/private/`；
+- 增加评测退化检测、Schema 漂移和 CLI 私有路径测试；
 - 增加训练复盘单 Agent 的 Run、Context、Action、Trace、Error 和 Budget Schema；
 - 增加只允许一个只读 Skill 的 Agent Harness 与 `call_tool → observation → finish` 有限循环；
 - 增加工具白名单、确认门、步骤/调用预算、有限重试、两级超时和结构化退出原因；
@@ -21,8 +26,10 @@
 
 ### Verified
 
+- M3 PR #2 与 M4 PR #3 已依次合并到 `main`；
+- M5-A 离线基线 12/12 场景通过，正确性指标均为 100%，越权后工具执行数为 0；
+- 全部自动化测试增至 39 项；
 - M4 单 Agent 成功路径和故障路径通过 10 项专项测试；
-- 全部自动化测试增至 34 项；
 - fixture 端到端 Agent CLI 验收成功，Trace 完整记录 2 步策略决策和 1 次工具调用；
 - M2 通过 PR #1 合并到 `main`；
 - 24 项自动化测试通过；
@@ -31,7 +38,7 @@
 
 ### Known Issues
 
-- 当前使用确定性 Policy，真实 LLM Policy、Token/费用预算和模型评测尚未实现；
+- 当前使用确定性 Policy；真实 LLM Policy、Token/费用和动作解析错误评测尚未实现；
 - Agent Trace 尚未持久化；
 - COROS 训练负荷尚未进入规范化活动；
 - 训练计划尚未持久化；
