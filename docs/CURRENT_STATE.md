@@ -5,7 +5,7 @@
 
 ## 当前里程碑
 
-**M5-A：单 Agent 离线评测基线——已完成；M5 整体进行中。**
+**M5-A：单 Agent 离线评测基线——已完成；M5-B 模型选型方案已完成、代码待开始。**
 
 M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
@@ -61,6 +61,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 被护栏拒绝后底层工具执行数为 0，平均逻辑工具调用 0.5833，平均工具尝试 0.75；
 - 评测套件和报告 Schema 已导出，`suite_hash` 可标识同一批评测输入；
 - `runcrew eval review-agent` 可运行评测，报告只允许写入 `data/private/`。
+- M5-B 已核对 DeepSeek 官方模型、Tool Calls、思考模式和 Schema 约束；推荐 `deepseek-v4-flash` 非思考模式，选型与接入方案已形成中文文档。
 
 ## 当前已知限制
 
@@ -71,6 +72,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 当前 COROS 规范化活动没有训练负荷字段，因此真实 `load_change` 暂时可能为 `unknown`；
 - 训练计划尚未持久化，只能通过 CLI 显式传入距离/时长目标；
 - 当前评测仍使用确定性 Policy 和脚本化故障；真实 LLM Policy、Token/费用指标和模型调用评测尚未实现；
+- DeepSeek 只完成技术选型，尚未配置 API Key、发起付费请求或产生真实模型结果；
 - Trace 当前随 CLI JSON 返回，尚未持久化；
 - 工具超时会停止 Harness 等待，但已经在线程中开始的同步只读查询不能被强制终止；
 - 真实数据库历史活动数量仍少，跨周负荷回放主要由合成 fixture 验证。
@@ -86,11 +88,13 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 **M5-B：接入一个真实 LLM Policy，并与当前离线基线比较。**
 
-具体起点：确定一个模型供应商、模型名和费用上限；让模型只读取 `ReviewAgentContext` 并输出现有 `call_tool / finish` Action Schema，然后在相同 12 个场景上记录动作解析、完成率、Token、费用和延迟。没有对照结果前不拆分多 Agent。
+模型候选已经明确为 `deepseek-v4-flash` 非思考模式。具体起点：实现 `DeepSeekReviewPolicy` 的 Mock 契约测试，由用户在本机配置 API Key 和费用上限后只用合成数据做一次真实 Smoke Test；随后在相同 12 个场景上记录动作解析、完成率、Token、费用和延迟。没有对照结果前不拆分多 Agent。
+
+详细边界见 [M5-B：DeepSeek 模型选型与接入方案](M5-B-DeepSeek模型选型与接入方案.md)。
 
 ## 外部额度约束
 
-未来重试 COROS 自动 FIT URL 获取仍会消耗每日下载额度，执行前必须向用户说明并确认只下载一条活动。M5-A 没有调用 COROS、真实 FIT 或 LLM API。
+未来重试 COROS 自动 FIT URL 获取仍会消耗每日下载额度，执行前必须向用户说明并确认只下载一条活动。调用 DeepSeek 会产生外部请求和费用，首次真实调用前也必须确认费用上限；M5-A 与本次模型调研均没有调用 COROS、真实 FIT 或 LLM API。
 
 ## 验收命令
 

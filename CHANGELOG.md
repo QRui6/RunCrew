@@ -6,6 +6,7 @@
 
 ### Added
 
+- 增加 M5-B DeepSeek 模型选型与接入方案，明确模型、模式、数据边界、Harness 校验、失败处理和验收标准；
 - 增加 `review-agent-eval/1.0` 版本化离线评测套件，包含 12 个任务、韧性、护栏和预算场景；
 - 增加 Evaluation Case、Suite、Metrics 和 Report Schema，以及 Schema 导出脚本；
 - 增加 Agent 评测运行器、可替换 Policy 工厂、故障注入、事实一致性和工具执行判分；
@@ -38,6 +39,7 @@
 
 ### Known Issues
 
+- DeepSeek 当前只完成调研和设计，尚未配置 Key、发起真实请求或得到模型评测结果；
 - 当前使用确定性 Policy；真实 LLM Policy、Token/费用和动作解析错误评测尚未实现；
 - Agent Trace 尚未持久化；
 - COROS 训练负荷尚未进入规范化活动；

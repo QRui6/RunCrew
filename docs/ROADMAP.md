@@ -83,14 +83,16 @@
 
 ## M5：单 Agent 评测与真实 LLM Policy
 
-状态：**进行中（M5-A 已完成）**
+状态：**进行中（M5-A 已完成；M5-B 选型方案已完成）**
 
 验收：
 
 - [x] 12 个不含私人数据的离线回放场景；
 - [x] 完成率、护栏、Schema、事实一致性、工具调用、重试和延迟指标；
 - [x] 版本化 Suite/Report Schema、`suite_hash` 和私有报告；
+- [x] 核对 DeepSeek 官方能力并形成 `deepseek-v4-flash` 非思考模式接入方案；
 - [ ] 一个实现 M4 Action Schema 的真实 LLM Policy；
+- [ ] Mock 适配器契约测试和单次合成数据 API Smoke Test；
 - [ ] Token、费用和动作解析错误指标；
 - [ ] 与确定性 Policy 基线对照；
 - [ ] 多 Agent 决策记录。

@@ -17,6 +17,7 @@ REQUIRED_FILES = [
     "scripts/export_evaluation_schemas.py",
     "docs/PROJECT_CONTEXT.md",
     "docs/RunCrew-项目实施全景与面试说明.md",
+    "docs/M5-B-DeepSeek模型选型与接入方案.md",
     "docs/CURRENT_STATE.md",
     "docs/ARCHITECTURE.md",
     "docs/ROADMAP.md",

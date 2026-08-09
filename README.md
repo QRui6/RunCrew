@@ -26,6 +26,7 @@ RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前�
 | 项目为什么存在 | [项目上下文](docs/PROJECT_CONTEXT.md) |
 | 项目各阶段如何实施、面试如何讲 | [项目实施全景与面试说明](docs/RunCrew-项目实施全景与面试说明.md) |
 | 目前做到哪里、下一步是什么 | [当前状态](docs/CURRENT_STATE.md) |
+| 为什么下一阶段推荐 DeepSeek、如何接入 | [M5-B DeepSeek 模型选型与接入方案](docs/M5-B-DeepSeek模型选型与接入方案.md) |
 | 模块如何协作 | [系统架构](docs/ARCHITECTURE.md) |
 | 后续阶段 | [开发路线图](docs/ROADMAP.md) |
 | 每阶段做了什么 | [进展索引](docs/PROGRESS.md) |
@@ -100,3 +101,7 @@ Agent 输出在 Training Review 之外增加 `run_id`、终态、退出原因、
 ```
 
 评测包含 12 个无私人数据场景，覆盖正常任务、缺数降级、瞬时恢复、超时、非法输出、越权、参数篡改、确认和预算。评测用例可以进入 Git，报告只能写入 `data/private/`。当前基线不调用真实 LLM。
+
+## 下一阶段模型方案
+
+M5-B 推荐先接入 `deepseek-v4-flash` 非思考模式，只替换动作选择 Policy。模型的 Tool Call 仍必须经过本地 Pydantic、白名单、确认、预算和参数一致性校验。该方案目前只完成调研与设计，尚未实现，也尚未产生真实模型评测结果；详见 [DeepSeek 模型选型与接入方案](docs/M5-B-DeepSeek模型选型与接入方案.md)。

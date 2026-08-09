@@ -498,7 +498,7 @@ prohibited_tool_execution_count=0
 | Context Engineering | 领域上下文 + 有界 Agent Context，只暴露请求、权限、合法观察和剩余预算 | 已有分层和裁剪，尚无 Token 级压缩 |
 | Harness Engineering | 统一 Run、权限、确认、预算、重试、两级超时、验证和 Trace | M4 最小竖切已完成 |
 | Loop Engineering | `call_tool → observation → finish` 有限状态循环和明确退出条件 | M4 最小竖切已完成 |
-| LLM | Policy 接口已预留，真实模型尚未接入 | 当前不能声称模型已经自主决策 |
+| LLM | Policy 接口已预留；已完成 DeepSeek 选型方案，真实模型尚未接入 | 推荐 `deepseek-v4-flash` 非思考模式，当前不能声称模型已经自主决策 |
 | Multi-Agent | 尚未实现 | 必须由评测证明必要性 |
 | Evaluation | 12 场景版本化 Suite、39 项测试、Suite Hash、任务/护栏/事实/成本/延迟指标 | 离线基线已完成，尚无真实模型 Token/费用结果 |
 
@@ -675,10 +675,10 @@ M5 只允许增加：
 
 ## 11. 当前下一步
 
-唯一下一任务是接入一个真实 LLM Policy：
+唯一下一任务是按已完成的 [DeepSeek 模型选型与接入方案](M5-B-DeepSeek模型选型与接入方案.md) 接入真实 LLM Policy：
 
 ```text
-确定模型供应商、模型名和费用上限
+使用 deepseek-v4-flash 非思考模式并确认费用上限
 → 将 ReviewAgentContext 转为受控模型输入
 → 强制模型输出 call_tool / finish Action Schema
 → 记录 Token、费用、延迟和动作解析错误
