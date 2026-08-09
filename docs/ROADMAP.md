@@ -101,7 +101,9 @@
 - [x] 第一次真实失败时由 Harness 阻止重复工具执行；
 - [x] 使用标准 assistant/tool 消息链复验并得到 `succeeded / completed`；
 - [x] 增加完整 Suite 命令和跨用例共享的总费用停止门；
-- [ ] 运行完整 12 场景 DeepSeek Suite 并保存私有报告；
+- [x] 第一次运行完整 12 场景 DeepSeek Suite，12/12 满足预期；
+- [x] 发现并修复 CLI 改写用例超时导致 Suite Hash 漂移的问题；
+- [ ] 使用原始 Suite 复跑并取得与确定性基线相同的 `suite_hash`；
 - [ ] 与确定性 Policy 基线对照；
 - [ ] 多 Agent 决策记录。
 

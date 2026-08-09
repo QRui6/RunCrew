@@ -5,7 +5,7 @@
 
 ## 当前里程碑
 
-**M5-A、M5-B1 与 M5-B2 已完成；M5-B3 完整 12 场景真实模型对照待开始。**
+**M5-A、M5-B1 与 M5-B2 已完成；M5-B3 第一次完整运行通过，严格同题对照待复跑。**
 
 M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
@@ -22,7 +22,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 ## 已验证事实
 
 - Python 3.13 本地环境可运行；
-- 自动化测试：50 passed；
+- 自动化测试：51 passed；
 - fixture 首次同步插入 2 条；
 - fixture 第二次同步插入 0 条、更新 2 条；
 - 真实 COROS OAuth + PKCE 成功；
@@ -69,7 +69,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - Evaluation Report Schema 已升级至 1.1，可按用例和总报告统计模型调用、API 尝试、动作解析错误、缓存 Token、输入/输出/思考 Token 和模型耗时；
 - `runcrew eval deepseek-smoke` 已实现，只运行 `complete_training_review` 合成用例，并在读取 Key 前强制要求 `--confirm-paid-api` 与 `--max-estimated-cost-usd`；
 - 费用按 `deepseek-pricing/2026-08-09` 估算并写入 Trace/报告，超过 Policy 上限时停止后续动作；该上限是本地后验停止门，不是供应商账单硬上限；
-- DeepSeek Policy 与 CLI 的零费用测试已覆盖 Mock 契约、安全门、单用例 Smoke 和完整 Suite 费用门；全量 50 项测试通过。
+- DeepSeek Policy 与 CLI 的零费用测试已覆盖 Mock 契约、安全门、单用例 Smoke、完整 Suite 费用门和 Suite 不变性；全量 51 项测试通过。
 - 真实 `deepseek-v4-flash` 非思考请求已连通，首次 Tool Call 参数通过 Action Schema 和 Harness 校验；
 - 第一次真实 Smoke 共 2 次模型请求、2369 Token、估算 0.00036106 美元，动作解析错误为 0；
 - 第二轮模型重复请求工具，Harness 在执行前以工具预算拦截，底层工具实际只执行 1 次；
@@ -77,7 +77,12 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 修复后第二次真实 Smoke 达到 `succeeded / completed`，事实一致性为 True，业务工具只执行 1 次；
 - 成功 Smoke 共 2 次模型请求、2549 Token、0 个动作解析错误，估算费用 0.00016426 美元，模型累计耗时 4663.993 ms；
 - 成功尝试输入 Token 中 1664 个命中缓存、630 个未命中缓存；两次真实报告均保存在 `data/private/evals/`。
-- `runcrew eval deepseek-suite` 已实现：复用同一 12 场景 Suite，并以跨用例共享费用对象限制整套评测总成本；尚未执行真实模型调用。
+- `runcrew eval deepseek-suite` 已实现：复用同一 12 场景 Suite，并以跨用例共享费用对象限制整套评测总成本。
+- 第一次完整 DeepSeek 运行 12/12 满足预期：任务完成率、护栏通过率、Schema 通过率和事实一致率均为 100%，越权工具执行数与动作解析错误均为 0；
+- 第一次完整运行共 12 次 API 请求、12897 Token、估算费用 0.00061916 美元，Policy 累计耗时 23581.19 ms，P95 单场景耗时 4422.692 ms；
+- 9 个场景使用真实 DeepSeek Policy，3 个越权/参数篡改/提前结束场景继续使用脚本化故障注入；
+- 审核报告时发现 CLI 曾把默认场景 `run_timeout_seconds` 从 15 改为 60，使报告 Hash `783517...` 与基线 Hash `f3dc7d...` 不同；该报告已另存为 `deepseek-suite-attempt-1-timeout-adjusted.json`，只作为功能证据，不作为严格同题对照；
+- 已移除超时改写并增加 Suite 不变性回归测试，下一次运行应与确定性基线得到相同 `suite_hash`。
 
 ## 当前已知限制
 
@@ -88,8 +93,8 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 当前 COROS 规范化活动没有训练负荷字段，因此真实 `load_change` 暂时可能为 `unknown`；
 - 训练计划尚未持久化，只能通过 CLI 显式传入距离/时长目标；
 - 当前正式基线仍使用确定性 Policy 和脚本化故障；DeepSeek 只有单用例真实结果，尚无完整模型质量结论；
-- DeepSeek 已有单用例成功报告，但尚无完整 Suite 的真实模型基线；
-- 评测已经支持 Token、动作解析、带版本单价的费用估算和共享费用门，但完整 12 场景模型对照尚未运行；
+- DeepSeek 已有单用例和第一次完整运行报告，但严格同一 Hash 的正式模型基线尚待复跑；
+- 第一次完整运行的功能指标全部通过，但因执行前修改了题集超时，不能直接作为最终对照报告；
 - 本地费用门只能在收到真实 usage 后停止后续动作，不能阻止第一笔请求，也不能替代 DeepSeek 账户侧余额控制；
 - 单用例真实 DeepSeek Loop 已验收，但还不能把一个成功用例描述成完整模型稳定性结论；
 - Trace 当前随 CLI JSON 返回，尚未持久化；
@@ -107,7 +112,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 **M5-B3：运行完整真实 LLM Suite，并与当前离线基线比较。**
 
-运行已经实现的 `runcrew eval deepseek-suite`，在同一 `review-agent-eval/1.0` 套件上记录所有默认 Policy 场景的完成率、终态、Token、费用和延迟；脚本化护栏场景继续验证 Harness。没有完整对照结果前不拆分多 Agent。
+重新运行已经修正的 `runcrew eval deepseek-suite`，确认报告 `suite_hash` 为确定性基线的 `f3dc7dd964da5773c3a3fda5a717e41c4b8c02b06131959b3a708e88a74dd4f8`，再形成正式对照结论。没有同 Hash 对照结果前不拆分多 Agent。
 
 详细边界见 [M5-B：DeepSeek 模型选型与接入方案](M5-B-DeepSeek模型选型与接入方案.md)。
 

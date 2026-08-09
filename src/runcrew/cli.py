@@ -534,22 +534,9 @@ def evaluate_deepseek_suite(
 
     cost_budget = DeepSeekCostBudget(max_total_estimated_cost_usd)
     suite = load_review_agent_suite(cases_path)
-    live_cases = [
-        case.model_copy(
-            update={
-                "run": case.run.model_copy(
-                    update={"run_timeout_seconds": 60.0}
-                )
-            }
-        )
-        if case.policy_mode == "default"
-        else case
-        for case in suite.cases
-    ]
-    live_suite = suite.model_copy(update={"cases": live_cases})
     report = asyncio.run(
         evaluate_review_agent_suite(
-            live_suite,
+            suite,
             default_policy_factory=lambda: DeepSeekReviewPolicy(
                 config,
                 cost_budget=cost_budget,

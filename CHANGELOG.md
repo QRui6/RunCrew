@@ -14,6 +14,8 @@
 - 增加 9 项 DeepSeek Mock 契约、安全、脱敏、费用门和 Smoke CLI 测试；
 - DeepSeek 第二轮改用标准 `assistant(tool_calls) → tool(tool_call_id, result)` 消息链，避免只传 Observation JSON 导致模型重复调用工具；
 - 增加完整 12 场景 `deepseek-suite` 命令和跨 Policy 实例共享的总费用停止门；
+- 修复完整 Suite 命令擅自把默认场景总超时从 15 秒改为 60 秒、导致 `suite_hash` 无法与确定性基线严格比较的问题；
+- 增加回归测试，保证真实模型命令原样使用版本化 Suite；
 - 增加 M5-B DeepSeek 模型选型与接入方案，明确模型、模式、数据边界、Harness 校验、失败处理和验收标准；
 - 增加 `review-agent-eval/1.0` 版本化离线评测套件，包含 12 个任务、韧性、护栏和预算场景；
 - 增加 Evaluation Case、Suite、Metrics 和 Report Schema，以及 Schema 导出脚本；
@@ -38,11 +40,13 @@
 - 修复后第二次真实 DeepSeek 合成 Smoke 达到 `succeeded / completed`，事实一致性为 True，工具只执行 1 次；
 - 成功 Smoke 使用 2 次模型请求、2549 Token，估算费用 0.00016426 美元，动作解析错误为 0；
 - 第二次输入有 1664 个缓存命中 Token、630 个未命中 Token，费用低于第一次失败尝试；
+- 第一次完整 DeepSeek Suite 运行 12/12 满足预期，任务/护栏/Schema/事实一致率均为 100%，动作解析错误和越权工具执行均为 0；
+- 第一次完整运行使用 12 次模型请求、12897 Token、估算 0.00061916 美元；发现其 Suite Hash 因 CLI 超时改写与基线不同，已保留为尝试报告而不冒充正式同题对照；
 - 第一次真实 DeepSeek 合成 Smoke 成功完成鉴权和首轮 Tool Call；第二轮重复调用被 Harness 在执行前拦截，实际工具执行数为 1；
 - 首次真实 Smoke 记录 2 次模型请求、2369 Token、0 个动作解析错误和 0.00036106 美元估算费用；
 - M3 PR #2 与 M4 PR #3 已依次合并到 `main`；
 - M5-A 离线基线 12/12 场景通过，正确性指标均为 100%，越权后工具执行数为 0；
-- 全部自动化测试增至 50 项；
+- 全部自动化测试增至 51 项；
 - M4 单 Agent 成功路径和故障路径通过 10 项专项测试；
 - fixture 端到端 Agent CLI 验收成功，Trace 完整记录 2 步策略决策和 1 次工具调用；
 - M2 通过 PR #1 合并到 `main`；
@@ -52,8 +56,8 @@
 
 ### Known Issues
 
-- DeepSeek 单用例真实 Smoke 已通过，但完整 12 场景真实模型对照尚未运行；
-- 当前正式基线仍使用确定性 Policy；完整真实模型对照尚未运行；
+- DeepSeek 第一次完整运行已通过，但因旧命令改写用例超时而不能作为严格同 Hash 对照，修复后尚待复跑；
+- 当前正式基线仍使用确定性 Policy；严格同题真实模型对照尚未完成；
 - Agent Trace 尚未持久化；
 - COROS 训练负荷尚未进入规范化活动；
 - 训练计划尚未持久化；

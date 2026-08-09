@@ -6,6 +6,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+import runcrew.cli as cli_module
 from runcrew.cli import app
 from runcrew.domain.evaluation import (
     ReviewAgentEvaluationReport,
@@ -164,3 +165,48 @@ def test_deepseek_suite_cli_requires_explicit_confirmation_and_shared_cost_cap(
     )
     assert missing_cost_cap.exit_code != 0
     assert "--max-total-estimated-cost-usd" in missing_cost_cap.output
+
+
+def test_deepseek_suite_preserves_the_versioned_suite_for_strict_comparison(
+    monkeypatch,
+) -> None:
+    source_suite = load_review_agent_suite(CASES_PATH)
+    captured: dict[str, ReviewAgentEvaluationSuite] = {}
+
+    class SuccessfulReport:
+        meets_baseline = True
+
+        @staticmethod
+        def model_dump_json(*, indent: int) -> str:
+            assert indent == 2
+            return '{"meets_baseline":true}'
+
+    async def fake_evaluate(suite, **kwargs):
+        captured["suite"] = suite
+        assert kwargs["policy_name"] == (
+            "deepseek-v4-flash-live-nonthinking-suite"
+        )
+        return SuccessfulReport()
+
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-local-test-only")
+    monkeypatch.setattr(
+        cli_module,
+        "evaluate_review_agent_suite",
+        fake_evaluate,
+    )
+
+    completed = CliRunner().invoke(
+        app,
+        [
+            "eval",
+            "deepseek-suite",
+            "--confirm-paid-api",
+            "--max-total-estimated-cost-usd",
+            "0.01",
+        ],
+    )
+
+    assert completed.exit_code == 0, completed.output
+    assert captured["suite"].model_dump(mode="json") == source_suite.model_dump(
+        mode="json"
+    )

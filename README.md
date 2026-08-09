@@ -106,7 +106,7 @@ Agent 输出在 Training Review 之外增加 `run_id`、终态、退出原因、
 
 ## 下一阶段模型方案
 
-M5-B2 已通过 `deepseek-v4-flash` 非思考模式真实合成 Smoke：标准 assistant/tool 消息链完成 `call_tool → observation → finish`，事实一致性通过且工具只执行一次。第一次失败及修复过程也已保留；完整 12 场景真实模型对照尚未运行。详见 [DeepSeek 模型选型与接入方案](docs/M5-B-DeepSeek模型选型与接入方案.md)。
+M5-B2 已通过 `deepseek-v4-flash` 非思考模式真实合成 Smoke。M5-B3 第一次完整运行 12/12 满足预期，但复核发现 CLI 改写用例超时导致 Suite Hash 与确定性基线不同；修复和回归测试已完成，等待同 Hash 复跑。详见 [DeepSeek 模型选型与接入方案](docs/M5-B-DeepSeek模型选型与接入方案.md)。
 
 完整 Suite 命令已经实现但不会自动运行。它复用 12 个合成场景，并要求同时传入 `--confirm-paid-api` 和共享总费用上限；缺少 Key、确认或费用上限时会在联网前退出：
 
