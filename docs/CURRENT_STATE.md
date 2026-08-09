@@ -42,6 +42,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 真实活动复盘已输出基于多分圈计算的 `pace_stability` evidence，数据质量为 high。
 - M2 已通过 GitHub PR #1 合并到 `main`；
 - M3 GitHub PR #2 与 M4 GitHub PR #3 已依次合并到 `main`；
+- M5-A GitHub PR #4 已创建，base 为 `main`；
 - `TrainingReviewRequest` / `TrainingReviewResult` Schema 已定义并导出；
 - `review-running-training` Skill 已通过官方 `quick_validate.py`；
 - 同一输入会生成相同 `input_hash` 和结果，回放测试已通过；

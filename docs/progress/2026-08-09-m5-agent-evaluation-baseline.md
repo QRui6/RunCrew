@@ -4,6 +4,7 @@
 - 状态：完成
 - 分支：`feat/m5-agent-evaluation-baseline`
 - 基线：M3 PR #2 与 M4 PR #3 已依次合并到 `main`
+- Pull Request：GitHub PR #4，base 为 `main`
 
 ## 1. 本阶段目标
 
