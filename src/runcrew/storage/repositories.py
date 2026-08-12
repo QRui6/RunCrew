@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any, Mapping
 
 from sqlalchemy import desc, func, select
@@ -11,12 +11,24 @@ from sqlalchemy.orm import Session
 
 from runcrew.domain.activity import ActivityDetail, ActivitySummary
 from runcrew.domain.chat import ChatAnswer, ChatConversation, ChatMessage, ChatTurnUsage
+from runcrew.domain.training_cycle import (
+    DailyCheckIn,
+    PlanChangeProposal,
+    TrainingGoal,
+    TrainingPlan,
+    UserConfirmation,
+)
 from runcrew.storage.models import (
     ActivityRecord,
     ChatConversationRecord,
     ChatMessageRecord,
+    DailyCheckInRecord,
+    PlanChangeProposalRecord,
     RawProviderEvent,
     SyncRunRecord,
+    TrainingGoalRecord,
+    TrainingPlanRecord,
+    UserConfirmationRecord,
 )
 
 
@@ -351,3 +363,181 @@ class ChatRepository:
                 "follow_up_suggestions", []
             ),
         )
+
+
+class TrainingGoalRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def save(self, goal: TrainingGoal) -> None:
+        record = self.session.get(TrainingGoalRecord, goal.id)
+        if record is None:
+            record = TrainingGoalRecord(
+                id=goal.id,
+                status=goal.status,
+                target_date=goal.target_date,
+                canonical_json=goal.model_dump_json(),
+                created_at=goal.created_at,
+                updated_at=goal.updated_at,
+            )
+            self.session.add(record)
+        else:
+            record.status = goal.status
+            record.target_date = goal.target_date
+            record.canonical_json = goal.model_dump_json()
+            record.updated_at = goal.updated_at
+        self.session.flush()
+
+    def get(self, goal_id: str) -> TrainingGoal | None:
+        record = self.session.get(TrainingGoalRecord, goal_id)
+        return TrainingGoal.model_validate_json(record.canonical_json) if record else None
+
+    def list(self, *, limit: int = 20) -> list[TrainingGoal]:
+        records = self.session.scalars(
+            select(TrainingGoalRecord)
+            .order_by(desc(TrainingGoalRecord.updated_at))
+            .limit(limit)
+        ).all()
+        return [TrainingGoal.model_validate_json(record.canonical_json) for record in records]
+
+
+class TrainingPlanRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def save(self, plan: TrainingPlan) -> None:
+        record = self.session.get(TrainingPlanRecord, plan.id)
+        if record is None:
+            record = TrainingPlanRecord(
+                id=plan.id,
+                goal_id=plan.goal_id,
+                status=plan.status,
+                week_start=plan.week_start,
+                revision=plan.revision,
+                canonical_json=plan.model_dump_json(),
+                created_at=plan.created_at,
+                updated_at=plan.updated_at,
+            )
+            self.session.add(record)
+        else:
+            record.status = plan.status
+            record.week_start = plan.week_start
+            record.revision = plan.revision
+            record.canonical_json = plan.model_dump_json()
+            record.updated_at = plan.updated_at
+        self.session.flush()
+
+    def get(self, plan_id: str) -> TrainingPlan | None:
+        record = self.session.get(TrainingPlanRecord, plan_id)
+        return TrainingPlan.model_validate_json(record.canonical_json) if record else None
+
+    def for_goal_week(self, goal_id: str, week_start: date) -> TrainingPlan | None:
+        record = self.session.scalar(
+            select(TrainingPlanRecord).where(
+                TrainingPlanRecord.goal_id == goal_id,
+                TrainingPlanRecord.week_start == week_start,
+            )
+        )
+        return TrainingPlan.model_validate_json(record.canonical_json) if record else None
+
+    def active_for_goal(self, goal_id: str) -> TrainingPlan | None:
+        record = self.session.scalar(
+            select(TrainingPlanRecord)
+            .where(
+                TrainingPlanRecord.goal_id == goal_id,
+                TrainingPlanRecord.status == "active",
+            )
+            .order_by(desc(TrainingPlanRecord.updated_at))
+            .limit(1)
+        )
+        return TrainingPlan.model_validate_json(record.canonical_json) if record else None
+
+
+class CheckInRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def save(self, check_in: DailyCheckIn) -> None:
+        record = self.session.scalar(
+            select(DailyCheckInRecord).where(DailyCheckInRecord.day == check_in.day)
+        )
+        if record is None:
+            record = DailyCheckInRecord(
+                id=check_in.id,
+                day=check_in.day,
+                canonical_json=check_in.model_dump_json(),
+                created_at=check_in.created_at,
+            )
+            self.session.add(record)
+        else:
+            check_in.id = record.id
+            record.canonical_json = check_in.model_dump_json()
+        self.session.flush()
+
+    def recent(self, *, limit: int = 7) -> list[DailyCheckIn]:
+        records = self.session.scalars(
+            select(DailyCheckInRecord)
+            .order_by(desc(DailyCheckInRecord.day))
+            .limit(limit)
+        ).all()
+        return [DailyCheckIn.model_validate_json(record.canonical_json) for record in records]
+
+
+class PlanChangeRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def save_proposal(self, proposal: PlanChangeProposal) -> None:
+        record = self.session.get(PlanChangeProposalRecord, proposal.id)
+        if record is None:
+            record = PlanChangeProposalRecord(
+                id=proposal.id,
+                plan_id=proposal.plan_id,
+                status=proposal.status,
+                base_revision=proposal.base_revision,
+                canonical_json=proposal.model_dump_json(),
+                created_at=proposal.created_at,
+            )
+            self.session.add(record)
+        else:
+            record.status = proposal.status
+            record.canonical_json = proposal.model_dump_json()
+        self.session.flush()
+
+    def get_proposal(self, proposal_id: str) -> PlanChangeProposal | None:
+        record = self.session.get(PlanChangeProposalRecord, proposal_id)
+        return (
+            PlanChangeProposal.model_validate_json(record.canonical_json)
+            if record
+            else None
+        )
+
+    def save_confirmation(self, confirmation: UserConfirmation) -> None:
+        self.session.add(
+            UserConfirmationRecord(
+                id=confirmation.id,
+                proposal_id=confirmation.proposal_id,
+                decision=confirmation.decision,
+                canonical_json=confirmation.model_dump_json(),
+                created_at=confirmation.created_at,
+            )
+        )
+        self.session.flush()
+
+    def pending_for_goal(self, goal_id: str) -> list[PlanChangeProposal]:
+        records = self.session.scalars(
+            select(PlanChangeProposalRecord)
+            .join(
+                TrainingPlanRecord,
+                TrainingPlanRecord.id == PlanChangeProposalRecord.plan_id,
+            )
+            .where(
+                TrainingPlanRecord.goal_id == goal_id,
+                PlanChangeProposalRecord.status == "pending",
+            )
+            .order_by(PlanChangeProposalRecord.created_at)
+        ).all()
+        return [
+            PlanChangeProposal.model_validate_json(record.canonical_json)
+            for record in records
+        ]

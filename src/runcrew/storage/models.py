@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -102,3 +102,70 @@ class ChatMessageRecord(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False, index=True
     )
+
+
+class TrainingGoalRecord(Base):
+    __tablename__ = "training_goals"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    target_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    canonical_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class TrainingPlanRecord(Base):
+    __tablename__ = "training_plans"
+    __table_args__ = (
+        UniqueConstraint("goal_id", "week_start", name="uq_training_plan_goal_week"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    goal_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("training_goals.id"), nullable=False, index=True
+    )
+    status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    week_start: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    canonical_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class DailyCheckInRecord(Base):
+    __tablename__ = "daily_check_ins"
+    __table_args__ = (UniqueConstraint("day", name="uq_daily_check_in_day"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    day: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    canonical_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class PlanChangeProposalRecord(Base):
+    __tablename__ = "plan_change_proposals"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    plan_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("training_plans.id"), nullable=False, index=True
+    )
+    status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    base_revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    canonical_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class UserConfirmationRecord(Base):
+    __tablename__ = "user_confirmations"
+    __table_args__ = (
+        UniqueConstraint("proposal_id", name="uq_user_confirmation_proposal"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("plan_change_proposals.id"), nullable=False, index=True
+    )
+    decision: Mapped[str] = mapped_column(String(16), nullable=False)
+    canonical_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

@@ -27,6 +27,8 @@ RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前�
 - 原只读 Dashboard 保留为工程观测台，展示 Skill evidence、Agent Trace 和 Same-Hash 评测对照；
 - 用7个场景、8个轮次评测 grounding、openness、safety 和长上下文行为；
 - 使用不含位置的合成 FIT 进行离线开发和回归测试。
+- 管理训练目标、周计划、主观身体反馈和计划变更提案；
+- 激活后的计划不能由 Agent 直接修改，只有用户批准的提案才能递增版本并生效。
 
 ## 文档导航
 
@@ -58,6 +60,7 @@ python -m pip install -e ".[dev]"
 .\.venv\Scripts\runcrew.exe agent review --latest --provider fixture
 .\.venv\Scripts\runcrew.exe eval review-agent --output data\private\evals\m5-baseline.json
 .\.venv\Scripts\runcrew.exe eval running-chat --output data\private\evals\running-chat-offline-v1.0.json
+.\.venv\Scripts\runcrew.exe cycle --help
 .\.venv\Scripts\runcrew.exe demo
 .\.venv\Scripts\python.exe scripts\verify.py
 ```
@@ -102,6 +105,16 @@ python -m pip install -e ".[dev]"
   --max-total-estimated-cost-usd 0.01 `
   --output data\private\evals\running-chat-deepseek-v1.0.json
 ```
+
+## 管理训练闭环
+
+M7-A 提供本地 `cycle` 命令组，用于创建目标、周计划、主观反馈和计划变更。先查看所有命令：
+
+```powershell
+.\.venv\Scripts\runcrew.exe cycle --help
+```
+
+激活后的计划不能直接编辑。计划 Agent 或恢复 Agent 未来只能创建变更提案，用户通过 `change-decide` 批准后才会生效；如果计划 revision 已变化，旧提案会标记为 `stale`。
 
 ## 同步真实 COROS 数据
 

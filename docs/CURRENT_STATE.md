@@ -1,11 +1,11 @@
 # 当前状态
 
 > 本文件是项目当前进度的唯一事实来源。任何 AI 开始工作时必须先读本文件。  
-> 最后更新：2026-08-09
+> 最后更新：2026-08-12
 
 ## 当前里程碑
 
-**M5-A 至 M5-B3、M6-A1 与 M6-A2 已完成；M6-A3a 自由对话契约和离线多轮评测已完成，M6-A3b 真实 DeepSeek 同题验收等待新 Key 可用。**
+**M5 与 M6-A1/A2/A3a 已完成；真实 DeepSeek 聊天同题验收仍待新 Key。产品路线已进入 M7，M7-A 训练闭环数据与权限基础完成，下一步是 M7-B1 恢复风险 Skill。**
 
 M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
@@ -22,7 +22,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 ## 已验证事实
 
 - Python 3.13 本地环境可运行；
-- 自动化测试：66 passed；
+- 自动化测试：73 passed；
 - fixture 首次同步插入 2 条；
 - fixture 第二次同步插入 0 条、更新 2 条；
 - 真实 COROS OAuth + PKCE 成功；
@@ -114,6 +114,12 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 评测会拒绝把通用知识错误包装成个人数据结论；DeepSeek 无效回答也会保留已返回 Token 和估算费用；
 - `runcrew eval deepseek-chat-suite` 已实现完整 Suite、显式付费确认、共享费用门和私有报告路径限制；
 - 自动化测试增至66项；M6-A3 尚未调用真实 DeepSeek，因为当前进程、Windows User 和 Machine 环境均没有可读取的新 Key。
+- M7-A 已增加训练目标、周计划、计划课、每日身体反馈、变更提案和用户确认领域契约；
+- 新增 `training_goals`、`training_plans`、`daily_check_ins`、`plan_change_proposals`、`user_confirmations` 五张本地表；
+- `runcrew cycle` 可以创建/列出目标、创建周计划、添加训练课、激活计划、记录反馈、提出变更、确认变更和查看快照；
+- 激活计划禁止直接写入，Agent 只能基于当前 revision 提案；用户批准后才生效，旧版本提案标记为 stale；
+- 休息课不能残留距离或时长，Patch 通过显式 clear 字段区分“不修改”和“清除”；
+- M7-A 全量自动化测试增至73项；只使用合成数据，没有访问外部服务或产生费用。
 
 ## 当前已知限制
 
@@ -122,7 +128,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - `queryActivityFitFileDownloadUrls` 在参数符合实时 schema 的情况下返回 `isError=true`，没有下发下载 URL；
 - 自动 FIT URL 未能验证，但用户手动导出的真实 FIT 已通过私有缓存完成端到端验收；
 - 当前 COROS 规范化活动没有训练负荷字段，因此真实 `load_change` 暂时可能为 `unknown`；
-- 训练计划尚未持久化，聊天会话当前也不能补充计划距离/时长；
+- 训练目标、周计划和主观反馈已经持久化，但尚未接入聊天界面，也不会自动生成或匹配实际 Activity；
 - 当前12场景中，3个非法动作场景使用脚本化 Policy 注入，只能证明 Harness 能拦截，不能声称真实 DeepSeek 在提示注入或恶意诱导下同样安全；
 - 当前模型任务只有一个工具和两种动作，12/12通过不代表复杂规划、多工具协作或生产稳定性已经验收；
 - 本地费用门只能在收到真实 usage 后停止后续动作，不能阻止第一笔请求，也不能替代 DeepSeek 账户侧余额控制；
@@ -144,15 +150,15 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 ## 下一项唯一任务
 
-**M6-A3b：运行并审核一次合成数据的真实 DeepSeek 8轮连续对话评测。**
+**M7-B1：实现确定性的恢复与风险评估 Skill。**
 
-让当前开发进程可以读取新的 `DEEPSEEK_API_KEY`，然后运行 `deepseek-chat-suite`，报告写入 `data/private/evals/running-chat-deepseek-v1.0.json`。审核8轮通过率、回答模式、Token、费用和失败原因；通过后才把 M6-A3 标记完成并进入 M6-B。
+该 Skill 读取规范化的最近训练、最近主观反馈和下一次计划课，输出带 evidence 的 `proceed / reduce / rest / seek_professional_help` 建议。它只做风险分层，不诊断疾病；完成后再把它交给受 Harness 约束的 Recovery Agent。M6-A3b 的真实 DeepSeek 8轮评测保留为待补验收，在新 Key 可用时执行，但不再阻塞确定性业务闭环。
 
 完整模型结论见 [M5-B3 DeepSeek 最终评测报告](M5-B3-DeepSeek最终评测报告.md)。
 
 ## 外部额度约束
 
-未来重试 COROS 自动 FIT URL 获取仍会消耗每日下载额度，执行前必须向用户说明并确认只下载一条活动。聊天默认使用离线模式；界面勾选 DeepSeek 后会把规范化活动摘要、确定性复盘和最近对话发送到官方 API 并产生费用，不发送 Provider 原始载荷、外部 ID、坐标或 FIT。M6-A3a 只运行合成离线评测，没有产生新的模型费用。
+未来重试 COROS 自动 FIT URL 获取仍会消耗每日下载额度，执行前必须向用户说明并确认只下载一条活动。聊天默认使用离线模式；界面勾选 DeepSeek 后会把规范化活动摘要、确定性复盘和最近对话发送到官方 API并产生费用，不发送 Provider 原始载荷、外部 ID、坐标或 FIT。M7-A 只运行本地合成测试，没有产生外部费用。
 
 ## 验收命令
 
@@ -166,6 +172,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 .\.venv\Scripts\runcrew.exe eval deepseek-suite --help
 .\.venv\Scripts\runcrew.exe eval running-chat --output data\private\evals\running-chat-offline-v1.0.json
 .\.venv\Scripts\runcrew.exe eval deepseek-chat-suite --help
+.\.venv\Scripts\runcrew.exe cycle --help
 .\.venv\Scripts\runcrew.exe demo --no-open-browser
 ```
 

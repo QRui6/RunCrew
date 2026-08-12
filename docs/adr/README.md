@@ -14,5 +14,6 @@
 | [ADR-0010](0010-shared-evaluation-time-budget.md) | 接受 | 确定性 Policy 与网络 LLM 使用同一合理时间预算，且预算属于 Suite Hash |
 | [ADR-0011](0011-grounded-chat-snapshot.md) | 接受 | 连续对话固定证据快照，并只传递有界最近历史 |
 | [ADR-0012](0012-layered-flexible-chat-grounding.md) | 接受 | 个人事实强制 evidence，通用知识与建议保留表达自由 |
+| [ADR-0013](0013-confirmed-plan-change-boundary.md) | 接受 | 激活计划只能通过带版本检查的提案和用户确认变更 |
 
 新 ADR 使用四位编号，必须记录背景、决策、原因、后果和替代方案。

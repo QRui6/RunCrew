@@ -20,6 +20,15 @@ from runcrew.domain.chat_evaluation import (
     ChatEvaluationReport,
     ChatEvaluationSuite,
 )
+from runcrew.domain.training_cycle import (
+    DailyCheckIn,
+    PlanChangeProposal,
+    PlanSession,
+    TrainingCycleSnapshot,
+    TrainingGoal,
+    TrainingPlan,
+    UserConfirmation,
+)
 
 __all__ = [
     "ActivityDetail",
@@ -34,10 +43,17 @@ __all__ = [
     "ChatTurnResult",
     "ChatTurnUsage",
     "DataQuality",
+    "DailyCheckIn",
     "Lap",
     "MetricPoint",
+    "PlanChangeProposal",
+    "PlanSession",
     "ReviewObservation",
     "SourceProvider",
     "SourceRef",
     "SportType",
+    "TrainingCycleSnapshot",
+    "TrainingGoal",
+    "TrainingPlan",
+    "UserConfirmation",
 ]

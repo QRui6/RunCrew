@@ -1,16 +1,26 @@
 from __future__ import annotations
 
 import asyncio
+import json
+from datetime import date
 from pathlib import Path
 from typing import Annotated
 
 import typer
+from pydantic import BaseModel
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from runcrew.providers.fixture import FixtureActivityProvider
 from runcrew.providers.coros import CorosActivityProvider
 from runcrew.domain.agent import ReviewAgentRunRequest
 from runcrew.domain.training_review import PlannedSession, TrainingReviewRequest
+from runcrew.domain.training_cycle import (
+    DailyCheckIn,
+    PlanSession,
+    PlanSessionPatch,
+    TrainingGoal,
+)
 from runcrew.evaluation import (
     evaluate_chat_suite,
     evaluate_review_agent_suite,
@@ -28,9 +38,16 @@ from runcrew.policies import (
 from runcrew.services.activity_review import build_activity_review
 from runcrew.services.sync import sync_activities
 from runcrew.services.training_review import execute_training_review
+from runcrew.services.training_cycle import TrainingCycleError, TrainingCycleService
 from runcrew.storage.database import Database
 from runcrew.storage.models import ActivityRecord, RawProviderEvent, SyncRunRecord
-from runcrew.storage.repositories import ActivityRepository
+from runcrew.storage.repositories import (
+    ActivityRepository,
+    CheckInRepository,
+    PlanChangeRepository,
+    TrainingGoalRepository,
+    TrainingPlanRepository,
+)
 from runcrew.web import serve_demo
 
 
@@ -43,10 +60,12 @@ activities_app = typer.Typer(help="Inspect and review normalized activities.")
 training_app = typer.Typer(help="Run replayable training review skills.")
 agent_app = typer.Typer(help="运行带 Trace、预算和退出条件的单 Agent。")
 evaluation_app = typer.Typer(help="运行可回放的 Agent 离线评测。")
+cycle_app = typer.Typer(help="管理训练目标、周计划、身体反馈和计划变更确认。")
 app.add_typer(activities_app, name="activities")
 app.add_typer(training_app, name="training")
 app.add_typer(agent_app, name="agent")
 app.add_typer(evaluation_app, name="eval")
+app.add_typer(cycle_app, name="cycle")
 
 
 def database_url(database_path: Path) -> str:
@@ -57,6 +76,28 @@ def open_database(database_path: Path) -> Database:
     database = Database(database_url(database_path))
     database.create_schema()
     return database
+
+
+def training_cycle_service(session: Session) -> TrainingCycleService:
+    return TrainingCycleService(
+        goals=TrainingGoalRepository(session),
+        plans=TrainingPlanRepository(session),
+        check_ins=CheckInRepository(session),
+        changes=PlanChangeRepository(session),
+    )
+
+
+def echo_domain(value: BaseModel) -> None:
+    typer.echo(value.model_dump_json(indent=2))
+
+
+def parse_iso_date(value: str, *, option_name: str) -> date:
+    try:
+        return date.fromisoformat(value)
+    except ValueError as error:
+        raise typer.BadParameter(
+            f"{option_name} 必须使用 YYYY-MM-DD 格式。"
+        ) from error
 
 
 @app.command("init-db")
@@ -99,6 +140,271 @@ def status_command(
         )
     else:
         typer.echo("Latest sync: none")
+
+
+@cycle_app.command("goal-create")
+def cycle_goal_create(
+    name: Annotated[str, typer.Option(help="训练目标名称。")],
+    event_type: Annotated[
+        str, typer.Option(help="5k、10k、half_marathon、marathon 或 general_fitness。")
+    ],
+    target_date: Annotated[str, typer.Option(help="目标日期，格式 YYYY-MM-DD。")],
+    available_weekdays: Annotated[
+        str,
+        typer.Option(help="可训练星期，逗号分隔，例如 tue,thu,sat,sun。"),
+    ],
+    target_time_seconds: Annotated[
+        int | None, typer.Option(min=1, help="可选目标成绩，单位秒。")
+    ] = None,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    database = open_database(database_path)
+    try:
+        goal = TrainingGoal(
+            name=name,
+            event_type=event_type,
+            target_date=parse_iso_date(target_date, option_name="--target-date"),
+            target_time_seconds=target_time_seconds,
+            available_weekdays=[
+                value.strip() for value in available_weekdays.split(",") if value.strip()
+            ],
+        )
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    with database.session() as session:
+        training_cycle_service(session).create_goal(goal)
+        session.commit()
+    echo_domain(goal)
+
+
+@cycle_app.command("plan-create")
+def cycle_plan_create(
+    goal_id: Annotated[str, typer.Option(help="训练目标内部 ID。")],
+    week_start: Annotated[str, typer.Option(help="周一日期，格式 YYYY-MM-DD。")],
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    database = open_database(database_path)
+    try:
+        with database.session() as session:
+            plan = training_cycle_service(session).create_plan(
+                goal_id=goal_id,
+                week_start=parse_iso_date(week_start, option_name="--week-start"),
+            )
+            session.commit()
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(plan)
+
+
+@cycle_app.command("goal-list")
+def cycle_goal_list(
+    limit: Annotated[int, typer.Option(min=1, max=100)] = 20,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    database = open_database(database_path)
+    with database.session() as session:
+        goals = TrainingGoalRepository(session).list(limit=limit)
+    typer.echo(
+        json.dumps(
+            [goal.model_dump(mode="json") for goal in goals],
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+
+
+@cycle_app.command("session-add")
+def cycle_session_add(
+    plan_id: Annotated[str, typer.Option(help="训练计划内部 ID。")],
+    scheduled_for: Annotated[str, typer.Option(help="课表日期，格式 YYYY-MM-DD。")],
+    session_type: Annotated[
+        str,
+        typer.Option(help="easy/long_run/tempo/interval/recovery/rest/test。"),
+    ],
+    purpose: Annotated[str, typer.Option(help="本次课的训练目的。")],
+    distance_km: Annotated[float | None, typer.Option(min=0.001)] = None,
+    duration_minutes: Annotated[float | None, typer.Option(min=0.01)] = None,
+    intensity: Annotated[str | None, typer.Option()] = None,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    database = open_database(database_path)
+    try:
+        item = PlanSession(
+            scheduled_for=parse_iso_date(
+                scheduled_for, option_name="--scheduled-for"
+            ),
+            session_type=session_type,
+            distance_meters=distance_km * 1000 if distance_km is not None else None,
+            duration_seconds=round(duration_minutes * 60)
+            if duration_minutes is not None
+            else None,
+            intensity=intensity,
+            purpose=purpose,
+        )
+        with database.session() as session:
+            plan = training_cycle_service(session).add_draft_session(plan_id, item)
+            session.commit()
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(plan)
+
+
+@cycle_app.command("plan-activate")
+def cycle_plan_activate(
+    plan_id: Annotated[str, typer.Option(help="训练计划内部 ID。")],
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    database = open_database(database_path)
+    try:
+        with database.session() as session:
+            plan = training_cycle_service(session).activate_plan(plan_id)
+            session.commit()
+    except TrainingCycleError as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(plan)
+
+
+@cycle_app.command("check-in")
+def cycle_check_in(
+    day: Annotated[str, typer.Option(help="反馈日期，格式 YYYY-MM-DD。")],
+    fatigue: Annotated[int, typer.Option(min=1, max=5)],
+    soreness: Annotated[int, typer.Option(min=0, max=10)],
+    sleep_quality: Annotated[int, typer.Option(min=1, max=5)],
+    readiness: Annotated[int | None, typer.Option(min=1, max=5)] = None,
+    pain_area: Annotated[str | None, typer.Option()] = None,
+    pain_severity: Annotated[int, typer.Option(min=0, max=10)] = 0,
+    note: Annotated[str | None, typer.Option()] = None,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    database = open_database(database_path)
+    try:
+        check_in = DailyCheckIn(
+            day=parse_iso_date(day, option_name="--day"),
+            fatigue=fatigue,
+            soreness=soreness,
+            sleep_quality=sleep_quality,
+            readiness=readiness,
+            pain_area=pain_area,
+            pain_severity=pain_severity,
+            note=note,
+        )
+        with database.session() as session:
+            training_cycle_service(session).record_check_in(check_in)
+            session.commit()
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(check_in)
+
+
+@cycle_app.command("change-propose")
+def cycle_change_propose(
+    plan_id: Annotated[str, typer.Option()],
+    session_id: Annotated[str, typer.Option()],
+    proposed_by: Annotated[
+        str, typer.Option(help="user/coach_orchestrator/plan_agent/recovery_agent。")
+    ],
+    reason: Annotated[str, typer.Option()],
+    session_type: Annotated[str | None, typer.Option()] = None,
+    distance_km: Annotated[float | None, typer.Option(min=0.001)] = None,
+    duration_minutes: Annotated[float | None, typer.Option(min=0.01)] = None,
+    intensity: Annotated[str | None, typer.Option()] = None,
+    clear_distance: Annotated[
+        bool, typer.Option(help="清除原计划距离。")
+    ] = False,
+    clear_duration: Annotated[
+        bool, typer.Option(help="清除原计划时长。")
+    ] = False,
+    clear_intensity: Annotated[
+        bool, typer.Option(help="清除原计划强度描述。")
+    ] = False,
+    purpose: Annotated[str | None, typer.Option()] = None,
+    scheduled_for: Annotated[
+        str | None, typer.Option(help="可选新日期，格式 YYYY-MM-DD。")
+    ] = None,
+    evidence_refs: Annotated[
+        str, typer.Option(help="可选 evidence ID，逗号分隔。")
+    ] = "",
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    database = open_database(database_path)
+    try:
+        change = PlanSessionPatch(
+            session_id=session_id,
+            scheduled_for=(
+                parse_iso_date(scheduled_for, option_name="--scheduled-for")
+                if scheduled_for is not None
+                else None
+            ),
+            session_type=session_type,
+            distance_meters=distance_km * 1000 if distance_km is not None else None,
+            duration_seconds=round(duration_minutes * 60)
+            if duration_minutes is not None
+            else None,
+            intensity=intensity,
+            clear_distance=clear_distance,
+            clear_duration=clear_duration,
+            clear_intensity=clear_intensity,
+            purpose=purpose,
+        )
+        with database.session() as session:
+            proposal = training_cycle_service(session).propose_change(
+                plan_id=plan_id,
+                proposed_by=proposed_by,
+                reason=reason,
+                changes=[change],
+                evidence_refs=[
+                    value.strip() for value in evidence_refs.split(",") if value.strip()
+                ],
+            )
+            session.commit()
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(proposal)
+
+
+@cycle_app.command("change-decide")
+def cycle_change_decide(
+    proposal_id: Annotated[str, typer.Option()],
+    decision: Annotated[str, typer.Option(help="approve 或 reject。")],
+    comment: Annotated[str | None, typer.Option()] = None,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    database = open_database(database_path)
+    try:
+        with database.session() as session:
+            plan, proposal, confirmation = training_cycle_service(session).decide_change(
+                proposal_id=proposal_id,
+                decision=decision,
+                comment=comment,
+            )
+            session.commit()
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    typer.echo(
+        json.dumps(
+            {
+                "plan": plan.model_dump(mode="json"),
+                "proposal": proposal.model_dump(mode="json"),
+                "confirmation": confirmation.model_dump(mode="json"),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+
+
+@cycle_app.command("snapshot")
+def cycle_snapshot(
+    goal_id: Annotated[str, typer.Option()],
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    database = open_database(database_path)
+    try:
+        with database.session() as session:
+            snapshot = training_cycle_service(session).snapshot(goal_id)
+    except TrainingCycleError as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(snapshot)
 
 
 @app.command("demo")

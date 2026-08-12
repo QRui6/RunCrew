@@ -48,6 +48,12 @@ Agent Evaluation Runner
 Local Chat Product（127.0.0.1）
   ├── 对话工作区：Activity → evidence snapshot → bounded history → answer
   └── 工程观测台：Activity → Skill → Trace → Evaluation
+  │
+  ▼
+Training Cycle Foundation
+  ├── Goal → weekly Plan → planned Sessions
+  ├── Daily Check-in
+  └── Change Proposal → user Confirmation → revisioned Plan
 ```
 
 ## 分层职责
@@ -166,6 +172,18 @@ provider + external_id
 
 `chat_conversations` 把一次连续对话绑定到一个 RunCrew 内部活动 ID，并保存首次 Agent 运行产生的 Training Review 与脱敏 Trace 快照。`chat_messages` 按顺序保存用户/助手消息、evidence 引用、置信度、缺失数据、模型和用量。两张表只存在于本地 SQLite，不提交 Git。
 
+### training_goals / training_plans
+
+保存用户明确声明的训练目标与按周组织的计划。计划课作为 `TrainingPlan` 的规范化 JSON 一并保存；同一目标同一周只能存在一份计划。草稿计划可以编辑，激活后必须通过变更提案修改。
+
+### daily_check_ins
+
+每天最多保存一份主观反馈，包括疲劳、酸痛、睡眠质量、准备度和可选疼痛描述。这些字段只作为恢复风险输入，不构成医疗诊断。
+
+### plan_change_proposals / user_confirmations
+
+保存 Agent 或用户提出的结构化计划调整，以及用户最终批准/拒绝结果。提案携带基础修订号，批准时若计划已经变化则标记为 `stale`，不覆盖新状态。
+
 ## 失败语义
 
 | 情况 | 行为 |
@@ -182,8 +200,11 @@ provider + external_id
 | 缺少训练计划 | `training_completion=unknown` 并返回 `requires` |
 | 两个七天窗口缺少训练负荷 | `load_change=unknown`，不推断负荷趋势 |
 | 缺少分圈和同类型历史配速 | `training_anomaly=unknown` |
+| Agent 尝试直接修改激活计划 | Service 拒绝，要求提交变更提案 |
+| 用户批准旧 revision 的提案 | 提案标记 `stale`，计划保持不变 |
+| 休息课仍包含距离或时长 | Domain Schema 拒绝矛盾状态 |
 
-## 未来 Agent 边界
+## Agent 边界
 
 Agent 不应直接调用 COROS 文本解析器。正确关系为：
 
@@ -208,4 +229,16 @@ Policy
 → Policy
 → finish
 → Agent Run Result + Trace
+```
+
+M7 后续的写入型协作必须遵循：
+
+```text
+专业 Agent
+→ 读取最小 TrainingCycleSnapshot
+→ 调用确定性 Risk / Plan / Execution Skill
+→ 提交 PlanChangeProposal（只有建议权）
+→ Coach Orchestrator 汇总冲突
+→ 用户 approve / reject
+→ TrainingCycleService 校验 revision 并应用
 ```

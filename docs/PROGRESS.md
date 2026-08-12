@@ -18,6 +18,7 @@
 | 2026-08-09 | M6-A 本地只读演示 Dashboard | 完成 | [M6-A 本地演示界面](progress/2026-08-09-m6a-local-demo-dashboard.md) |
 | 2026-08-09 | M6-A2 跑步数据连续对话 MVP | 完成 | [M6-A2 连续对话](progress/2026-08-09-m6a2-running-chat.md) |
 | 2026-08-09 | M6-A3 自由对话契约与多轮评测 | 进行中 | [M6-A3 自由对话评测](progress/2026-08-09-m6a3-flexible-chat-evaluation.md) |
+| 2026-08-12 | M7-A 训练闭环数据与权限基础 | 完成 | [M7-A 训练闭环基础](progress/2026-08-12-m7a-training-cycle-foundation.md) |
 
 ## 新阶段记录模板
 

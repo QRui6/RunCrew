@@ -72,4 +72,4 @@ RunCrew 是一个使用你自己的长期跑步数据，帮助完成“训练回
 → 必要的多 Agent 协作
 ```
 
-当前已经完成数据竖切、FIT 详情兜底、确定性 Training Review Skill、单 Agent Context + Harness + Loop、12场景评测基线、DeepSeek Policy、工程观测台和跑步数据连续对话 MVP。聊天采用“固定 evidence 快照 + 最近8条消息”的有界上下文，并把个人事实/推断与通用知识/建议分层：前者必须有 evidence，后者保留表达自由。7场景8轮离线聊天基线已经通过，下一步运行真实 DeepSeek 同题评测；当前证据仍不支持拆分多 Agent。
+当前已经完成数据竖切、FIT 详情兜底、确定性 Training Review Skill、单 Agent Context + Harness + Loop、版本化评测、DeepSeek Policy、工程观测台和跑步数据连续对话 MVP。M7-A 又建立了训练目标、周计划、主观反馈、变更提案和用户确认的数据基础。下一步先实现恢复风险、计划调整和执行对照三个确定性 Skill，再根据职责、权限和冲突证据引入专业 Agent 与 Coach Orchestrator；不是把一个 Prompt 按角色名称机械拆分。
