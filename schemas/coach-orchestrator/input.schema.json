@@ -1,0 +1,100 @@
+{
+  "$defs": {
+    "SourceProvider": {
+      "enum": [
+        "coros",
+        "fit",
+        "keep",
+        "manual",
+        "fixture"
+      ],
+      "title": "SourceProvider",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "goal_id": {
+      "minLength": 1,
+      "title": "Goal Id",
+      "type": "string"
+    },
+    "plan_id": {
+      "minLength": 1,
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "as_of": {
+      "format": "date-time",
+      "title": "As Of",
+      "type": "string"
+    },
+    "provider": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SourceProvider"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "date_tolerance_days": {
+      "default": 1,
+      "maximum": 3,
+      "minimum": 0,
+      "title": "Date Tolerance Days",
+      "type": "integer"
+    },
+    "recovery_lookback_days": {
+      "default": 14,
+      "maximum": 28,
+      "minimum": 14,
+      "title": "Recovery Lookback Days",
+      "type": "integer"
+    },
+    "max_steps": {
+      "default": 5,
+      "maximum": 12,
+      "minimum": 1,
+      "title": "Max Steps",
+      "type": "integer"
+    },
+    "node_call_budget": {
+      "default": 3,
+      "maximum": 6,
+      "minimum": 0,
+      "title": "Node Call Budget",
+      "type": "integer"
+    },
+    "max_retries": {
+      "default": 1,
+      "maximum": 3,
+      "minimum": 0,
+      "title": "Max Retries",
+      "type": "integer"
+    },
+    "node_timeout_seconds": {
+      "default": 5,
+      "exclusiveMinimum": 0,
+      "maximum": 60,
+      "title": "Node Timeout Seconds",
+      "type": "number"
+    },
+    "run_timeout_seconds": {
+      "default": 20,
+      "exclusiveMinimum": 0,
+      "maximum": 120,
+      "title": "Run Timeout Seconds",
+      "type": "number"
+    }
+  },
+  "required": [
+    "goal_id",
+    "plan_id",
+    "as_of"
+  ],
+  "title": "Coach Orchestrator 运行输入",
+  "type": "object"
+}

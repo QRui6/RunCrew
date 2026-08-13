@@ -18,5 +18,6 @@
 | [ADR-0014](0014-deterministic-recovery-risk-boundary.md) | 接受 | 恢复 Agent 只能解释确定性风险结果，不能自行诊断或打分 |
 | [ADR-0015](0015-deterministic-plan-draft-boundary.md) | 接受 | 计划 Skill 只生成可回放草案或待确认提案参数，不保存或批准 |
 | [ADR-0016](0016-confirmed-training-execution-boundary.md) | 接受 | 训练执行先生成候选，只有用户确认后才写入并提升 revision |
+| [ADR-0017](0017-coach-orchestrator-handoff-boundary.md) | 接受 | Coach 只做路由，职责节点使用最小类型化交接并在计划变更前暂停 |
 
 新 ADR 使用四位编号，必须记录背景、决策、原因、后果和替代方案。

@@ -10,9 +10,9 @@
 
 一句话结论：
 
-> RunCrew 已经完成从真实跑步数据到可审计连续对话的单 Agent 基础，并建立“目标—计划—执行—反馈—风险评估—提案—用户确认”的训练闭环状态。M7-B1/B2/B3 已形成恢复风险、计划草案和执行对照三个确定性领域 Skill，下一步连接可评测的跨职责 Agent 协作。
+> RunCrew 已经完成从真实跑步数据到可审计连续对话的单 Agent 基础，并建立“目标—计划—执行—反馈—风险评估—提案—用户确认”的训练闭环状态。M7-B1/B2/B3 已形成三个确定性领域 Skill，M7-C 已用受控 Harness 把它们连接为跨职责 Agent 工作流。
 
-当前里程碑是 **M7-A、M7-B1/B2/B3 已完成，M7-C Coach Orchestrator Harness 待实现；M6-A3b 真实 DeepSeek 同题评测仍待新 Key，但不阻塞本地业务闭环**。
+当前里程碑是 **M7-A、M7-B1/B2/B3 与 M7-C 已完成，M7-D 聊天产品接入待实现；M6-A3b 真实 DeepSeek 同题评测仍待新 Key，但不阻塞本地业务闭环**。
 
 | 能力 | 当前状态 | 说明 |
 |---|---|---|
@@ -589,7 +589,7 @@ estimated_cost_usd=0.00016426
 | Harness Engineering | 统一 Run、权限、确认、预算、重试、两级超时、验证和 Trace | M4 最小竖切已完成 |
 | Loop Engineering | `call_tool → observation → finish` 有限状态循环和明确退出条件 | M4 最小竖切已完成 |
 | LLM | `deepseek-v4-flash` v1.1 同 Hash 对照12/12通过 | 当前动作协议不需要升级 Pro |
-| Multi-Agent | 尚未实现 | 必须由评测证明必要性 |
+| Multi-Agent | Coach 路由 + Execution/Recovery/Plan 隔离节点 + 类型化 Handoff + 用户确认中断 | 确定性 Harness 已通过117项全量测试；LLM 编排和版本化 Suite 待验收 |
 | Evaluation | 12场景 v1.1 Suite、52项测试、Suite Hash、任务/护栏/事实/Token/费用/延迟指标 | 确定性与 DeepSeek 均12/12，M5-B3完成 |
 
 ## 6. 贯穿项目的核心设计原则
@@ -786,7 +786,8 @@ M7-A 与 M7-B1/B2 已完成，当前主线是先完成多 Agent 共用的确定�
 → [已完成] 恢复风险 Skill：五类结果、时间边界、红旗升级与 plan_action
 → [已完成] 训练计划草案与调整 Skill：可回放周草案与待确认提案参数
 → [已完成] 训练执行对照 Skill：只读候选、用户确认、纠正与审计
-→ [下一步] Coach Orchestrator Harness
+→ [已完成] Coach Orchestrator Harness：最小交接、权限、预算、Trace 与确认中断
+→ [下一步] 训练闭环与 Coach 接入聊天产品
 → [待补] 在新 Key 可用后完成显式付费真实 DeepSeek 8轮验收
 ```
 
@@ -800,9 +801,11 @@ M7-A 与 M7-B1/B2 已完成，当前主线是先完成多 Agent 共用的确定�
 
 第四步实现 `compare-training-execution`。计划课与 Activity 没有天然主键，因此系统只根据本地日期、距离和时长产生候选；清晰候选仍需用户确认，多候选和同一活动竞争多课会安全降级。缺少活动保持 unmatched，只有用户明确操作才变成 skipped。确认、跳过和清除错误关联都会提升 plan revision 并保存独立审计记录，从而使后续 Agent 使用的是经用户确认的执行事实，而不是一次启发式猜测。
 
+第五步实现 `CoachOrchestratorHarness`。Coach Policy 不接收活动和身体反馈明细，只能基于完成状态与恢复路由选择 Execution、Recovery、Plan 节点或结束；每个节点绑定单一工具和最小权限。Harness 负责固定交接参数、校验目标/计划范围与 Recovery 哈希血缘、记录脱敏 Handoff、限制步骤/调用/重试/超时。Plan 节点只产出草案，终态明确停在 `awaiting_user_confirmation`，CLI 集成测试证明不会落库或修改 revision。至此可以声称已有可运行的跨职责编排，但不能把确定性路由夸大为真实 LLM 多 Agent 稳定性。
+
 面试表达：
 
-> 我没有为了简历先堆三个角色，而是先找到了多 Agent 真正需要的冲突：训练计划想继续推进，但恢复风险可能要求降级。于是我把目标、计划、反馈、提案和确认做成持久化状态，再把恢复判断封装成可回放 Skill。Recovery Agent 只有建议权，Plan Agent 只能生成变更提案，最终修改由用户确认和 revision 校验控制。
+> 我没有为了简历先堆三个角色，而是先找到了多 Agent 真正需要的冲突：训练计划想继续推进，但恢复风险可能要求降级。于是我先完成状态和三个确定性 Skill，再让 Coach 只做路由，让 Execution、Recovery、Plan 各自只有一个工具和最小上下文。跨节点交接用 Schema 和哈希校验，Plan 只能生成草案，最终修改仍由用户确认和 revision 控制。117项测试覆盖越权、篡改、超时和真实 SQLite 不落库边界。
 
 ### M6-A1：本地工程观测 Dashboard
 

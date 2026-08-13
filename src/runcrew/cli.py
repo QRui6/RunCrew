@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from runcrew.providers.fixture import FixtureActivityProvider
 from runcrew.providers.coros import CorosActivityProvider
 from runcrew.domain.agent import ReviewAgentRunRequest
+from runcrew.domain.coach import CoachAgentRunRequest
 from runcrew.domain.training_review import PlannedSession, TrainingReviewRequest
 from runcrew.domain.training_cycle import (
     DailyCheckIn,
@@ -34,7 +35,7 @@ from runcrew.evaluation import (
     load_chat_evaluation_suite,
     load_review_agent_suite,
 )
-from runcrew.harness import ReviewAgentHarness
+from runcrew.harness import CoachNodeTools, CoachOrchestratorHarness, ReviewAgentHarness
 from runcrew.policies import (
     DeepSeekCostBudget,
     DeepSeekGroundedChatPolicy,
@@ -87,6 +88,7 @@ cycle_app = typer.Typer(help="管理训练目标、周计划、身体反馈和�
 recovery_app = typer.Typer(help="运行确定性的恢复与训练风险评估。")
 planning_app = typer.Typer(help="生成可回放的训练周草案与待确认调整提案。")
 execution_app = typer.Typer(help="对照训练计划与实际跑步，并管理用户确认。")
+coach_app = typer.Typer(help="编排训练执行、恢复评估和计划调整职责节点。")
 app.add_typer(activities_app, name="activities")
 app.add_typer(training_app, name="training")
 app.add_typer(agent_app, name="agent")
@@ -95,6 +97,7 @@ app.add_typer(cycle_app, name="cycle")
 app.add_typer(recovery_app, name="recovery")
 app.add_typer(planning_app, name="planning")
 app.add_typer(execution_app, name="execution")
+app.add_typer(coach_app, name="coach")
 
 
 def database_url(database_path: Path) -> str:
@@ -676,6 +679,92 @@ def execution_decide(
             session.commit()
     except (ValueError, TrainingExecutionError) as error:
         raise typer.BadParameter(str(error)) from error
+    echo_domain(result)
+
+
+@coach_app.command("run")
+def coach_run(
+    goal_id: Annotated[str, typer.Option(help="训练目标内部 ID。")],
+    plan_id: Annotated[str, typer.Option(help="要核对的训练计划内部 ID。")],
+    as_of: Annotated[
+        str | None,
+        typer.Option(help="可选知识截止时间；不传则使用系统本地时间。"),
+    ] = None,
+    provider_name: Annotated[
+        str | None,
+        typer.Option("--provider", help="可选活动来源，例如 coros 或 fixture。"),
+    ] = None,
+    date_tolerance_days: Annotated[int, typer.Option(min=0, max=3)] = 1,
+    recovery_lookback_days: Annotated[int, typer.Option(min=14, max=28)] = 14,
+    max_steps: Annotated[int, typer.Option(min=1, max=12)] = 5,
+    node_call_budget: Annotated[int, typer.Option(min=0, max=6)] = 3,
+    max_retries: Annotated[int, typer.Option(min=0, max=3)] = 1,
+    node_timeout_seconds: Annotated[float, typer.Option(min=0.01, max=60)] = 5.0,
+    run_timeout_seconds: Annotated[float, typer.Option(min=0.01, max=120)] = 20.0,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    """运行只读 Coach 工作流；计划节点最多生成草案，不保存或批准变更。"""
+    database = open_database(database_path)
+    try:
+        request = CoachAgentRunRequest(
+            goal_id=goal_id,
+            plan_id=plan_id,
+            as_of=(
+                parse_iso_datetime(as_of, option_name="--as-of")
+                if as_of
+                else datetime.now().astimezone()
+            ),
+            provider=provider_name,
+            date_tolerance_days=date_tolerance_days,
+            recovery_lookback_days=recovery_lookback_days,
+            max_steps=max_steps,
+            node_call_budget=node_call_budget,
+            max_retries=max_retries,
+            node_timeout_seconds=node_timeout_seconds,
+            run_timeout_seconds=run_timeout_seconds,
+        )
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+
+    with database.session() as session:
+        activities = ActivityRepository(session)
+        plans = TrainingPlanRepository(session)
+        goals = TrainingGoalRepository(session)
+        check_ins = CheckInRepository(session)
+
+        async def execution_tool(node_request: TrainingExecutionRequest):
+            return execute_training_comparison(
+                node_request,
+                activities=activities,
+                plans=plans,
+            )
+
+        async def recovery_tool(node_request: RecoveryAssessmentRequest):
+            return execute_recovery_assessment(
+                node_request,
+                activities=activities,
+                check_ins=check_ins,
+                plans=plans,
+                goals=goals,
+            )
+
+        async def plan_tool(node_request):
+            return execute_plan_adjustment(
+                node_request,
+                goals=goals,
+                plans=plans,
+            )
+
+        result = asyncio.run(
+            CoachOrchestratorHarness().run(
+                request,
+                tools=CoachNodeTools(
+                    execution=execution_tool,
+                    recovery=recovery_tool,
+                    planning=plan_tool,
+                ),
+            )
+        )
     echo_domain(result)
 
 

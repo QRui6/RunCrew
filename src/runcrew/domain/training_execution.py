@@ -138,6 +138,7 @@ class TrainingExecutionResult(BaseModel):
         "training-execution-rules/1.0"
     )
     input_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    goal_id: str = Field(min_length=1)
     plan_id: str = Field(min_length=1)
     plan_revision: int = Field(ge=1)
     as_of: datetime

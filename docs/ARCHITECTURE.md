@@ -265,3 +265,18 @@ M7 后续的写入型协作必须遵循：
 → 用户 approve / reject
 → TrainingCycleService 校验 revision 并应用
 ```
+
+M7-C 当前可执行关系为：
+
+```text
+DeterministicCoachPolicy（只做路由）
+  ├── Execution Agent → compare_training_execution（read）
+  ├── Recovery Agent  → assess_running_recovery（read）
+  └── Plan Agent      → adjust_running_plan（prepare_change）
+                         │
+                         └── change proposal draft
+                              → Harness 暂停
+                              → 用户审核（当前不自动写入）
+```
+
+Policy 只接收完成状态、恢复路由、下一节点类型化请求和剩余预算。Harness 负责固定参数、工具白名单、目标/计划范围、Recovery `input_hash` 血缘、Schema、重试、超时和退出条件。跨节点 Handoff 只记录字段名与请求哈希，避免把身体反馈和活动详情复制进 Trace。

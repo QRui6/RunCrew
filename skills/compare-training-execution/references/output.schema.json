@@ -251,6 +251,11 @@
       "title": "Input Hash",
       "type": "string"
     },
+    "goal_id": {
+      "minLength": 1,
+      "title": "Goal Id",
+      "type": "string"
+    },
     "plan_id": {
       "minLength": 1,
       "title": "Plan Id",
@@ -290,6 +295,7 @@
   },
   "required": [
     "input_hash",
+    "goal_id",
     "plan_id",
     "plan_revision",
     "as_of",

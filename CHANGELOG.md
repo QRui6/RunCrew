@@ -6,6 +6,12 @@
 
 ### Added
 
+- 增加 Coach Orchestrator 输入、动作、最小 Policy Context、节点权限、Handoff、Trace、Budget、Error 和输出 Schema；
+- 增加 Execution、Recovery、Plan 三个隔离职责节点和确定性编排 Loop，支持有限重试、节点/整次超时、步骤与调用预算；
+- 增加 `runcrew coach run`，串联“执行对照 → 恢复评估 → 必要时计划调整”，并在计划草案后暂停等待用户确认；
+- 增加跨目标、跨计划和恢复证据血缘校验；Handoff Trace 只记录字段名和请求哈希；
+- 增加 Coach 输入输出 JSON Schema、导出脚本和 ADR-0017；
+- 增加10项编排、故障和真实 SQLite CLI 集成测试，全量测试增至117项；
 - 增加 `compare-training-execution` 中文 Skill、四个输入输出 Schema、规则边界和官方 UI 元数据；
 - 增加 `execution compare/decide`，支持只读候选匹配、用户确认、标记跳过和清除错误执行状态；
 - 增加训练执行确认审计表，所有写入受 plan revision 保护并提升 revision；
@@ -25,6 +31,8 @@
 
 ### Changed
 
+- 训练执行对照输出增加 `goal_id`，供跨节点 Harness 校验目标范围；
+- 计划调整节点保持 `prepare_change` 权限，不能保存或批准提案；缺反馈或红旗时 Coach 不调用 Plan 节点；
 - `unmatched` 与 `skipped` 分离；缺少活动不再被解释为用户跳过训练，只有显式确认才更新计划课状态；
 - 同一计划内重复活动关联、未来确认和超过三天的跨日确认被拒绝。
 - 计划历史不足时使用低强度模板，不按目标成绩推导高强度处方；具体增量、时长分配与降级比例显式归属 RunCrew 工程规则；
@@ -35,6 +43,8 @@
 
 ### Verified
 
+- Coach CLI 真实 SQLite 集成测试证明生成草案后 pending proposal 仍为空、plan revision 不变；
+- 117项全量测试和项目统一验证通过；M7-C 没有调用 COROS 或 DeepSeek；
 - `assess-running-recovery` 通过官方 `quick_validate.py`；
 - 12项专项测试和85项全量测试通过；
 - 本阶段没有调用 COROS 或 DeepSeek，没有产生外部费用。

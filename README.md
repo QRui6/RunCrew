@@ -169,6 +169,17 @@ M7-A 提供本地 `cycle` 命令组，用于创建目标、周计划、主观反
 
 也可以使用 `mark_skipped` 或 `clear_execution`。成功写入会提升计划 revision 并保留审计记录。
 
+运行跨职责 Coach 工作流：
+
+```powershell
+.\.venv\Scripts\runcrew.exe coach run `
+  --goal-id <目标ID> `
+  --plan-id <激活计划ID> `
+  --provider coros
+```
+
+Coach 会依次委派训练执行和恢复评估；只有需要降级时才调用计划节点。计划节点只返回待确认草案，命令不会保存、批准或修改正式计划。缺少新鲜反馈或出现安全红旗时，工作流会明确阻断。
+
 ## 同步真实 COROS 数据
 
 ```powershell

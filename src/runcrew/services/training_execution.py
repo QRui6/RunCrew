@@ -184,6 +184,7 @@ def build_training_comparison(
     ) or "计划中没有训练课"
     return TrainingExecutionResult(
         input_hash=input_hash,
+        goal_id=plan.goal_id,
         plan_id=plan.id,
         plan_revision=plan.revision,
         as_of=request.as_of,
