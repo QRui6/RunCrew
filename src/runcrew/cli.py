@@ -24,6 +24,10 @@ from runcrew.domain.training_cycle import (
 )
 from runcrew.domain.recovery_assessment import RecoveryAssessmentRequest
 from runcrew.domain.training_planning import WeeklyPlanDraftRequest
+from runcrew.domain.training_execution import (
+    TrainingExecutionDecisionRequest,
+    TrainingExecutionRequest,
+)
 from runcrew.evaluation import (
     evaluate_chat_suite,
     evaluate_review_agent_suite,
@@ -52,6 +56,11 @@ from runcrew.services.training_planning import (
     execute_plan_adjustment,
     execute_weekly_plan_draft,
 )
+from runcrew.services.training_execution import (
+    TrainingExecutionError,
+    confirm_training_execution,
+    execute_training_comparison,
+)
 from runcrew.storage.database import Database
 from runcrew.storage.models import ActivityRecord, RawProviderEvent, SyncRunRecord
 from runcrew.storage.repositories import (
@@ -60,6 +69,7 @@ from runcrew.storage.repositories import (
     PlanChangeRepository,
     TrainingGoalRepository,
     TrainingPlanRepository,
+    TrainingExecutionConfirmationRepository,
 )
 from runcrew.web import serve_demo
 
@@ -76,6 +86,7 @@ evaluation_app = typer.Typer(help="运行可回放的 Agent 离线评测。")
 cycle_app = typer.Typer(help="管理训练目标、周计划、身体反馈和计划变更确认。")
 recovery_app = typer.Typer(help="运行确定性的恢复与训练风险评估。")
 planning_app = typer.Typer(help="生成可回放的训练周草案与待确认调整提案。")
+execution_app = typer.Typer(help="对照训练计划与实际跑步，并管理用户确认。")
 app.add_typer(activities_app, name="activities")
 app.add_typer(training_app, name="training")
 app.add_typer(agent_app, name="agent")
@@ -83,6 +94,7 @@ app.add_typer(evaluation_app, name="eval")
 app.add_typer(cycle_app, name="cycle")
 app.add_typer(recovery_app, name="recovery")
 app.add_typer(planning_app, name="planning")
+app.add_typer(execution_app, name="execution")
 
 
 def database_url(database_path: Path) -> str:
@@ -576,6 +588,93 @@ def planning_adjust(
         RecoveryAssessmentGoalNotFoundError,
         TrainingPlanningError,
     ) as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(result)
+
+
+@execution_app.command("compare")
+def execution_compare(
+    plan_id: Annotated[str, typer.Option(help="训练计划内部 ID。")],
+    as_of: Annotated[
+        str | None,
+        typer.Option(help="可选知识截止时间；不传则使用系统本地时间。"),
+    ] = None,
+    provider_name: Annotated[
+        str | None,
+        typer.Option("--provider", help="可选活动来源，例如 coros 或 fixture。"),
+    ] = None,
+    date_tolerance_days: Annotated[int, typer.Option(min=0, max=3)] = 1,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    """只生成匹配建议，不写入计划，也不自动判定跳过。"""
+    database = open_database(database_path)
+    try:
+        request = TrainingExecutionRequest(
+            plan_id=plan_id,
+            as_of=(
+                parse_iso_datetime(as_of, option_name="--as-of")
+                if as_of
+                else datetime.now().astimezone()
+            ),
+            provider=provider_name,
+            date_tolerance_days=date_tolerance_days,
+        )
+        with database.session() as session:
+            result = execute_training_comparison(
+                request,
+                activities=ActivityRepository(session),
+                plans=TrainingPlanRepository(session),
+            )
+    except (ValueError, TrainingExecutionError) as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(result)
+
+
+@execution_app.command("decide")
+def execution_decide(
+    plan_id: Annotated[str, typer.Option(help="训练计划内部 ID。")],
+    base_revision: Annotated[int, typer.Option(min=1)],
+    session_id: Annotated[str, typer.Option(help="计划课内部 ID。")],
+    decision: Annotated[
+        str,
+        typer.Option(help="confirm_match、mark_skipped 或 clear_execution。"),
+    ],
+    activity_id: Annotated[
+        str | None,
+        typer.Option(help="confirm_match 时必填的 RunCrew 内部活动 ID。"),
+    ] = None,
+    as_of: Annotated[
+        str | None,
+        typer.Option(help="可选确认时间；不传则使用系统本地时间。"),
+    ] = None,
+    comment: Annotated[str | None, typer.Option()] = None,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    """显式确认匹配、跳过或清除状态；使用 revision 防止过期写入。"""
+    database = open_database(database_path)
+    try:
+        request = TrainingExecutionDecisionRequest(
+            plan_id=plan_id,
+            base_revision=base_revision,
+            session_id=session_id,
+            decision=decision,
+            activity_id=activity_id,
+            as_of=(
+                parse_iso_datetime(as_of, option_name="--as-of")
+                if as_of
+                else datetime.now().astimezone()
+            ),
+            comment=comment,
+        )
+        with database.session() as session:
+            result = confirm_training_execution(
+                request,
+                activities=ActivityRepository(session),
+                plans=TrainingPlanRepository(session),
+                confirmations=TrainingExecutionConfirmationRepository(session),
+            )
+            session.commit()
+    except (ValueError, TrainingExecutionError) as error:
         raise typer.BadParameter(str(error)) from error
     echo_domain(result)
 

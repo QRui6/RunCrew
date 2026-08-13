@@ -169,3 +169,19 @@ class UserConfirmationRecord(Base):
     decision: Mapped[str] = mapped_column(String(16), nullable=False)
     canonical_json: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class TrainingExecutionConfirmationRecord(Base):
+    __tablename__ = "training_execution_confirmations"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    plan_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("training_plans.id"), nullable=False, index=True
+    )
+    session_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    decision: Mapped[str] = mapped_column(String(24), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    base_revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    applied_revision: Mapped[int | None] = mapped_column(Integer)
+    canonical_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

@@ -6,6 +6,11 @@
 
 ### Added
 
+- 增加 `compare-training-execution` 中文 Skill、四个输入输出 Schema、规则边界和官方 UI 元数据；
+- 增加 `execution compare/decide`，支持只读候选匹配、用户确认、标记跳过和清除错误执行状态；
+- 增加训练执行确认审计表，所有写入受 plan revision 保护并提升 revision；
+- 增加12项执行对照、冲突降级、未来数据、stale、CLI 和 Schema 测试，全量测试增至107项；
+- 增加 ADR-0016，固定候选匹配不能自动成为执行事实的边界。
 - 增加 `draft-running-plan` 中文 Skill、周计划/调整输入 Schema、统一输出 Schema、规则边界资料和官方 UI 元数据；
 - 增加确定性训练计划 Service，可根据目标、可训练星期与截止时点前历史活动生成可回放周草案；
 - 增加 `runcrew planning draft` 与 `runcrew planning adjust`，后者串联 Recovery Skill 并生成带 revision 的待确认提案参数；
@@ -20,6 +25,8 @@
 
 ### Changed
 
+- `unmatched` 与 `skipped` 分离；缺少活动不再被解释为用户跳过训练，只有显式确认才更新计划课状态；
+- 同一计划内重复活动关联、未来确认和超过三天的跨日确认被拒绝。
 - 计划历史不足时使用低强度模板，不按目标成绩推导高强度处方；具体增量、时长分配与降级比例显式归属 RunCrew 工程规则；
 - Recovery 的 `plan_action` 成为 Plan Skill 的结构化输入；`keep` 不生成提案，数据不足与专业升级信号安全阻塞。
 - 训练负荷覆盖不足80%时改用七天训练时长变化代理，并在 evidence 中公开方法；

@@ -1,0 +1,285 @@
+{
+  "$defs": {
+    "PlanSession": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "scheduled_for": {
+          "format": "date",
+          "title": "Scheduled For",
+          "type": "string"
+        },
+        "session_type": {
+          "enum": [
+            "easy",
+            "long_run",
+            "tempo",
+            "interval",
+            "recovery",
+            "rest",
+            "test"
+          ],
+          "title": "Session Type",
+          "type": "string"
+        },
+        "distance_meters": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distance Meters"
+        },
+        "duration_seconds": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Seconds"
+        },
+        "intensity": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intensity"
+        },
+        "purpose": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Purpose",
+          "type": "string"
+        },
+        "status": {
+          "default": "planned",
+          "enum": [
+            "planned",
+            "completed",
+            "skipped"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "linked_activity_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Linked Activity Id"
+        }
+      },
+      "required": [
+        "scheduled_for",
+        "session_type",
+        "purpose"
+      ],
+      "title": "PlanSession",
+      "type": "object"
+    },
+    "TrainingExecutionConfirmation": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "plan_id": {
+          "minLength": 1,
+          "title": "Plan Id",
+          "type": "string"
+        },
+        "base_revision": {
+          "minimum": 1,
+          "title": "Base Revision",
+          "type": "integer"
+        },
+        "applied_revision": {
+          "anyOf": [
+            {
+              "minimum": 2,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Applied Revision"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "decision": {
+          "enum": [
+            "confirm_match",
+            "mark_skipped",
+            "clear_execution"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "activity_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Activity Id"
+        },
+        "comment": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comment"
+        },
+        "status": {
+          "default": "applied",
+          "enum": [
+            "applied",
+            "stale",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plan_id",
+        "base_revision",
+        "session_id",
+        "decision"
+      ],
+      "title": "TrainingExecutionConfirmation",
+      "type": "object"
+    },
+    "TrainingPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "goal_id": {
+          "minLength": 1,
+          "title": "Goal Id",
+          "type": "string"
+        },
+        "week_start": {
+          "format": "date",
+          "title": "Week Start",
+          "type": "string"
+        },
+        "status": {
+          "default": "draft",
+          "enum": [
+            "draft",
+            "active",
+            "superseded",
+            "completed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "source": {
+          "default": "user",
+          "enum": [
+            "user",
+            "deterministic",
+            "plan_agent"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "sessions": {
+          "items": {
+            "$ref": "#/$defs/PlanSession"
+          },
+          "maxItems": 14,
+          "title": "Sessions",
+          "type": "array"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "goal_id",
+        "week_start"
+      ],
+      "title": "TrainingPlan",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "plan": {
+      "$ref": "#/$defs/TrainingPlan"
+    },
+    "confirmation": {
+      "$ref": "#/$defs/TrainingExecutionConfirmation"
+    }
+  },
+  "required": [
+    "plan",
+    "confirmation"
+  ],
+  "title": "训练执行人工确认输出",
+  "type": "object"
+}

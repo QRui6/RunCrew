@@ -148,6 +148,27 @@ M7-A 提供本地 `cycle` 命令组，用于创建目标、周计划、主观反
 
 两条 `planning` 命令都不会写入或批准正式计划。具体增量与降级幅度是版本化的 RunCrew 保守工程规则，不是医学标准。
 
+对照计划课与实际跑步：
+
+```powershell
+.\.venv\Scripts\runcrew.exe execution compare `
+  --plan-id <计划ID> `
+  --provider coros
+```
+
+系统只生成候选，不会自动关联或把缺少活动判成跳过。确认匹配时使用对照结果中的 revision：
+
+```powershell
+.\.venv\Scripts\runcrew.exe execution decide `
+  --plan-id <计划ID> `
+  --base-revision <revision> `
+  --session-id <计划课ID> `
+  --decision confirm_match `
+  --activity-id <RunCrew活动ID>
+```
+
+也可以使用 `mark_skipped` 或 `clear_execution`。成功写入会提升计划 revision 并保留审计记录。
+
 ## 同步真实 COROS 数据
 
 ```powershell

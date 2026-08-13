@@ -196,6 +196,10 @@ provider + external_id
 
 保存 Agent 或用户提出的结构化计划调整，以及用户最终批准/拒绝结果。提案携带基础修订号，批准时若计划已经变化则标记为 `stale`，不覆盖新状态。
 
+### training_execution_confirmations
+
+保存用户对计划课执行事实的确认：关联实际 Activity、标记跳过或清除错误状态。候选匹配本身不落库；确认携带基础 revision，成功后提升计划 revision，过期操作只记录为 `stale`。
+
 ## 失败语义
 
 | 情况 | 行为 |
@@ -218,6 +222,10 @@ provider + external_id
 | 缺少当天或前一天身体反馈 | `insufficient_data`，不默认正常训练 |
 | 出现心肺红旗 | 覆盖普通负荷判断，停止自动训练建议并提示专业帮助 |
 | 训练负荷覆盖不足 | 使用时长变化代理并显式标记 method；无历史则保留缺失项 |
+| 没有实际活动候选 | `unmatched`，不自动判定为 skipped |
+| 多个候选接近或一条活动竞争多课 | `ambiguous`，等待用户选择 |
+| 执行确认使用旧 revision | 记录 `stale`，不修改计划课 |
+| 确认未来活动或提前跳过未来课 | Service 拒绝写入 |
 
 ## Agent 边界
 

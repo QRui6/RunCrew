@@ -1,0 +1,69 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "plan_id": {
+      "minLength": 1,
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "base_revision": {
+      "minimum": 1,
+      "title": "Base Revision",
+      "type": "integer"
+    },
+    "session_id": {
+      "minLength": 1,
+      "title": "Session Id",
+      "type": "string"
+    },
+    "decision": {
+      "enum": [
+        "confirm_match",
+        "mark_skipped",
+        "clear_execution"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "as_of": {
+      "description": "确认时点，必须包含时区。",
+      "format": "date-time",
+      "title": "As Of",
+      "type": "string"
+    },
+    "activity_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Activity Id"
+    },
+    "comment": {
+      "anyOf": [
+        {
+          "maxLength": 500,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Comment"
+    }
+  },
+  "required": [
+    "plan_id",
+    "base_revision",
+    "session_id",
+    "decision",
+    "as_of"
+  ],
+  "title": "训练执行人工确认输入",
+  "type": "object"
+}

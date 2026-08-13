@@ -1,0 +1,55 @@
+{
+  "$defs": {
+    "SourceProvider": {
+      "enum": [
+        "coros",
+        "fit",
+        "keep",
+        "manual",
+        "fixture"
+      ],
+      "title": "SourceProvider",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "plan_id": {
+      "description": "RunCrew 内部训练计划 ID。",
+      "minLength": 1,
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "as_of": {
+      "description": "知识截止时间，必须包含时区。",
+      "format": "date-time",
+      "title": "As Of",
+      "type": "string"
+    },
+    "provider": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SourceProvider"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "可选活动来源过滤；多来源可能重复时应显式指定。"
+    },
+    "date_tolerance_days": {
+      "default": 1,
+      "maximum": 3,
+      "minimum": 0,
+      "title": "Date Tolerance Days",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "plan_id",
+    "as_of"
+  ],
+  "title": "训练执行对照输入",
+  "type": "object"
+}

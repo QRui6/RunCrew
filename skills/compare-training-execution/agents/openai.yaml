@@ -1,0 +1,4 @@
+interface:
+  display_name: "训练执行对照"
+  short_description: "将计划课与实际跑步活动进行可回放匹配并保留用户纠正入口"
+  default_prompt: "使用 $compare-training-execution 对照我的计划课与实际跑步，说明完成、部分完成、待执行或无法匹配，并让我确认后再写入。"

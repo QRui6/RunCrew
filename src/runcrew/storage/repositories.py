@@ -18,6 +18,7 @@ from runcrew.domain.training_cycle import (
     TrainingPlan,
     UserConfirmation,
 )
+from runcrew.domain.training_execution import TrainingExecutionConfirmation
 from runcrew.storage.models import (
     ActivityRecord,
     ChatConversationRecord,
@@ -27,6 +28,7 @@ from runcrew.storage.models import (
     RawProviderEvent,
     SyncRunRecord,
     TrainingGoalRecord,
+    TrainingExecutionConfirmationRecord,
     TrainingPlanRecord,
     UserConfirmationRecord,
 )
@@ -565,5 +567,40 @@ class PlanChangeRepository:
         ).all()
         return [
             PlanChangeProposal.model_validate_json(record.canonical_json)
+            for record in records
+        ]
+
+
+class TrainingExecutionConfirmationRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def save(self, confirmation: TrainingExecutionConfirmation) -> None:
+        self.session.add(
+            TrainingExecutionConfirmationRecord(
+                id=confirmation.id,
+                plan_id=confirmation.plan_id,
+                session_id=confirmation.session_id,
+                decision=confirmation.decision,
+                status=confirmation.status,
+                base_revision=confirmation.base_revision,
+                applied_revision=confirmation.applied_revision,
+                canonical_json=confirmation.model_dump_json(),
+                created_at=confirmation.created_at,
+            )
+        )
+        self.session.flush()
+
+    def for_plan(self, plan_id: str) -> list[TrainingExecutionConfirmation]:
+        records = self.session.scalars(
+            select(TrainingExecutionConfirmationRecord)
+            .where(TrainingExecutionConfirmationRecord.plan_id == plan_id)
+            .order_by(
+                TrainingExecutionConfirmationRecord.created_at,
+                TrainingExecutionConfirmationRecord.id,
+            )
+        ).all()
+        return [
+            TrainingExecutionConfirmation.model_validate_json(record.canonical_json)
             for record in records
         ]

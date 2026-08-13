@@ -1,0 +1,301 @@
+{
+  "$defs": {
+    "ExecutionCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "activity_id": {
+          "minLength": 1,
+          "title": "Activity Id",
+          "type": "string"
+        },
+        "started_at": {
+          "format": "date-time",
+          "title": "Started At",
+          "type": "string"
+        },
+        "date_difference_days": {
+          "minimum": 0,
+          "title": "Date Difference Days",
+          "type": "integer"
+        },
+        "score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Score",
+          "type": "number"
+        },
+        "distance_ratio": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distance Ratio"
+        },
+        "duration_ratio": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ratio"
+        }
+      },
+      "required": [
+        "activity_id",
+        "started_at",
+        "date_difference_days",
+        "score"
+      ],
+      "title": "ExecutionCandidate",
+      "type": "object"
+    },
+    "ExecutionEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "schedule",
+            "date_proximity",
+            "volume_comparison",
+            "confirmed_link",
+            "candidate_conflict",
+            "missing_data"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "values": {
+          "additionalProperties": true,
+          "title": "Values",
+          "type": "object"
+        },
+        "rule_source": {
+          "enum": [
+            "active_plan",
+            "normalized_activity",
+            "user_confirmation",
+            "runcrew_matching_rule",
+            "missing_data_policy"
+          ],
+          "title": "Rule Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "message",
+        "rule_source"
+      ],
+      "title": "ExecutionEvidence",
+      "type": "object"
+    },
+    "SessionExecutionComparison": {
+      "additionalProperties": false,
+      "properties": {
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "scheduled_for": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "title": "Scheduled For",
+          "type": "string"
+        },
+        "session_type": {
+          "minLength": 1,
+          "title": "Session Type",
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "complete",
+            "partial",
+            "skipped",
+            "unmatched",
+            "upcoming",
+            "rest"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "match_state": {
+          "enum": [
+            "confirmed",
+            "suggested",
+            "ambiguous",
+            "none",
+            "broken_link"
+          ],
+          "title": "Match State",
+          "type": "string"
+        },
+        "suggested_activity_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Suggested Activity Id"
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/ExecutionCandidate"
+          },
+          "maxItems": 10,
+          "title": "Candidates",
+          "type": "array"
+        },
+        "completion_ratio": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completion Ratio"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "requires_user_confirmation": {
+          "title": "Requires User Confirmation",
+          "type": "boolean"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/ExecutionEvidence"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "session_id",
+        "scheduled_for",
+        "session_type",
+        "outcome",
+        "match_state",
+        "confidence",
+        "requires_user_confirmation",
+        "evidence"
+      ],
+      "title": "SessionExecutionComparison",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "ruleset_version": {
+      "const": "training-execution-rules/1.0",
+      "default": "training-execution-rules/1.0",
+      "title": "Ruleset Version",
+      "type": "string"
+    },
+    "input_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Input Hash",
+      "type": "string"
+    },
+    "plan_id": {
+      "minLength": 1,
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "plan_revision": {
+      "minimum": 1,
+      "title": "Plan Revision",
+      "type": "integer"
+    },
+    "as_of": {
+      "format": "date-time",
+      "title": "As Of",
+      "type": "string"
+    },
+    "summary": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Summary",
+      "type": "string"
+    },
+    "sessions": {
+      "items": {
+        "$ref": "#/$defs/SessionExecutionComparison"
+      },
+      "maxItems": 14,
+      "title": "Sessions",
+      "type": "array"
+    },
+    "unassigned_activity_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Unassigned Activity Ids",
+      "type": "array"
+    }
+  },
+  "required": [
+    "input_hash",
+    "plan_id",
+    "plan_revision",
+    "as_of",
+    "summary",
+    "sessions"
+  ],
+  "title": "训练执行对照输出",
+  "type": "object"
+}
