@@ -6,7 +6,9 @@ const elements = {
   activities: $("#activity-list"), conversations: $("#conversation-list"), messages: $("#messages"),
   input: $("#message-input"), composer: $("#composer"), send: $("#send-button"), title: $("#chat-title"),
   badge: $("#context-badge"), selected: $("#selected-activity"), deepseek: $("#use-deepseek"),
-  modelToggle: $("#model-toggle"), toast: $("#toast"), turnMeta: $("#turn-meta")
+  modelToggle: $("#model-toggle"), toast: $("#toast"), turnMeta: $("#turn-meta"),
+  crewSummary: $("#crew-summary"), crewExecution: $("#crew-execution"), crewRecovery: $("#crew-recovery"), crewPlan: $("#crew-plan"),
+  crewExecutionStatus: $("#crew-execution-status"), crewRecoveryStatus: $("#crew-recovery-status"), crewPlanStatus: $("#crew-plan-status")
 };
 const trainingElements = {
   toggle: $("#training-toggle"), drawer: $("#training-drawer"), backdrop: $("#training-backdrop"), close: $("#training-close"),
@@ -63,17 +65,38 @@ function renderConversations() {
 
 function empty(text) { const p = document.createElement("p"); p.className = "empty-list"; p.textContent = text; return p; }
 
+function setCrewOverview(mode, result = null) {
+  [elements.crewExecution, elements.crewRecovery, elements.crewPlan].forEach((node) => { node.classList.remove("running", "complete", "skipped"); });
+  const states = {
+    waiting: ["待运行", "待运行", "按需调用", "WAITING"],
+    ready: ["证据就绪", "等待反馈", "按需调用", "CONTEXT READY"],
+    running: ["运行中", "等待上游", "等待路由", "RUNNING"],
+    failed: ["运行中断", "未完成", "未调用", "FAILED"]
+  };
+  const values = states[mode] || states.waiting;
+  [elements.crewExecutionStatus, elements.crewRecoveryStatus, elements.crewPlanStatus, elements.crewSummary].forEach((node, index) => { node.textContent = values[index]; });
+  if (mode === "ready") elements.crewExecution.classList.add("complete");
+  if (mode === "running") elements.crewExecution.classList.add("running");
+  if (mode === "failed") elements.crewExecution.classList.add("skipped");
+  if (!result) return;
+  elements.crewSummary.textContent = "RUN COMPLETE";
+  if (result.execution) { elements.crewExecution.classList.add("complete"); elements.crewExecutionStatus.textContent = "已完成"; }
+  if (result.recovery) { elements.crewRecovery.classList.add("complete"); elements.crewRecoveryStatus.textContent = "已完成"; }
+  if (result.planning) { elements.crewPlan.classList.add("complete"); elements.crewPlanStatus.textContent = "已生成草案"; }
+  else { elements.crewPlan.classList.add("skipped"); elements.crewPlanStatus.textContent = "无需调用"; }
+}
+
 function selectActivity(id) {
   state.selectedActivityId = id; state.activeConversationId = null;
   const activity = state.activities.find((item) => item.id === id);
-  elements.title.textContent = activity ? `聊聊 · ${activity.title}` : "选一场跑步，开始聊";
+  elements.title.textContent = activity ? `活动解读 · ${activity.title}` : "跑步训练智能工作台";
   elements.badge.textContent = activity ? `${dateLabel(activity.started_at)} · ${activity.provider.toUpperCase()}` : "等待选择数据";
-  renderActivities(); renderConversations(); renderSelectedActivity(activity); resetMessages(); elements.input.focus();
+  renderActivities(); renderConversations(); renderSelectedActivity(activity); setCrewOverview(activity ? "ready" : "waiting"); resetMessages(); elements.input.focus();
 }
 
 function renderSelectedActivity(activity) {
   elements.selected.replaceChildren();
-  if (!activity) { elements.selected.className = "selected-activity empty"; elements.selected.textContent = "尚未选择活动"; return; }
+  if (!activity) { elements.selected.className = "selected-activity empty"; elements.selected.textContent = "请选择一条跑步记录以建立证据上下文"; return; }
   elements.selected.className = "selected-activity";
   const time = document.createElement("time"); time.textContent = fullDate(activity.started_at);
   const h3 = document.createElement("h3"); h3.textContent = activity.title;
@@ -87,11 +110,21 @@ function renderSelectedActivity(activity) {
 function resetMessages() {
   elements.messages.replaceChildren();
   const welcome = document.createElement("div"); welcome.className = "welcome";
-  const orbit = document.createElement("span"); orbit.className = "welcome-orbit"; orbit.append("RUN", document.createElement("br"), "DATA");
-  const p = document.createElement("p"); p.textContent = "从这场跑步开始问。Agent 会先调用 Training Review Skill 建立证据快照，后续追问复用同一份快照与最近对话。";
+  const kicker = document.createElement("div"); kicker.className = "welcome-kicker"; const kickerName = document.createElement("span"); kickerName.textContent = "ACTIVITY CONTEXT READY"; kicker.append(kickerName, " · GROUNDED RESPONSE");
+  const title = document.createElement("h2"); title.append("围绕这次跑步，", document.createElement("br"), "开始一次有依据的对话。");
+  const p = document.createElement("p"); p.className = "welcome-copy"; p.textContent = "RunCrew 会先调用 Training Review Skill 建立证据快照。后续追问复用同一份快照与最近对话，并明确区分数据事实、推断与训练建议。";
+  const crew = document.createElement("div"); crew.className = "welcome-crew";
+  [["01", "Evidence", "规范化训练证据"], ["02", "Review", "识别表现与风险"], ["03", "Response", "形成可追溯回答"]].forEach(([index, name, detail], itemIndex) => {
+    const node = document.createElement("div"); node.className = "welcome-agent"; const number = document.createElement("span"); number.textContent = index;
+    const copy = document.createElement("p"); const strong = document.createElement("b"); strong.textContent = name; const small = document.createElement("small"); small.textContent = detail; copy.append(strong, small); node.append(number, copy); crew.append(node);
+    if (itemIndex < 2) { const arrow = document.createElement("i"); arrow.textContent = "→"; crew.append(arrow); }
+  });
+  const suggestionLabel = document.createElement("div"); suggestionLabel.className = "suggestion-label"; suggestionLabel.textContent = "基于当前活动提问";
   const suggestions = document.createElement("div"); suggestions.className = "suggestions";
-  ["这次跑步完成得怎么样？", "最近七天的训练负荷有什么变化？", "这个判断用了哪些证据？"].forEach((text) => { const b = document.createElement("button"); b.type = "button"; b.textContent = text; b.addEventListener("click", () => { elements.input.value = text; elements.input.focus(); }); suggestions.append(b); });
-  welcome.append(orbit, p, suggestions); elements.messages.append(welcome);
+  [["训练复盘", "这次跑步完成得怎么样？"], ["负荷趋势", "最近七天的训练负荷有什么变化？"], ["证据核对", "这个判断用了哪些证据？"]].forEach(([label, text]) => {
+    const button = document.createElement("button"); button.type = "button"; const tag = document.createElement("span"); tag.textContent = label; const arrow = document.createElement("b"); arrow.textContent = "↗"; button.append(tag, text, arrow); button.addEventListener("click", () => { elements.input.value = text; elements.input.focus(); }); suggestions.append(button);
+  });
+  welcome.append(kicker, title, p, crew, suggestionLabel, suggestions); elements.messages.append(welcome);
 }
 
 function renderMessages(messages) {
@@ -160,6 +193,7 @@ function showToast(message) { elements.toast.textContent = message; elements.toa
 
 function toggleTraining(open) {
   trainingElements.drawer.hidden = !open; trainingElements.backdrop.hidden = !open;
+  trainingElements.toggle.setAttribute("aria-expanded", String(open));
   if (open) refreshTraining().catch((error) => showToast(error.message));
 }
 
@@ -204,6 +238,8 @@ function renderCoachRuns() {
 
 function renderCoachResult(view) {
   state.activeCoachRunId = view.audit.run_id; const result = view.audit.result; trainingElements.result.replaceChildren(); trainingElements.result.className = "coach-result";
+  if (view.audit.status === "failed") setCrewOverview("failed");
+  else setCrewOverview("complete", result);
   const status = document.createElement("span"); status.className = "coach-status"; status.textContent = statusLabel(view.audit.status);
   const title = document.createElement("h4"); title.textContent = result.recovery ? recommendationLabel(result.recovery.recommendation) : "Coach 未形成恢复结论";
   const summary = document.createElement("p"); summary.textContent = result.recovery ? result.recovery.summary : (result.error ? result.error.message : "运行未产生业务结果。");
@@ -236,9 +272,9 @@ async function saveCheckIn(event) {
 
 async function runCoach() {
   const view = selectedGoalView(); if (!view || !view.active_plan) return showToast("所选目标没有激活计划。");
-  trainingElements.run.disabled = true; state.coachRunning = true; trainingElements.result.className = "coach-result empty"; trainingElements.result.textContent = "三个职责节点正在按权限运行…";
+  trainingElements.run.disabled = true; state.coachRunning = true; setCrewOverview("running"); trainingElements.result.className = "coach-result empty"; trainingElements.result.textContent = "三个职责节点正在按权限运行…";
   try { const result = await api("/api/training/coach-runs", { method: "POST", body: JSON.stringify({ goal_id: view.goal.id, plan_id: view.active_plan.id, as_of: new Date().toISOString(), provider: trainingElements.provider.value || null }) }); renderCoachResult(result); await refreshTraining(); showToast("Coach 运行完成，计划草案仍未自动生效。"); }
-  catch (error) { showToast(error.message); trainingElements.result.textContent = "运行失败，请检查数据和计划状态。"; }
+  catch (error) { showToast(error.message); setCrewOverview("failed"); trainingElements.result.textContent = "运行失败，请检查数据和计划状态。"; }
   finally { state.coachRunning = false; trainingElements.run.disabled = false; }
 }
 
@@ -254,7 +290,10 @@ async function refreshBootstrap(initial = true) {
   elements.deepseek.disabled = !payload.deepseek_available; elements.modelToggle.classList.toggle("disabled", !payload.deepseek_available);
   if (!payload.deepseek_available) elements.modelToggle.title = "请先在本机配置 DEEPSEEK_API_KEY";
   if (initial && state.activities.length) state.selectedActivityId = state.activities[0].id;
-  renderActivities(); renderConversations(); renderSelectedActivity(state.activities.find((item) => item.id === state.selectedActivityId));
+  const selectedActivity = state.activities.find((item) => item.id === state.selectedActivityId);
+  renderActivities(); renderConversations(); renderSelectedActivity(selectedActivity);
+  if (initial && selectedActivity) { elements.title.textContent = `活动解读 · ${selectedActivity.title}`; elements.badge.textContent = `${dateLabel(selectedActivity.started_at)} · ${selectedActivity.provider.toUpperCase()}`; }
+  setCrewOverview(state.selectedActivityId ? "ready" : "waiting");
   if (initial) resetMessages();
 }
 
@@ -271,3 +310,7 @@ trainingElements.backdrop.addEventListener("click", () => toggleTraining(false))
 trainingElements.goal.addEventListener("change", () => { state.selectedGoalId = trainingElements.goal.value || null; renderPlan(selectedGoalView()); });
 trainingElements.checkIn.addEventListener("submit", saveCheckIn);
 trainingElements.run.addEventListener("click", runCoach);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !trainingElements.drawer.hidden) toggleTraining(false);
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "n") { event.preventDefault(); $("#new-chat").click(); }
+});

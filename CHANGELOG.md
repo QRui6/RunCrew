@@ -6,6 +6,10 @@
 
 ### Added
 
+- 将聊天首页重构为正式跑步训练智能工作台，增加产品导航、个人训练空间、实时上下文检查器和可观察的 Agent 协作状态；
+- 将训练闭环重组为训练运营中心，按计划上下文、身体反馈、跨 Agent 联合评估和运行审计组织，并保留人工确认边界；
+- 增加响应式布局、减少动态效果支持、`Ctrl+N` 新建对话和 `Esc` 关闭运营中心等产品级交互；
+
 - 增加 `coach-agent-eval/1.0`：18个版本化无私人数据场景，覆盖任务、节点韧性、权限/交接护栏、预算和批准前 stale；
 - 增加 Coach Evaluation Suite/Report Schema、稳定 `suite_hash`、CLI `eval coach-agent`、Schema 导出脚本和 ADR-0019；
 - 增加事实一致率、Recovery→Plan 血缘一致率、用户确认边界率、审核防护率和错误节点执行数等多 Agent 指标；

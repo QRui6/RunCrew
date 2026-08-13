@@ -3,53 +3,94 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="RunCrew：围绕个人跑步数据连续对话的本地 Agent。">
-  <title>RunCrew · 跑步数据对话 Agent</title>
+  <meta name="description" content="RunCrew：基于个人跑步数据、证据与多 Agent 协作的训练智能工作台。">
+  <title>RunCrew · 跑步训练智能工作台</title>
   <link rel="stylesheet" href="/assets/chat.css">
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="/" aria-label="RunCrew 首页">
-      <span class="brand-mark">RC</span>
-      <span><strong>RunCrew</strong><small>你的跑步数据随队 Agent</small></span>
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" role="img">
+          <path d="M7 22.5c2.8-7.8 7.1-11.8 12.8-11.8 2.5 0 4.2 1.2 5.2 3.5-2.5-.6-4.7-.1-6.7 1.5-2 1.6-3.8 4.1-5.3 7.5"/>
+          <circle cx="22.8" cy="7.4" r="2.2"/>
+        </svg>
+      </span>
+      <span class="brand-copy"><strong>RunCrew</strong><small>RUNNING INTELLIGENCE</small></span>
     </a>
+
+    <nav class="product-nav" aria-label="产品导航">
+      <span class="nav-item active">智能对话</span>
+      <button id="training-toggle" class="nav-item" type="button" aria-controls="training-drawer" aria-expanded="false">训练运营</button>
+      <a class="nav-item" href="/engineering">工程观测</a>
+    </nav>
+
     <div class="top-actions">
-      <span class="privacy"><i></i> 数据仅在本机处理</span>
-      <button id="training-toggle" class="training-toggle" type="button">训练闭环 <b>↗</b></button>
-      <a href="/engineering">工程观测台 →</a>
+      <span class="privacy"><i></i><span>本地数据空间</span></span>
+      <span class="environment">PRIVATE BETA</span>
     </div>
   </header>
 
   <main class="workspace">
     <aside class="rail">
-      <button id="new-chat" class="new-chat" type="button"><span>＋</span> 新建跑步对话</button>
-      <section>
-        <div class="section-label"><span>选择跑步</span><small id="activity-count">0 条</small></div>
+      <div class="workspace-profile">
+        <span class="profile-icon">RC</span>
+        <div><strong>个人训练空间</strong><small>高驰 · Keep · 本地记录</small></div>
+        <span class="workspace-status" title="数据空间正常">●</span>
+      </div>
+
+      <button id="new-chat" class="new-chat" type="button">
+        <span aria-hidden="true">＋</span><b>新建训练对话</b><small>Ctrl N</small>
+      </button>
+
+      <section class="rail-section activity-section">
+        <div class="section-label"><span>跑步记录</span><small id="activity-count">0 条</small></div>
         <div id="activity-list" class="activity-list" aria-live="polite"></div>
       </section>
-      <section class="history-section">
-        <div class="section-label"><span>历史对话</span><small>LOCAL</small></div>
+
+      <section class="rail-section history-section">
+        <div class="section-label"><span>最近对话</span><small>LOCAL</small></div>
         <div id="conversation-list" class="conversation-list"></div>
       </section>
+
+      <div class="rail-foot">
+        <p><span class="shield-icon">✓</span><strong>数据边界已开启</strong></p>
+        <small>坐标与原始载荷不会进入模型上下文</small>
+      </div>
     </aside>
 
     <section class="chat-stage">
       <div class="chat-heading">
-        <div>
-          <p class="eyebrow">GROUNDED CONVERSATION</p>
-          <h1 id="chat-title">选一场跑步，开始聊</h1>
+        <div class="heading-copy">
+          <p class="breadcrumb">RUNCREW / ACTIVITY INTELLIGENCE</p>
+          <div class="heading-title-row">
+            <h1 id="chat-title">跑步训练智能工作台</h1>
+            <span class="agent-live"><i></i> Agent Crew 在线</span>
+          </div>
+          <p class="heading-subtitle">围绕真实跑步记录连续对话，所有个人结论均可追溯到证据。</p>
         </div>
-        <span id="context-badge" class="context-badge">等待选择数据</span>
+        <span id="context-badge" class="context-badge">等待选择活动</span>
       </div>
 
       <div id="messages" class="messages" aria-live="polite">
         <div class="welcome" id="welcome">
-          <span class="welcome-orbit">RUN<br>DATA</span>
-          <p>可以自然地聊训练、假设、跑步知识和下一步思路。涉及你的个人数据时我会说明依据；通用知识与建议会单独标明，不会伪装成已经发生的事实。</p>
+          <div class="welcome-kicker"><span>PERSONAL COACH NETWORK</span><i></i> READY</div>
+          <h2>把每一次跑步，<br>变成下一次训练的依据。</h2>
+          <p class="welcome-copy">选择一条跑步记录后，你可以讨论训练表现、近期负荷、恢复状态与后续安排。RunCrew 会先组织证据，再由不同职责 Agent 协同给出结论。</p>
+
+          <div class="welcome-crew" aria-label="Agent 协作流程">
+            <div class="welcome-agent"><span>01</span><p><b>Execution</b><small>核对训练执行</small></p></div>
+            <i aria-hidden="true">→</i>
+            <div class="welcome-agent"><span>02</span><p><b>Recovery</b><small>评估身体恢复</small></p></div>
+            <i aria-hidden="true">→</i>
+            <div class="welcome-agent"><span>03</span><p><b>Plan</b><small>必要时调整计划</small></p></div>
+          </div>
+
+          <div class="suggestion-label">可以从这些问题开始</div>
           <div class="suggestions">
-            <button type="button">这次跑步完成得怎么样？</button>
-            <button type="button">最近七天的训练负荷有什么变化？</button>
-            <button type="button">这个判断用了哪些证据？</button>
+            <button type="button"><span>训练复盘</span>这次跑步完成得怎么样？<b>↗</b></button>
+            <button type="button"><span>负荷趋势</span>最近七天的训练负荷有什么变化？<b>↗</b></button>
+            <button type="button"><span>证据核对</span>这个判断使用了哪些数据？<b>↗</b></button>
           </div>
         </div>
       </div>
@@ -57,56 +98,101 @@
       <form id="composer" class="composer">
         <label class="message-field">
           <span class="sr-only">输入关于跑步数据的问题</span>
-          <textarea id="message-input" rows="1" maxlength="2000" placeholder="问问这次跑步，或者继续追问上一个回答…"></textarea>
+          <textarea id="message-input" rows="1" maxlength="2000" placeholder="询问本次跑步，或继续追问上一个结论…"></textarea>
         </label>
         <div class="composer-foot">
-          <label class="model-toggle" id="model-toggle">
-            <input id="use-deepseek" type="checkbox">
-            <span></span>
-            <b>DeepSeek 回答</b>
-            <small>显式开启后会发送脱敏上下文并产生少量费用</small>
-          </label>
-          <button id="send-button" type="submit">发送 <b>↗</b></button>
+          <div class="composer-options">
+            <label class="model-toggle" id="model-toggle">
+              <input id="use-deepseek" type="checkbox">
+              <span></span>
+              <b>DeepSeek 推理</b>
+            </label>
+            <span class="context-scope"><i></i> 仅发送脱敏证据与最近 8 条消息</span>
+          </div>
+          <button id="send-button" type="submit"><span>发送</span><b>↑</b></button>
         </div>
       </form>
+      <p class="composer-notice">RunCrew 可能出错。涉及伤病、胸闷或持续不适时，请停止训练并咨询专业人员。</p>
     </section>
 
     <aside class="context-panel">
-      <p class="eyebrow">ACTIVE CONTEXT</p>
-      <h2>本轮 Agent 看到了什么</h2>
-      <div id="selected-activity" class="selected-activity empty">尚未选择活动</div>
-      <div class="boundary-card">
-        <div><span>01</span><p><b>规范化活动</b><small>不读取坐标和 Provider 原始载荷</small></p></div>
-        <div><span>02</span><p><b>Training Review Skill</b><small>先计算 evidence，再交给模型解释</small></p></div>
-        <div><span>03</span><p><b>最近 8 条消息</b><small>长对话自动裁剪，避免上下文无限增长</small></p></div>
+      <div class="inspector-head">
+        <div><p class="breadcrumb">LIVE CONTEXT</p><h2>本轮运行上下文</h2></div>
+        <span class="live-indicator"><i></i> LIVE</span>
       </div>
+
+      <div class="inspector-scope">
+        <span><i></i> CURRENT TURN</span><small>READ-ONLY INSPECTOR</small>
+      </div>
+
+      <section class="inspector-section">
+        <div class="inspector-label"><span>活动快照</span><small>NORMALIZED</small></div>
+        <div id="selected-activity" class="selected-activity empty">请选择一条跑步记录以建立证据上下文</div>
+      </section>
+
+      <section id="crew-overview" class="inspector-section crew-overview">
+        <div class="inspector-label"><span>Agent 协作状态</span><small id="crew-summary">WAITING</small></div>
+        <div class="crew-node" id="crew-execution">
+          <span class="crew-index">01</span><i></i>
+          <p><b>训练执行 Agent</b><small>核对计划与实际负荷</small></p>
+          <em id="crew-execution-status">待运行</em>
+        </div>
+        <div class="crew-node" id="crew-recovery">
+          <span class="crew-index">02</span><i></i>
+          <p><b>恢复评估 Agent</b><small>结合反馈识别风险</small></p>
+          <em id="crew-recovery-status">待运行</em>
+        </div>
+        <div class="crew-node" id="crew-plan">
+          <span class="crew-index">03</span><i></i>
+          <p><b>计划调整 Agent</b><small>仅在需要时生成草案</small></p>
+          <em id="crew-plan-status">按需调用</em>
+        </div>
+      </section>
+
+      <section class="inspector-section boundary-card">
+        <div class="inspector-label"><span>证据与安全策略</span><small>ENFORCED</small></div>
+        <div><span>✓</span><p><b>结构化证据优先</b><small>先计算 evidence，再组织自然语言解释</small></p></div>
+        <div><span>✓</span><p><b>最小上下文窗口</b><small>只保留当前活动与最近 8 条消息</small></p></div>
+        <div><span>✓</span><p><b>人工确认后生效</b><small>训练计划草案不会自动写入执行计划</small></p></div>
+      </section>
+
       <div id="turn-meta" class="turn-meta" hidden>
         <p><span>回答模式</span><strong id="meta-model">—</strong></p>
         <p><span>上下文消息</span><strong id="meta-context">—</strong></p>
         <p><span>本轮 Token</span><strong id="meta-tokens">—</strong></p>
         <p><span>估算费用</span><strong id="meta-cost">—</strong></p>
       </div>
-      <p class="medical-note">RunCrew 不是医疗诊断工具。疼痛、胸闷或持续不适应停止训练并咨询专业人员。</p>
     </aside>
   </main>
 
   <div id="training-backdrop" class="training-backdrop" hidden></div>
-  <aside id="training-drawer" class="training-drawer" aria-label="训练闭环" hidden>
+  <aside id="training-drawer" class="training-drawer" aria-label="训练运营中心" hidden>
     <header class="drawer-head">
-      <div><p class="eyebrow">COACH OPERATIONS</p><h2>训练闭环</h2></div>
-      <button id="training-close" type="button" aria-label="关闭训练闭环">×</button>
+      <div><p class="breadcrumb">COACH OPERATIONS</p><h2>训练运营中心</h2><small>从身体反馈到训练决策的人工可控闭环</small></div>
+      <button id="training-close" type="button" aria-label="关闭训练运营中心">×</button>
     </header>
 
-    <section class="operations-section">
-      <label class="operations-label" for="training-goal">01 · 选择训练目标</label>
-      <select id="training-goal"><option value="">尚无激活目标</option></select>
-      <label class="provider-label" for="training-provider">活动来源</label>
-      <select id="training-provider"><option value="">全部来源</option></select>
+    <div class="drawer-status">
+      <span><i></i> 训练闭环可用</span>
+      <small>所有变更需人工批准</small>
+    </div>
+
+    <section class="operations-section plan-section">
+      <div class="operations-heading"><div><span>01</span><h3>训练计划上下文</h3></div><small>PLAN SCOPE</small></div>
+      <div class="select-grid">
+        <label class="operations-label" for="training-goal">训练目标
+          <select id="training-goal"><option value="">尚无激活目标</option></select>
+        </label>
+        <label class="provider-label" for="training-provider">活动来源
+          <select id="training-provider"><option value="">全部来源</option></select>
+        </label>
+      </div>
       <div id="training-plan" class="plan-card empty">先在终端创建并激活训练计划。</div>
     </section>
 
     <section class="operations-section">
-      <div class="operations-heading"><div><span>02</span><h3>记录今日状态</h3></div><small>保存到本地</small></div>
+      <div class="operations-heading"><div><span>02</span><h3>记录今日状态</h3></div><small>LOCAL CHECK-IN</small></div>
+      <p class="operations-copy">身体反馈会作为恢复评估 Agent 的输入，但不会替代医疗判断。</p>
       <form id="check-in-form" class="check-in-form">
         <label>日期<input id="check-in-day" type="date" required></label>
         <div class="metric-grid">
@@ -131,14 +217,15 @@
     </section>
 
     <section class="operations-section coach-section">
-      <div class="operations-heading"><div><span>03</span><h3>运行 Coach</h3></div><small>Execution → Recovery → Plan</small></div>
-      <p class="operations-copy">先核对训练执行，再评估恢复；只有需要降级时才调用计划节点。产生的草案不会自动生效。</p>
-      <button id="coach-run" class="primary-action" type="button">运行跨职责评估 <b>↗</b></button>
+      <div class="operations-heading"><div><span>03</span><h3>跨 Agent 联合评估</h3></div><small>EXECUTION → RECOVERY → PLAN</small></div>
+      <p class="operations-copy">先核对训练执行，再评估恢复；只有需要降级时才调用计划节点。生成的草案不会自动生效。</p>
+      <div class="operations-flow" aria-hidden="true"><span>训练执行</span><i>→</i><span>恢复评估</span><i>→</i><span>计划调整</span></div>
+      <button id="coach-run" class="primary-action" type="button">运行跨职责评估 <b>↑</b></button>
       <div id="coach-result" class="coach-result empty">尚未运行 Coach。</div>
     </section>
 
     <section class="operations-section recent-section">
-      <div class="operations-heading"><div><span>04</span><h3>最近运行</h3></div><small>可恢复审核</small></div>
+      <div class="operations-heading"><div><span>04</span><h3>最近运行记录</h3></div><small>RECOVERABLE AUDIT</small></div>
       <div id="coach-runs" class="coach-runs"></div>
     </section>
   </aside>

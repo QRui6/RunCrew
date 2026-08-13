@@ -25,6 +25,7 @@
 | 2026-08-13 | M7-C Coach Orchestrator Harness | 完成 | [M7-C Coach Orchestrator Harness](progress/2026-08-13-m7c-coach-orchestrator-harness.md) |
 | 2026-08-13 | M7-D 聊天产品训练闭环 | 完成 | [M7-D 聊天训练闭环](progress/2026-08-13-m7d-chat-training-operations.md) |
 | 2026-08-13 | M7-E Coach 多 Agent 版本化评测 | 完成 | [M7-E Coach 评测](progress/2026-08-13-m7e-coach-agent-evaluation.md) |
+| 2026-08-13 | M8-A1 正式产品界面重构 | 完成 | [M8-A1 产品界面](progress/2026-08-13-m8a1-product-interface-redesign.md) |
 
 ## 新阶段记录模板
 
