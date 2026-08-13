@@ -19,8 +19,10 @@ from runcrew.domain.training_cycle import (
     UserConfirmation,
 )
 from runcrew.domain.training_execution import TrainingExecutionConfirmation
+from runcrew.domain.training_operations import CoachRunAudit, CoachRunSummary
 from runcrew.storage.models import (
     ActivityRecord,
+    CoachRunRecord,
     ChatConversationRecord,
     ChatMessageRecord,
     DailyCheckInRecord,
@@ -604,3 +606,79 @@ class TrainingExecutionConfirmationRepository:
             TrainingExecutionConfirmation.model_validate_json(record.canonical_json)
             for record in records
         ]
+
+
+class CoachRunRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def save(self, audit: CoachRunAudit) -> None:
+        record = self.session.get(CoachRunRecord, audit.run_id)
+        if record is None:
+            record = CoachRunRecord(
+                id=audit.run_id,
+                goal_id=audit.goal_id,
+                plan_id=audit.plan_id,
+                status=audit.status,
+                workflow_hash=audit.result.workflow_hash,
+                planning_output_hash=audit.planning_output_hash,
+                request_json=audit.run_request.model_dump_json(),
+                result_json=audit.result.model_dump_json(),
+                proposal_id=audit.proposal_id,
+                created_at=audit.created_at,
+                decided_at=audit.decided_at,
+            )
+            self.session.add(record)
+        else:
+            record.status = audit.status
+            record.planning_output_hash = audit.planning_output_hash
+            record.proposal_id = audit.proposal_id
+            record.decided_at = audit.decided_at
+        self.session.flush()
+
+    def get(self, run_id: str) -> CoachRunAudit | None:
+        record = self.session.get(CoachRunRecord, run_id)
+        return self._to_domain(record) if record else None
+
+    def recent(self, *, limit: int = 10) -> list[CoachRunSummary]:
+        records = self.session.scalars(
+            select(CoachRunRecord)
+            .order_by(desc(CoachRunRecord.created_at))
+            .limit(limit)
+        ).all()
+        return [
+            CoachRunSummary(
+                run_id=record.id,
+                goal_id=record.goal_id,
+                plan_id=record.plan_id,
+                status=record.status,
+                recommendation=(
+                    audit.result.recovery.recommendation
+                    if audit.result.recovery is not None
+                    else None
+                ),
+                required_user_action=audit.result.required_user_action,
+                proposal_id=record.proposal_id,
+                created_at=record.created_at,
+                decided_at=record.decided_at,
+            )
+            for record in records
+            for audit in [self._to_domain(record)]
+        ]
+
+    @staticmethod
+    def _to_domain(record: CoachRunRecord) -> CoachRunAudit:
+        from runcrew.domain.coach import CoachAgentRunRequest, CoachAgentRunResult
+
+        return CoachRunAudit(
+            run_id=record.id,
+            goal_id=record.goal_id,
+            plan_id=record.plan_id,
+            status=record.status,
+            run_request=CoachAgentRunRequest.model_validate_json(record.request_json),
+            result=CoachAgentRunResult.model_validate_json(record.result_json),
+            planning_output_hash=record.planning_output_hash,
+            proposal_id=record.proposal_id,
+            created_at=record.created_at,
+            decided_at=record.decided_at,
+        )

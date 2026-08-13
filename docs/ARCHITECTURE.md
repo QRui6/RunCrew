@@ -200,6 +200,10 @@ provider + external_id
 
 保存用户对计划课执行事实的确认：关联实际 Activity、标记跳过或清除错误状态。候选匹配本身不落库；确认携带基础 revision，成功后提升计划 revision，过期操作只记录为 `stale`。
 
+### coach_runs
+
+保存可恢复的 Coach 编排审计，包括运行请求、受 Schema 校验的完整结果、workflow hash、Planning output hash、审核状态、正式 proposal ID 和决定时间。记录只存在于本地 SQLite；浏览器读取的是产品 DTO，不获得 Provider 原始载荷。拒绝不会创建正式提案，批准前必须重放并核对草案。
+
 ## 失败语义
 
 | 情况 | 行为 |
@@ -280,3 +284,18 @@ DeterministicCoachPolicy（只做路由）
 ```
 
 Policy 只接收完成状态、恢复路由、下一节点类型化请求和剩余预算。Harness 负责固定参数、工具白名单、目标/计划范围、Recovery `input_hash` 血缘、Schema、重试、超时和退出条件。跨节点 Handoff 只记录字段名与请求哈希，避免把身体反馈和活动详情复制进 Trace。
+
+M7-D 产品审核链：
+
+```text
+训练闭环抽屉
+  → 结构化身体反馈（本地 SQLite）
+  → Coach Run（保存请求、结果与 planning hash）
+  → 用户 approve / reject
+       ├── reject：只关闭 Coach Run，不创建正式提案
+       └── approve：服务端以原请求重放 Coach
+              ├── 结果变化 → stale，不写计划
+              └── 结果相同 → 创建正式提案 → revision 校验 → 应用
+```
+
+Decision API 不接受任何计划 patch。浏览器只表达决定，变更内容必须来自服务端保存并重新验证的 Coach 结果。

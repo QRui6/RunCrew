@@ -1,0 +1,51 @@
+{
+  "$defs": {
+    "SourceProvider": {
+      "enum": [
+        "coros",
+        "fit",
+        "keep",
+        "manual",
+        "fixture"
+      ],
+      "title": "SourceProvider",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "goal_id": {
+      "minLength": 1,
+      "title": "Goal Id",
+      "type": "string"
+    },
+    "plan_id": {
+      "minLength": 1,
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "as_of": {
+      "format": "date-time",
+      "title": "As Of",
+      "type": "string"
+    },
+    "provider": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SourceProvider"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "goal_id",
+    "plan_id",
+    "as_of"
+  ],
+  "title": "训练运营 Coach 运行提交",
+  "type": "object"
+}

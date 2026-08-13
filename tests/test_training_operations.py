@@ -1,0 +1,313 @@
+from __future__ import annotations
+
+import asyncio
+import json
+from datetime import date, datetime, timezone
+from pathlib import Path
+
+from runcrew.domain.activity import ActivitySummary, SourceProvider, SourceRef, SportType
+from runcrew.domain.training_cycle import (
+    PlanSession,
+    PlanSessionPatch,
+    TrainingGoal,
+    TrainingPlan,
+)
+from runcrew.domain.training_operations import (
+    CheckInSubmission,
+    CoachRunDecisionRequest,
+    CoachRunSubmission,
+    CoachRunDecisionResult,
+    CoachRunView,
+    TrainingOperationsBootstrap,
+)
+from runcrew.services.training_cycle import TrainingCycleService
+from runcrew.services.training_operations import TrainingOperationsService
+from runcrew.storage.database import Database
+from runcrew.storage.repositories import (
+    ActivityRepository,
+    CheckInRepository,
+    CoachRunRepository,
+    PlanChangeRepository,
+    TrainingGoalRepository,
+    TrainingPlanRepository,
+)
+from runcrew.web import DemoApplication, DemoDashboardService
+
+
+ANCHOR = datetime(2026, 8, 13, 8, tzinfo=timezone.utc)
+
+
+def seed(database_path: Path) -> Database:
+    database = Database(f"sqlite:///{database_path.as_posix()}")
+    database.create_schema()
+    with database.session() as session:
+        TrainingGoalRepository(session).save(
+            TrainingGoal(
+                id="goal-1",
+                name="秋季10公里",
+                event_type="10k",
+                target_date=date(2026, 10, 18),
+                available_weekdays=["thu", "sat"],
+            )
+        )
+        TrainingPlanRepository(session).save(
+            TrainingPlan(
+                id="plan-1",
+                goal_id="goal-1",
+                week_start=date(2026, 8, 10),
+                status="active",
+                sessions=[
+                    PlanSession(
+                        id="quality-1",
+                        scheduled_for=date(2026, 8, 15),
+                        session_type="interval",
+                        distance_meters=6000,
+                        duration_seconds=2400,
+                        intensity="高强度",
+                        purpose="速度耐力",
+                    )
+                ],
+            )
+        )
+        ActivityRepository(session).upsert(
+            ActivitySummary(
+                id="run-1",
+                source_ref=SourceRef(
+                    provider=SourceProvider.FIXTURE,
+                    external_id="private-provider-id",
+                    fetched_at=ANCHOR,
+                    raw_payload_hash="private-raw-hash",
+                ),
+                sport_type=SportType.RUN,
+                started_at=datetime(2026, 8, 12, 8, tzinfo=timezone.utc),
+                duration_seconds=1800,
+                distance_meters=5000,
+            )
+        )
+        session.commit()
+    return database
+
+
+def moderate_check_in() -> CheckInSubmission:
+    return CheckInSubmission(
+        day=ANCHOR.date(),
+        fatigue=3,
+        soreness=4,
+        sleep_quality=3,
+        pain_area="右膝",
+        pain_severity=3,
+        note="跑后略有不适",
+    )
+
+
+def run_submission() -> CoachRunSubmission:
+    return CoachRunSubmission(
+        goal_id="goal-1",
+        plan_id="plan-1",
+        as_of=ANCHOR,
+        provider="fixture",
+    )
+
+
+def test_operations_bootstrap_and_check_in_are_local_and_scoped(tmp_path: Path) -> None:
+    path = tmp_path / "operations.db"
+    seed(path)
+    service = TrainingOperationsService(database_path=path)
+
+    check_in = service.record_check_in(goal_id="goal-1", submission=moderate_check_in())
+    bootstrap = service.bootstrap()
+
+    assert check_in.pain_area == "右膝"
+    assert len(bootstrap.goals) == 1
+    assert bootstrap.goals[0].active_plan is not None
+    assert bootstrap.goals[0].latest_check_in is not None
+    assert "private-provider-id" not in bootstrap.model_dump_json()
+    assert "private-raw-hash" not in bootstrap.model_dump_json()
+
+
+def test_coach_run_persists_audit_but_not_plan_proposal(tmp_path: Path) -> None:
+    path = tmp_path / "coach-run.db"
+    database = seed(path)
+    service = TrainingOperationsService(database_path=path)
+    service.record_check_in(goal_id="goal-1", submission=moderate_check_in())
+
+    view = asyncio.run(service.run_coach(run_submission()))
+    loaded = service.get_coach_run(view.audit.run_id)
+
+    assert view.audit.status == "awaiting_user_confirmation"
+    assert view.audit.result.planning is not None
+    assert loaded.audit.run_id == view.audit.run_id
+    assert loaded.audit.planning_output_hash == view.audit.result.planning.input_hash
+    with database.session() as session:
+        assert PlanChangeRepository(session).pending_for_goal("goal-1") == []
+        assert TrainingPlanRepository(session).get("plan-1").revision == 1
+
+
+def test_user_approval_replays_then_applies_revisioned_change(tmp_path: Path) -> None:
+    path = tmp_path / "approve.db"
+    database = seed(path)
+    service = TrainingOperationsService(database_path=path)
+    service.record_check_in(goal_id="goal-1", submission=moderate_check_in())
+    run = asyncio.run(service.run_coach(run_submission()))
+
+    decided = asyncio.run(
+        service.decide_coach_run(
+            run_id=run.audit.run_id,
+            request=CoachRunDecisionRequest(
+                decision="approve", comment="同意本次降低训练量"
+            ),
+        )
+    )
+
+    assert decided.outcome == "approved"
+    assert decided.plan.revision == 2
+    assert decided.proposal is not None and decided.proposal.status == "approved"
+    assert decided.confirmation is not None
+    assert decided.audit.proposal_id == decided.proposal.id
+    with database.session() as session:
+        stored = CoachRunRepository(session).get(run.audit.run_id)
+        assert stored is not None and stored.status == "approved"
+
+
+def test_reject_does_not_create_or_apply_proposal(tmp_path: Path) -> None:
+    path = tmp_path / "reject.db"
+    database = seed(path)
+    service = TrainingOperationsService(database_path=path)
+    service.record_check_in(goal_id="goal-1", submission=moderate_check_in())
+    run = asyncio.run(service.run_coach(run_submission()))
+
+    decided = asyncio.run(
+        service.decide_coach_run(
+            run_id=run.audit.run_id,
+            request=CoachRunDecisionRequest(decision="reject", comment="今天仍按原计划"),
+        )
+    )
+
+    assert decided.outcome == "rejected"
+    assert decided.proposal is None and decided.confirmation is None
+    assert decided.plan.revision == 1
+    with database.session() as session:
+        assert PlanChangeRepository(session).pending_for_goal("goal-1") == []
+
+
+def test_changed_plan_makes_coach_draft_stale_instead_of_overwriting(tmp_path: Path) -> None:
+    path = tmp_path / "stale.db"
+    database = seed(path)
+    service = TrainingOperationsService(database_path=path)
+    service.record_check_in(goal_id="goal-1", submission=moderate_check_in())
+    run = asyncio.run(service.run_coach(run_submission()))
+
+    with database.session() as session:
+        cycle = TrainingCycleService(
+            goals=TrainingGoalRepository(session),
+            plans=TrainingPlanRepository(session),
+            check_ins=CheckInRepository(session),
+            changes=PlanChangeRepository(session),
+        )
+        proposal = cycle.propose_change(
+            plan_id="plan-1",
+            proposed_by="user",
+            reason="用户先修改了计划",
+            changes=[
+                PlanSessionPatch(session_id="quality-1", duration_seconds=2100)
+            ],
+        )
+        cycle.decide_change(proposal_id=proposal.id, decision="approve")
+        session.commit()
+
+    decided = asyncio.run(
+        service.decide_coach_run(
+            run_id=run.audit.run_id,
+            request=CoachRunDecisionRequest(decision="approve"),
+        )
+    )
+
+    assert decided.outcome == "stale"
+    assert decided.plan.revision == 2
+    assert decided.plan.sessions[0].duration_seconds == 2100
+    assert decided.proposal is None
+
+
+def test_training_api_end_to_end_and_rejects_client_patch_injection(tmp_path: Path) -> None:
+    path = tmp_path / "api.db"
+    seed(path)
+    application = DemoApplication(
+        DemoDashboardService(database_path=path, evaluation_directory=tmp_path / "evals")
+    )
+
+    bootstrap = application.handle("GET", "/api/training/bootstrap")
+    check_in = application.handle(
+        "POST",
+        "/api/training/goals/goal-1/check-ins",
+        moderate_check_in().model_dump_json().encode("utf-8"),
+    )
+    run = application.handle(
+        "POST",
+        "/api/training/coach-runs",
+        run_submission().model_dump_json().encode("utf-8"),
+    )
+    run_payload = json.loads(run.body)
+    injected = application.handle(
+        "POST",
+        f"/api/training/coach-runs/{run_payload['audit']['run_id']}/decision",
+        json.dumps(
+            {
+                "decision": "approve",
+                "changes": [{"session_id": "quality-1", "duration_seconds": 99999}],
+            }
+        ).encode(),
+    )
+    approved = application.handle(
+        "POST",
+        f"/api/training/coach-runs/{run_payload['audit']['run_id']}/decision",
+        json.dumps({"decision": "approve", "comment": "确认"}, ensure_ascii=False).encode(
+            "utf-8"
+        ),
+    )
+
+    assert bootstrap.status == 200
+    assert check_in.status == 201
+    assert run.status == 201
+    assert run_payload["audit"]["status"] == "awaiting_user_confirmation"
+    assert injected.status == 400
+    assert approved.status == 200
+    assert json.loads(approved.body)["outcome"] == "approved"
+
+
+def test_training_write_routes_reject_unsupported_methods(tmp_path: Path) -> None:
+    path = tmp_path / "methods.db"
+    seed(path)
+    application = DemoApplication(
+        DemoDashboardService(database_path=path, evaluation_directory=tmp_path / "evals")
+    )
+
+    assert application.handle("DELETE", "/api/training/coach-runs/anything").status == 405
+    assert application.handle("PUT", "/api/training/goals/goal-1/check-ins").status == 405
+
+
+def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> None:
+    path = tmp_path / "assets.db"
+    seed(path)
+    application = DemoApplication(
+        DemoDashboardService(database_path=path, evaluation_directory=tmp_path / "evals")
+    )
+    html = application.handle("GET", "/").body.decode("utf-8")
+    script = application.handle("GET", "/assets/chat.js").body.decode("utf-8")
+    assert "训练闭环" in html
+    assert "记录今日状态" in html
+    assert "运行跨职责评估" in html
+    assert "/api/training/coach-runs" in script
+    assert "window.confirm" in script
+    assert "innerHTML" not in script
+
+    references = Path("schemas/training-operations")
+    expected = {
+        "bootstrap.schema.json": TrainingOperationsBootstrap,
+        "check-in-input.schema.json": CheckInSubmission,
+        "coach-run-input.schema.json": CoachRunSubmission,
+        "coach-run-output.schema.json": CoachRunView,
+        "decision-input.schema.json": CoachRunDecisionRequest,
+        "decision-output.schema.json": CoachRunDecisionResult,
+    }
+    for name, model in expected.items():
+        assert json.loads((references / name).read_text("utf-8")) == model.model_json_schema()

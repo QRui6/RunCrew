@@ -1,0 +1,100 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "day": {
+      "format": "date",
+      "title": "Day",
+      "type": "string"
+    },
+    "fatigue": {
+      "maximum": 5,
+      "minimum": 1,
+      "title": "Fatigue",
+      "type": "integer"
+    },
+    "soreness": {
+      "maximum": 10,
+      "minimum": 0,
+      "title": "Soreness",
+      "type": "integer"
+    },
+    "sleep_quality": {
+      "maximum": 5,
+      "minimum": 1,
+      "title": "Sleep Quality",
+      "type": "integer"
+    },
+    "readiness": {
+      "anyOf": [
+        {
+          "maximum": 5,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Readiness"
+    },
+    "pain_area": {
+      "anyOf": [
+        {
+          "maxLength": 80,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Pain Area"
+    },
+    "pain_severity": {
+      "default": 0,
+      "maximum": 10,
+      "minimum": 0,
+      "title": "Pain Severity",
+      "type": "integer"
+    },
+    "acute_symptoms": {
+      "items": {
+        "enum": [
+          "chest_pain_or_pressure",
+          "fainting_or_severe_dizziness",
+          "unusual_or_severe_shortness_of_breath",
+          "new_irregular_heartbeat",
+          "fever_or_acute_illness",
+          "sudden_pain_swelling_or_redness"
+        ],
+        "type": "string"
+      },
+      "maxItems": 6,
+      "title": "Acute Symptoms",
+      "type": "array"
+    },
+    "note": {
+      "anyOf": [
+        {
+          "maxLength": 500,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Note"
+    }
+  },
+  "required": [
+    "day",
+    "fatigue",
+    "soreness",
+    "sleep_quality"
+  ],
+  "title": "训练运营身体反馈提交",
+  "type": "object"
+}

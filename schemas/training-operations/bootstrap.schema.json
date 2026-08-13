@@ -1,0 +1,758 @@
+{
+  "$defs": {
+    "CoachRunSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "goal_id": {
+          "title": "Goal Id",
+          "type": "string"
+        },
+        "plan_id": {
+          "title": "Plan Id",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "recommendation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recommendation"
+        },
+        "required_user_action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Required User Action"
+        },
+        "proposal_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proposal Id"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "decided_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decided At"
+        }
+      },
+      "required": [
+        "run_id",
+        "goal_id",
+        "plan_id",
+        "status",
+        "created_at"
+      ],
+      "title": "CoachRunSummary",
+      "type": "object"
+    },
+    "DailyCheckIn": {
+      "additionalProperties": false,
+      "description": "用户主观反馈；仅作为恢复决策输入，不代表医疗诊断。",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "day": {
+          "format": "date",
+          "title": "Day",
+          "type": "string"
+        },
+        "fatigue": {
+          "description": "1为轻松，5为非常疲劳",
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Fatigue",
+          "type": "integer"
+        },
+        "soreness": {
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Soreness",
+          "type": "integer"
+        },
+        "sleep_quality": {
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Sleep Quality",
+          "type": "integer"
+        },
+        "readiness": {
+          "anyOf": [
+            {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Readiness"
+        },
+        "pain_area": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pain Area"
+        },
+        "pain_severity": {
+          "default": 0,
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Pain Severity",
+          "type": "integer"
+        },
+        "acute_symptoms": {
+          "items": {
+            "enum": [
+              "chest_pain_or_pressure",
+              "fainting_or_severe_dizziness",
+              "unusual_or_severe_shortness_of_breath",
+              "new_irregular_heartbeat",
+              "fever_or_acute_illness",
+              "sudden_pain_swelling_or_redness"
+            ],
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Acute Symptoms",
+          "type": "array"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "day",
+        "fatigue",
+        "soreness",
+        "sleep_quality"
+      ],
+      "title": "DailyCheckIn",
+      "type": "object"
+    },
+    "PlanChangeProposal": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "plan_id": {
+          "minLength": 1,
+          "title": "Plan Id",
+          "type": "string"
+        },
+        "base_revision": {
+          "minimum": 1,
+          "title": "Base Revision",
+          "type": "integer"
+        },
+        "proposed_by": {
+          "enum": [
+            "user",
+            "coach_orchestrator",
+            "plan_agent",
+            "recovery_agent"
+          ],
+          "title": "Proposed By",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "changes": {
+          "items": {
+            "$ref": "#/$defs/PlanSessionPatch"
+          },
+          "maxItems": 14,
+          "minItems": 1,
+          "title": "Changes",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "status": {
+          "default": "pending",
+          "enum": [
+            "pending",
+            "approved",
+            "rejected",
+            "stale"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "decided_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decided At"
+        }
+      },
+      "required": [
+        "plan_id",
+        "base_revision",
+        "proposed_by",
+        "reason",
+        "changes"
+      ],
+      "title": "PlanChangeProposal",
+      "type": "object"
+    },
+    "PlanSession": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "scheduled_for": {
+          "format": "date",
+          "title": "Scheduled For",
+          "type": "string"
+        },
+        "session_type": {
+          "enum": [
+            "easy",
+            "long_run",
+            "tempo",
+            "interval",
+            "recovery",
+            "rest",
+            "test"
+          ],
+          "title": "Session Type",
+          "type": "string"
+        },
+        "distance_meters": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distance Meters"
+        },
+        "duration_seconds": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Seconds"
+        },
+        "intensity": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intensity"
+        },
+        "purpose": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Purpose",
+          "type": "string"
+        },
+        "status": {
+          "default": "planned",
+          "enum": [
+            "planned",
+            "completed",
+            "skipped"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "linked_activity_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Linked Activity Id"
+        }
+      },
+      "required": [
+        "scheduled_for",
+        "session_type",
+        "purpose"
+      ],
+      "title": "PlanSession",
+      "type": "object"
+    },
+    "PlanSessionPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "scheduled_for": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scheduled For"
+        },
+        "session_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "easy",
+                "long_run",
+                "tempo",
+                "interval",
+                "recovery",
+                "rest",
+                "test"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Type"
+        },
+        "distance_meters": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distance Meters"
+        },
+        "duration_seconds": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Seconds"
+        },
+        "clear_distance": {
+          "default": false,
+          "title": "Clear Distance",
+          "type": "boolean"
+        },
+        "clear_duration": {
+          "default": false,
+          "title": "Clear Duration",
+          "type": "boolean"
+        },
+        "clear_intensity": {
+          "default": false,
+          "title": "Clear Intensity",
+          "type": "boolean"
+        },
+        "intensity": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intensity"
+        },
+        "purpose": {
+          "anyOf": [
+            {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Purpose"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "title": "PlanSessionPatch",
+      "type": "object"
+    },
+    "SourceProvider": {
+      "enum": [
+        "coros",
+        "fit",
+        "keep",
+        "manual",
+        "fixture"
+      ],
+      "title": "SourceProvider",
+      "type": "string"
+    },
+    "TrainingGoal": {
+      "additionalProperties": false,
+      "description": "用户明确声明的训练目标，而不是 Agent 猜测出来的目标。",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "event_type": {
+          "enum": [
+            "5k",
+            "10k",
+            "half_marathon",
+            "marathon",
+            "general_fitness"
+          ],
+          "title": "Event Type",
+          "type": "string"
+        },
+        "target_date": {
+          "format": "date",
+          "title": "Target Date",
+          "type": "string"
+        },
+        "target_time_seconds": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Time Seconds"
+        },
+        "available_weekdays": {
+          "items": {
+            "enum": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ],
+            "type": "string"
+          },
+          "maxItems": 7,
+          "minItems": 1,
+          "title": "Available Weekdays",
+          "type": "array"
+        },
+        "status": {
+          "default": "active",
+          "enum": [
+            "active",
+            "achieved",
+            "abandoned"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "event_type",
+        "target_date",
+        "available_weekdays"
+      ],
+      "title": "TrainingGoal",
+      "type": "object"
+    },
+    "TrainingOperationsGoalView": {
+      "additionalProperties": false,
+      "properties": {
+        "goal": {
+          "$ref": "#/$defs/TrainingGoal"
+        },
+        "active_plan": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrainingPlan"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latest_check_in": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DailyCheckIn"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pending_proposals": {
+          "items": {
+            "$ref": "#/$defs/PlanChangeProposal"
+          },
+          "title": "Pending Proposals",
+          "type": "array"
+        }
+      },
+      "required": [
+        "goal",
+        "active_plan",
+        "latest_check_in"
+      ],
+      "title": "TrainingOperationsGoalView",
+      "type": "object"
+    },
+    "TrainingPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "goal_id": {
+          "minLength": 1,
+          "title": "Goal Id",
+          "type": "string"
+        },
+        "week_start": {
+          "format": "date",
+          "title": "Week Start",
+          "type": "string"
+        },
+        "status": {
+          "default": "draft",
+          "enum": [
+            "draft",
+            "active",
+            "superseded",
+            "completed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "source": {
+          "default": "user",
+          "enum": [
+            "user",
+            "deterministic",
+            "plan_agent"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "sessions": {
+          "items": {
+            "$ref": "#/$defs/PlanSession"
+          },
+          "maxItems": 14,
+          "title": "Sessions",
+          "type": "array"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "goal_id",
+        "week_start"
+      ],
+      "title": "TrainingPlan",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "goals": {
+      "items": {
+        "$ref": "#/$defs/TrainingOperationsGoalView"
+      },
+      "title": "Goals",
+      "type": "array"
+    },
+    "providers": {
+      "items": {
+        "$ref": "#/$defs/SourceProvider"
+      },
+      "title": "Providers",
+      "type": "array"
+    },
+    "recent_coach_runs": {
+      "items": {
+        "$ref": "#/$defs/CoachRunSummary"
+      },
+      "title": "Recent Coach Runs",
+      "type": "array"
+    }
+  },
+  "required": [
+    "generated_at",
+    "goals"
+  ],
+  "title": "TrainingOperationsBootstrap",
+  "type": "object"
+}

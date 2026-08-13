@@ -6,6 +6,11 @@
 
 ### Added
 
+- 在聊天产品增加“训练闭环”抽屉，可选择目标/活动来源、查看激活计划、提交身体反馈、运行 Coach 并审核计划调整；
+- 增加训练运营产品领域契约、Service 和五类本地 API；
+- 增加本地 `coach_runs` 审计表，保存 Coach 请求、受校验结果、workflow/planning hash、审核状态和正式 proposal 关联；
+- 增加批准前 Coach 服务端重放：只有新旧 Planning hash 与完整草案一致才创建并批准正式提案，否则标记 stale；
+- 增加六份训练运营 API JSON Schema、导出脚本、8项服务/API/安全/静态资源测试和 ADR-0018；
 - 增加 Coach Orchestrator 输入、动作、最小 Policy Context、节点权限、Handoff、Trace、Budget、Error 和输出 Schema；
 - 增加 Execution、Recovery、Plan 三个隔离职责节点和确定性编排 Loop，支持有限重试、节点/整次超时、步骤与调用预算；
 - 增加 `runcrew coach run`，串联“执行对照 → 恢复评估 → 必要时计划调整”，并在计划草案后暂停等待用户确认；
@@ -31,6 +36,8 @@
 
 ### Changed
 
+- 浏览器审核请求只允许 `decision + comment`，不能提交计划 patch、reason 或 revision；拒绝不会创建正式提案；
+- Coach 运行可跨页面刷新恢复，最近运行列表展示待确认、批准、拒绝与 stale 状态；
 - 训练执行对照输出增加 `goal_id`，供跨节点 Harness 校验目标范围；
 - 计划调整节点保持 `prepare_change` 权限，不能保存或批准提案；缺反馈或红旗时 Coach 不调用 Plan 节点；
 - `unmatched` 与 `skipped` 分离；缺少活动不再被解释为用户跳过训练，只有显式确认才更新计划课状态；
@@ -43,6 +50,9 @@
 
 ### Verified
 
+- M7-D 全量自动化测试增至125项，训练运营 API、重放批准、stale、前端资源和 Schema 漂移均通过；
+- `chat.js` 与工程观测台 `app.js` 均通过 JavaScript 语法检查；本阶段没有调用 COROS 或 DeepSeek；
+- 应用内浏览器本次无可用实例，未声称完成视觉点击验收，保留本机人工复核项；
 - Coach CLI 真实 SQLite 集成测试证明生成草案后 pending proposal 仍为空、plan revision 不变；
 - 117项全量测试和项目统一验证通过；M7-C 没有调用 COROS 或 DeepSeek；
 - `assess-running-recovery` 通过官方 `quick_validate.py`；

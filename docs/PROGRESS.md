@@ -23,6 +23,7 @@
 | 2026-08-13 | M7-B2 训练计划草案与调整 Skill | 完成 | [M7-B2 训练计划 Skill](progress/2026-08-13-m7b2-training-plan-skill.md) |
 | 2026-08-13 | M7-B3 训练执行对照 Skill | 完成 | [M7-B3 训练执行 Skill](progress/2026-08-13-m7b3-training-execution-skill.md) |
 | 2026-08-13 | M7-C Coach Orchestrator Harness | 完成 | [M7-C Coach Orchestrator Harness](progress/2026-08-13-m7c-coach-orchestrator-harness.md) |
+| 2026-08-13 | M7-D 聊天产品训练闭环 | 完成 | [M7-D 聊天训练闭环](progress/2026-08-13-m7d-chat-training-operations.md) |
 
 ## 新阶段记录模板
 

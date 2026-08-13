@@ -15,6 +15,15 @@ from pydantic import ValidationError
 
 from runcrew.policies.deepseek import DeepSeekPolicyError
 from runcrew.services.chat import ChatService, ChatServiceError
+from runcrew.services.training_operations import (
+    TrainingOperationsError,
+    TrainingOperationsService,
+)
+from runcrew.domain.training_operations import (
+    CheckInSubmission,
+    CoachRunDecisionRequest,
+    CoachRunSubmission,
+)
 from runcrew.web.dashboard import DemoDashboardService
 
 
@@ -31,9 +40,13 @@ class DemoApplication:
         self,
         service: DemoDashboardService,
         chat_service: ChatService | None = None,
+        training_service: TrainingOperationsService | None = None,
     ) -> None:
         self.service = service
         self.chat_service = chat_service or ChatService(
+            database_path=service.database_path
+        )
+        self.training_service = training_service or TrainingOperationsService(
             database_path=service.database_path
         )
         static_root = resources.files("runcrew.web").joinpath("static")
@@ -99,6 +112,54 @@ class DemoApplication:
                 HTTPStatus.OK,
                 self.chat_service.bootstrap().model_dump(mode="json"),
             )
+        if method == "GET" and parsed.path == "/api/training/bootstrap":
+            return self._json_response(
+                HTTPStatus.OK,
+                self.training_service.bootstrap().model_dump(mode="json"),
+            )
+        goal_id = _training_check_in_route(parsed.path)
+        if method == "POST" and goal_id:
+            try:
+                submission = CheckInSubmission.model_validate(self._decode_json(body))
+                check_in = self.training_service.record_check_in(
+                    goal_id=goal_id,
+                    submission=submission,
+                )
+            except (TrainingOperationsError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(
+                HTTPStatus.CREATED,
+                check_in.model_dump(mode="json"),
+            )
+        if method == "POST" and parsed.path == "/api/training/coach-runs":
+            try:
+                submission = CoachRunSubmission.model_validate(self._decode_json(body))
+                result = asyncio.run(self.training_service.run_coach(submission))
+            except (TrainingOperationsError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(
+                HTTPStatus.CREATED,
+                result.model_dump(mode="json"),
+            )
+        coach_run_id, is_decision = _training_coach_run_route(parsed.path)
+        if method == "GET" and coach_run_id and not is_decision:
+            try:
+                result = self.training_service.get_coach_run(coach_run_id)
+            except TrainingOperationsError as error:
+                return self._json_response(HTTPStatus.NOT_FOUND, {"error": str(error)})
+            return self._json_response(HTTPStatus.OK, result.model_dump(mode="json"))
+        if method == "POST" and coach_run_id and is_decision:
+            try:
+                decision = CoachRunDecisionRequest.model_validate(self._decode_json(body))
+                result = asyncio.run(
+                    self.training_service.decide_coach_run(
+                        run_id=coach_run_id,
+                        request=decision,
+                    )
+                )
+            except (TrainingOperationsError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(HTTPStatus.OK, result.model_dump(mode="json"))
         if method == "POST" and parsed.path == "/api/chat/conversations":
             try:
                 payload = self._decode_json(body)
@@ -252,6 +313,7 @@ def serve_demo(
     application = DemoApplication(
         service,
         ChatService(database_path=database_path),
+        TrainingOperationsService(database_path=database_path),
     )
     server = _DemoHttpServer(("127.0.0.1", port), application)
     url = f"http://127.0.0.1:{server.server_port}"
@@ -298,6 +360,26 @@ def _chat_conversation_route(path: str) -> tuple[str | None, bool]:
         len(parts) == 5
         and parts[:3] == ["api", "chat", "conversations"]
         and parts[4] == "messages"
+    ):
+        return parts[3], True
+    return None, False
+
+
+def _training_check_in_route(path: str) -> str | None:
+    parts = [part for part in path.split("/") if part]
+    if len(parts) == 5 and parts[:3] == ["api", "training", "goals"] and parts[4] == "check-ins":
+        return parts[3]
+    return None
+
+
+def _training_coach_run_route(path: str) -> tuple[str | None, bool]:
+    parts = [part for part in path.split("/") if part]
+    if len(parts) == 4 and parts[:3] == ["api", "training", "coach-runs"]:
+        return parts[3], False
+    if (
+        len(parts) == 5
+        and parts[:3] == ["api", "training", "coach-runs"]
+        and parts[4] == "decision"
     ):
         return parts[3], True
     return None, False

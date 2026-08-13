@@ -185,3 +185,25 @@ class TrainingExecutionConfirmationRecord(Base):
     applied_revision: Mapped[int | None] = mapped_column(Integer)
     canonical_json: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class CoachRunRecord(Base):
+    __tablename__ = "coach_runs"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    goal_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("training_goals.id"), nullable=False, index=True
+    )
+    plan_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("training_plans.id"), nullable=False, index=True
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    workflow_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    planning_output_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    request_json: Mapped[str] = mapped_column(Text, nullable=False)
+    result_json: Mapped[str] = mapped_column(Text, nullable=False)
+    proposal_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("plan_change_proposals.id"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -72,4 +72,4 @@ RunCrew 是一个使用你自己的长期跑步数据，帮助完成“训练回
 → 必要的多 Agent 协作
 ```
 
-当前已经完成数据竖切、FIT 详情兜底、确定性 Training Review Skill、单 Agent Context + Harness + Loop、版本化评测、DeepSeek Policy、工程观测台和跑步数据连续对话 MVP。M7-A 建立了训练闭环状态，M7-B1/B2/B3 已增加恢复风险、计划草案和训练执行对照 Skill，M7-C 已用 Coach Orchestrator Harness 连接职责、最小上下文、权限和确认边界。下一步把该闭环接入聊天产品，而不是继续机械增加角色名称。
+当前已经完成数据竖切、FIT 详情兜底、确定性 Training Review Skill、单 Agent Context + Harness + Loop、版本化评测、DeepSeek Policy、工程观测台和跑步数据连续对话。M7-A 建立训练闭环状态，M7-B1/B2/B3 增加三个领域 Skill，M7-C 用 Coach Harness 连接职责和确认边界，M7-D 已把目标、反馈、Coach 与重放审核接入聊天产品。下一步建立版本化多 Agent 评测，而不是继续机械增加角色名称。

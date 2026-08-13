@@ -5,7 +5,7 @@
 
 ## 当前里程碑
 
-**M5 与 M6-A1/A2/A3a 已完成；真实 DeepSeek 聊天同题验收仍待新 Key。M7-A、M7-B1/B2/B3 与 M7-C 已完成，当前三个职责节点可由 Coach Harness 编排；下一步是 M7-D 聊天产品接入。**
+**M5 与 M6-A1/A2/A3a 已完成；真实 DeepSeek 聊天同题验收仍待新 Key。M7-A、M7-B1/B2/B3、M7-C 与 M7-D 已完成，聊天产品现可运行并审核 Coach 训练闭环；下一步是 M7-E 版本化多 Agent 评测。**
 
 M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
@@ -22,7 +22,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 ## 已验证事实
 
 - Python 3.13 本地环境可运行；
-- 自动化测试：117 passed；
+- 自动化测试：125 passed；
 - fixture 首次同步插入 2 条；
 - fixture 第二次同步插入 0 条、更新 2 条；
 - 真实 COROS OAuth + PKCE 成功；
@@ -151,6 +151,12 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 减量/休息只生成草案并以 `awaiting_user_confirmation` 暂停；缺反馈与安全红旗直接阻断而不调用 Plan；
 - `runcrew coach run` 已接入真实 SQLite Service；集成测试证明运行后 pending proposal 为空、plan revision 不变；
 - M7-C 增加10项专项测试，全量自动化测试增至117项；没有读取私人活动或调用外部账户。
+- 聊天产品顶部新增训练闭环入口，可选择激活目标、活动来源、查看计划、提交结构化身体反馈并运行 Coach；
+- `coach_runs` 保存运行请求、完整受校验结果、workflow/planning hash、审核状态、proposal ID 与决定时间，刷新后可以恢复待审核运行；
+- 浏览器 decision 只允许 `approve/reject + comment`，额外的 changes/reason/revision 会被 Schema 拒绝；
+- 用户拒绝只关闭 Coach 运行，不创建正式提案；用户批准前服务端重放原请求，结果或草案变化则标记 stale；
+- 重放一致时由服务端从 Coach 草案创建正式提案，再经 `TrainingCycleService` revision 校验应用；
+- 六份训练运营 API Schema 已导出，新增8项产品服务、API、安全和静态资源测试；
 
 ## 当前已知限制
 
@@ -159,10 +165,11 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - `queryActivityFitFileDownloadUrls` 在参数符合实时 schema 的情况下返回 `isError=true`，没有下发下载 URL；
 - 自动 FIT URL 未能验证，但用户手动导出的真实 FIT 已通过私有缓存完成端到端验收；
 - 当前 COROS 规范化活动没有训练负荷字段，因此真实 `load_change` 暂时可能为 `unknown`；
-- 训练目标、周计划、主观反馈和执行确认已经持久化；计划草案与执行对照可由 CLI 使用，但尚未接入聊天界面；
+- 训练目标、计划、反馈、Coach 运行和审核已接入聊天界面；目标与计划首次创建仍通过 CLI；
 - 恢复风险阈值是 RunCrew 保守工程规则，不是临床决策；无训练负荷时的时长代理不能表示强度差异；
 - Coach 多职责 Harness 已实现，但默认路由仍是确定性 Policy，尚未经过版本化多 Agent Suite 或真实 LLM 编排评测；
-- Coach CLI 只返回计划变更草案，尚未接入聊天审核，也不会自动创建 pending proposal；
+- 普通自然语言聊天不会隐式触发训练写入；结构化训练闭环抽屉才拥有显式审核入口；
+- 应用内浏览器在本次验收会话中没有可用实例，因此视觉点击验收待本机人工复核；HTTP/DOM/JS 自动化已通过；
 - 计划 v1 主要按时长规划，不处理比赛周、天气、海拔、力量训练或精确配速区间；5%增量和60%降级是保守工程规则；
 - 执行对照 v1 不理解训练标题、配速/心率区间和间歇分段；多设备重复活动及跨计划重复关联尚未自动解决；
 - 当前12场景中，3个非法动作场景使用脚本化 Policy 注入，只能证明 Harness 能拦截，不能声称真实 DeepSeek 在提示注入或恶意诱导下同样安全；
@@ -186,15 +193,15 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 ## 下一项唯一任务
 
-**M7-D：把训练闭环与 Coach Orchestrator 接入连续对话产品。**
+**M7-E：建立版本化 Coach 多 Agent Evaluation Suite。**
 
-聊天工作区将允许用户选择训练目标与激活计划、记录每日身体反馈、触发 Coach 运行，并在界面中查看与审核计划调整草案。确认必须继续经过 M7-A 的 proposal + revision 状态机；不能让聊天或 Plan Agent 直接修改激活计划。M6-A3b 真实 DeepSeek 8轮评测仍待新 Key，不阻塞本地产品接入。
+评测将使用无私人数据的版本化场景覆盖正常恢复、减量、休息、缺反馈、红旗升级、跨目标输出、Handoff 篡改、节点超时/重试、调用预算、批准前状态漂移与确定性回放，并聚合任务完成率、护栏通过率、事实/血缘一致率、用户确认边界和延迟。M6-A3b 真实 DeepSeek 8轮评测仍待新 Key，不阻塞本地评测建设。
 
 完整模型结论见 [M5-B3 DeepSeek 最终评测报告](M5-B3-DeepSeek最终评测报告.md)。
 
 ## 外部额度约束
 
-未来重试 COROS 自动 FIT URL 获取仍会消耗每日下载额度，执行前必须向用户说明并确认只下载一条活动。聊天默认使用离线模式；界面勾选 DeepSeek 后会把规范化活动摘要、确定性复盘和最近对话发送到官方 API并产生费用，不发送 Provider 原始载荷、外部 ID、坐标或 FIT。M7-C 只运行本地合成测试，没有调用外部账户或付费模型。
+未来重试 COROS 自动 FIT URL 获取仍会消耗每日下载额度，执行前必须向用户说明并确认只下载一条活动。聊天默认使用离线模式；界面勾选 DeepSeek 后会把规范化活动摘要、确定性复盘和最近对话发送到官方 API并产生费用，不发送 Provider 原始载荷、外部 ID、坐标或 FIT。M7-D 只运行本地合成测试，没有调用外部账户或付费模型。
 
 ## 验收命令
 

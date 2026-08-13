@@ -10,7 +10,7 @@
 4. [ROADMAP.md](ROADMAP.md)：后续阶段和验收条件；
 5. [adr/README.md](adr/README.md)：关键架构选择及其原因。
 
-当前一句话状态：117项自动化测试通过；M7-C 已用可回放 Harness 编排 Execution、Recovery 和 Plan 三个职责节点，并停在用户确认边界；下一步把训练闭环与 Coach 接入连续对话产品，真实 DeepSeek 聊天评测仍待新 Key。
+当前一句话状态：M7-D 已把目标、身体反馈、Coach 运行和防篡改/防过期审核接入连续对话产品；下一步建立版本化 Coach 多 Agent 评测，真实 DeepSeek 聊天评测仍待新 Key。
 
 常用验收命令：
 

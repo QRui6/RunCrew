@@ -15,6 +15,7 @@
     </a>
     <div class="top-actions">
       <span class="privacy"><i></i> 数据仅在本机处理</span>
+      <button id="training-toggle" class="training-toggle" type="button">训练闭环 <b>↗</b></button>
       <a href="/engineering">工程观测台 →</a>
     </div>
   </header>
@@ -88,6 +89,59 @@
       <p class="medical-note">RunCrew 不是医疗诊断工具。疼痛、胸闷或持续不适应停止训练并咨询专业人员。</p>
     </aside>
   </main>
+
+  <div id="training-backdrop" class="training-backdrop" hidden></div>
+  <aside id="training-drawer" class="training-drawer" aria-label="训练闭环" hidden>
+    <header class="drawer-head">
+      <div><p class="eyebrow">COACH OPERATIONS</p><h2>训练闭环</h2></div>
+      <button id="training-close" type="button" aria-label="关闭训练闭环">×</button>
+    </header>
+
+    <section class="operations-section">
+      <label class="operations-label" for="training-goal">01 · 选择训练目标</label>
+      <select id="training-goal"><option value="">尚无激活目标</option></select>
+      <label class="provider-label" for="training-provider">活动来源</label>
+      <select id="training-provider"><option value="">全部来源</option></select>
+      <div id="training-plan" class="plan-card empty">先在终端创建并激活训练计划。</div>
+    </section>
+
+    <section class="operations-section">
+      <div class="operations-heading"><div><span>02</span><h3>记录今日状态</h3></div><small>保存到本地</small></div>
+      <form id="check-in-form" class="check-in-form">
+        <label>日期<input id="check-in-day" type="date" required></label>
+        <div class="metric-grid">
+          <label>疲劳 1–5<input id="check-in-fatigue" type="number" min="1" max="5" value="3" required></label>
+          <label>酸痛 0–10<input id="check-in-soreness" type="number" min="0" max="10" value="2" required></label>
+          <label>睡眠 1–5<input id="check-in-sleep" type="number" min="1" max="5" value="3" required></label>
+          <label>疼痛 0–10<input id="check-in-pain" type="number" min="0" max="10" value="0" required></label>
+        </div>
+        <label>疼痛部位（疼痛大于 0 时必填）<input id="check-in-pain-area" type="text" maxlength="80" placeholder="例如：右膝外侧"></label>
+        <fieldset class="symptoms">
+          <legend>需要优先处理的症状</legend>
+          <label><input type="checkbox" name="acute-symptom" value="chest_pain_or_pressure"> 胸痛或胸部压迫感</label>
+          <label><input type="checkbox" name="acute-symptom" value="fainting_or_severe_dizziness"> 晕厥或严重眩晕</label>
+          <label><input type="checkbox" name="acute-symptom" value="unusual_or_severe_shortness_of_breath"> 异常严重气短</label>
+          <label><input type="checkbox" name="acute-symptom" value="new_irregular_heartbeat"> 新出现的心律异常感</label>
+          <label><input type="checkbox" name="acute-symptom" value="fever_or_acute_illness"> 发热或急性疾病</label>
+          <label><input type="checkbox" name="acute-symptom" value="sudden_pain_swelling_or_redness"> 突发疼痛、肿胀或发红</label>
+        </fieldset>
+        <label>备注<textarea id="check-in-note" rows="2" maxlength="500" placeholder="可选：今天的主观感受"></textarea></label>
+        <button class="secondary-action" type="submit">保存身体反馈</button>
+      </form>
+    </section>
+
+    <section class="operations-section coach-section">
+      <div class="operations-heading"><div><span>03</span><h3>运行 Coach</h3></div><small>Execution → Recovery → Plan</small></div>
+      <p class="operations-copy">先核对训练执行，再评估恢复；只有需要降级时才调用计划节点。产生的草案不会自动生效。</p>
+      <button id="coach-run" class="primary-action" type="button">运行跨职责评估 <b>↗</b></button>
+      <div id="coach-result" class="coach-result empty">尚未运行 Coach。</div>
+    </section>
+
+    <section class="operations-section recent-section">
+      <div class="operations-heading"><div><span>04</span><h3>最近运行</h3></div><small>可恢复审核</small></div>
+      <div id="coach-runs" class="coach-runs"></div>
+    </section>
+  </aside>
 
   <div id="toast" class="toast" role="status" hidden></div>
   <script src="/assets/chat.js" defer></script>

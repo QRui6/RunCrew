@@ -10,9 +10,9 @@
 
 一句话结论：
 
-> RunCrew 已经完成从真实跑步数据到可审计连续对话的单 Agent 基础，并建立“目标—计划—执行—反馈—风险评估—提案—用户确认”的训练闭环状态。M7-B1/B2/B3 已形成三个确定性领域 Skill，M7-C 已用受控 Harness 把它们连接为跨职责 Agent 工作流。
+> RunCrew 已经完成从真实跑步数据到可审计连续对话的基础，并建立“目标—计划—执行—反馈—风险评估—提案—用户确认”的训练闭环。M7-C 用受控 Harness 连接三个职责节点，M7-D 已将运行和防篡改/防过期审核接入聊天产品。
 
-当前里程碑是 **M7-A、M7-B1/B2/B3 与 M7-C 已完成，M7-D 聊天产品接入待实现；M6-A3b 真实 DeepSeek 同题评测仍待新 Key，但不阻塞本地业务闭环**。
+当前里程碑是 **M7-A、M7-B1/B2/B3、M7-C 与 M7-D 已完成，M7-E 版本化多 Agent 评测待实现；M6-A3b 真实 DeepSeek 同题评测仍待新 Key**。
 
 | 能力 | 当前状态 | 说明 |
 |---|---|---|
@@ -589,7 +589,7 @@ estimated_cost_usd=0.00016426
 | Harness Engineering | 统一 Run、权限、确认、预算、重试、两级超时、验证和 Trace | M4 最小竖切已完成 |
 | Loop Engineering | `call_tool → observation → finish` 有限状态循环和明确退出条件 | M4 最小竖切已完成 |
 | LLM | `deepseek-v4-flash` v1.1 同 Hash 对照12/12通过 | 当前动作协议不需要升级 Pro |
-| Multi-Agent | Coach 路由 + Execution/Recovery/Plan 隔离节点 + 类型化 Handoff + 用户确认中断 | 确定性 Harness 已通过117项全量测试；LLM 编排和版本化 Suite 待验收 |
+| Multi-Agent | Coach 路由 + 三个隔离节点 + 类型化 Handoff + 持久化运行 + 重放审核 | 确定性产品链已实现；LLM 编排和版本化 Suite 待验收 |
 | Evaluation | 12场景 v1.1 Suite、52项测试、Suite Hash、任务/护栏/事实/Token/费用/延迟指标 | 确定性与 DeepSeek 均12/12，M5-B3完成 |
 
 ## 6. 贯穿项目的核心设计原则
@@ -741,7 +741,7 @@ M5 只允许增加：
 
 #### 项目目前最大的不足是什么？
 
-真实历史数据仍少、COROS 训练负荷未映射，训练目标与计划虽已持久化但尚未接入聊天界面；3个非法动作护栏场景也是脚本化注入，不是模型对抗安全评分。现在可以描述为“单 Agent、Harness、Loop、真实模型同题评测和两个确定性领域 Skill 已完成”，但不能描述为已经完成多 Agent 编排、生产上线、医疗诊断或复杂自主规划平台。
+真实历史数据仍少、COROS 训练负荷未映射；3个旧评测非法动作场景也是脚本化注入，不是模型对抗安全评分。现在可以描述为“单 Agent 评测、三个确定性领域 Skill、Coach 多职责编排和带重放审核的本地产品闭环已完成”，但不能描述为 LLM 多 Agent 已验收、生产上线、医疗诊断或复杂自主规划平台。
 
 ## 10. 代码与文档导航
 
@@ -787,7 +787,8 @@ M7-A 与 M7-B1/B2 已完成，当前主线是先完成多 Agent 共用的确定�
 → [已完成] 训练计划草案与调整 Skill：可回放周草案与待确认提案参数
 → [已完成] 训练执行对照 Skill：只读候选、用户确认、纠正与审计
 → [已完成] Coach Orchestrator Harness：最小交接、权限、预算、Trace 与确认中断
-→ [下一步] 训练闭环与 Coach 接入聊天产品
+→ [已完成] 训练闭环与 Coach 接入聊天产品：反馈、运行、恢复审核与 stale 防护
+→ [下一步] Coach 多 Agent 版本化评测
 → [待补] 在新 Key 可用后完成显式付费真实 DeepSeek 8轮验收
 ```
 
@@ -802,6 +803,8 @@ M7-A 与 M7-B1/B2 已完成，当前主线是先完成多 Agent 共用的确定�
 第四步实现 `compare-training-execution`。计划课与 Activity 没有天然主键，因此系统只根据本地日期、距离和时长产生候选；清晰候选仍需用户确认，多候选和同一活动竞争多课会安全降级。缺少活动保持 unmatched，只有用户明确操作才变成 skipped。确认、跳过和清除错误关联都会提升 plan revision 并保存独立审计记录，从而使后续 Agent 使用的是经用户确认的执行事实，而不是一次启发式猜测。
 
 第五步实现 `CoachOrchestratorHarness`。Coach Policy 不接收活动和身体反馈明细，只能基于完成状态与恢复路由选择 Execution、Recovery、Plan 节点或结束；每个节点绑定单一工具和最小权限。Harness 负责固定交接参数、校验目标/计划范围与 Recovery 哈希血缘、记录脱敏 Handoff、限制步骤/调用/重试/超时。Plan 节点只产出草案，终态明确停在 `awaiting_user_confirmation`，CLI 集成测试证明不会落库或修改 revision。至此可以声称已有可运行的跨职责编排，但不能把确定性路由夸大为真实 LLM 多 Agent 稳定性。
+
+第六步把该链路接入现有聊天产品，但没有允许普通消息隐式改课表。用户从结构化训练闭环抽屉选择目标、记录身体反馈、运行 Coach，并明确批准或拒绝。`coach_runs` 保存可恢复审计；浏览器不能回传 patch。批准时服务端重跑同一工作流并比较 Planning hash 与完整草案，变化即 stale；一致后仍走 proposal + revision 状态机。这样产品交互增加了，安全边界没有被 UI 绕过。
 
 面试表达：
 
