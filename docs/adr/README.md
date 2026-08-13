@@ -20,5 +20,6 @@
 | [ADR-0016](0016-confirmed-training-execution-boundary.md) | 接受 | 训练执行先生成候选，只有用户确认后才写入并提升 revision |
 | [ADR-0017](0017-coach-orchestrator-handoff-boundary.md) | 接受 | Coach 只做路由，职责节点使用最小类型化交接并在计划变更前暂停 |
 | [ADR-0018](0018-replay-before-coach-approval.md) | 接受 | 浏览器只提交决定，批准前服务端重放 Coach 并拒绝过期草案 |
+| [ADR-0019](0019-versioned-coach-agent-evaluation.md) | 接受 | 多 Agent 评测复用真实 Harness 与产品审核边界，并建立版本化合成基线 |
 
 新 ADR 使用四位编号，必须记录背景、决策、原因、后果和替代方案。

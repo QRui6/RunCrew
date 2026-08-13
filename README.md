@@ -1,6 +1,6 @@
 # RunCrew
 
-RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前已经形成可靠数据竖切、可回放 Training Review Skill、具备有界上下文与 Trace 的单 Agent Loop、真实 LLM 同题评测，以及可以围绕个人跑步数据连续追问的本地聊天产品。
+RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前已经形成可靠数据竖切、可回放 Skill、具备有界上下文与 Trace 的 Agent Loop、真实 LLM 同题评测、围绕跑步数据的连续对话产品，以及由 Execution、Recovery、Plan 三个隔离职责节点组成的训练运营闭环。
 
 > AI 或新开发者开始工作时，请先阅读 [AGENTS.md](AGENTS.md)，然后阅读 [当前状态](docs/CURRENT_STATE.md)。
 
@@ -31,6 +31,9 @@ RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前�
 - 激活后的计划不能由 Agent 直接修改，只有用户批准的提案才能递增版本并生效。
 - 通过确定性的恢复风险 Skill 综合近期训练、身体反馈与下一课表，输出带 evidence 的训练决策边界；
 - 心肺红旗会停止自动训练建议；疲劳、睡眠和训练量阈值明确标记为项目保守规则，不冒充医疗诊断。
+- Coach 通过最小 Context、类型化 Handoff、节点权限、预算和 Trace 编排 Execution、Recovery 与 Plan；
+- 计划调整只能生成草案，用户批准前服务端重放并用 revision/stale 防止旧建议覆盖新计划；
+- 用18个版本化多 Agent 场景评测任务、韧性、护栏、证据血缘、确认边界与批准前状态漂移。
 
 ## 文档导航
 
@@ -62,6 +65,7 @@ python -m pip install -e ".[dev]"
 .\.venv\Scripts\runcrew.exe agent review --latest --provider fixture
 .\.venv\Scripts\runcrew.exe eval review-agent --output data\private\evals\m5-baseline.json
 .\.venv\Scripts\runcrew.exe eval running-chat --output data\private\evals\running-chat-offline-v1.0.json
+.\.venv\Scripts\runcrew.exe eval coach-agent --output data\private\evals\coach-agent-v1.0.json
 .\.venv\Scripts\runcrew.exe cycle --help
 .\.venv\Scripts\runcrew.exe recovery assess --help
 .\.venv\Scripts\runcrew.exe demo
@@ -187,6 +191,15 @@ Coach 会依次委派训练执行和恢复评估；只有需要降级时才调�
 ```
 
 页面可以记录身体反馈、运行 Coach、恢复历史运行并批准或拒绝建议。浏览器不能提交计划 patch；批准时服务端会重放同一 Coach 请求，只有结果未变化才通过 revision 状态机应用，否则返回 stale。
+
+## 运行 Coach 多 Agent 离线评测
+
+```powershell
+.\.venv\Scripts\runcrew.exe eval coach-agent `
+  --output data\private\evals\coach-agent-v1.0.json
+```
+
+`coach-agent-eval/1.0` 包含18个无私人数据场景，直接运行真实 Coach Harness，并用临时 SQLite 验证批准前 stale 防护。当前确定性基线18/18通过，报告的 Suite Hash 用于未来 LLM Coach Policy 同题比较。该命令不调用外部模型，报告只能写入 `data/private/`。
 
 ## 同步真实 COROS 数据
 

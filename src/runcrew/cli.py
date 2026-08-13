@@ -31,8 +31,10 @@ from runcrew.domain.training_execution import (
 )
 from runcrew.evaluation import (
     evaluate_chat_suite,
+    evaluate_coach_agent_suite,
     evaluate_review_agent_suite,
     load_chat_evaluation_suite,
+    load_coach_agent_suite,
     load_review_agent_suite,
 )
 from runcrew.harness import CoachNodeTools, CoachOrchestratorHarness, ReviewAgentHarness
@@ -1278,6 +1280,29 @@ def evaluate_running_chat(
         raise typer.BadParameter(f"Chat evaluation suite not found: {cases_path}")
     suite = load_chat_evaluation_suite(cases_path)
     report = asyncio.run(evaluate_chat_suite(suite))
+    payload = report.model_dump_json(indent=2)
+    _write_private_evaluation(output_path, payload)
+    typer.echo(payload)
+    if not report.meets_baseline:
+        raise typer.Exit(code=1)
+
+
+@evaluation_app.command("coach-agent")
+def evaluate_coach_agent(
+    cases_path: Annotated[
+        Path,
+        typer.Option("--cases", help="Coach 多 Agent 评测用例 JSON 路径。"),
+    ] = Path("evals/coach_agent/cases.json"),
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", help="可选报告路径，只允许写入 data/private。"),
+    ] = None,
+) -> None:
+    """运行不调用外部模型的 Coach 多 Agent 版本化评测。"""
+    if not cases_path.is_file():
+        raise typer.BadParameter(f"Coach evaluation suite not found: {cases_path}")
+    suite = load_coach_agent_suite(cases_path)
+    report = asyncio.run(evaluate_coach_agent_suite(suite))
     payload = report.model_dump_json(indent=2)
     _write_private_evaluation(output_path, payload)
     typer.echo(payload)

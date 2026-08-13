@@ -6,6 +6,10 @@
 
 ### Added
 
+- 增加 `coach-agent-eval/1.0`：18个版本化无私人数据场景，覆盖任务、节点韧性、权限/交接护栏、预算和批准前 stale；
+- 增加 Coach Evaluation Suite/Report Schema、稳定 `suite_hash`、CLI `eval coach-agent`、Schema 导出脚本和 ADR-0019；
+- 增加事实一致率、Recovery→Plan 血缘一致率、用户确认边界率、审核防护率和错误节点执行数等多 Agent 指标；
+- 增加5项 Coach 评测版本、回放、失败检测、Schema 与私有报告路径测试；
 - 在聊天产品增加“训练闭环”抽屉，可选择目标/活动来源、查看激活计划、提交身体反馈、运行 Coach 并审核计划调整；
 - 增加训练运营产品领域契约、Service 和五类本地 API；
 - 增加本地 `coach_runs` 审计表，保存 Coach 请求、受校验结果、workflow/planning hash、审核状态和正式 proposal 关联；
@@ -36,6 +40,7 @@
 
 ### Changed
 
+- 修正全景说明中“多 Agent、训练计划数据库、结构化 Check-in 尚未实现”等过期表述，并区分历史范围冻结和当前事实；
 - 浏览器审核请求只允许 `decision + comment`，不能提交计划 patch、reason 或 revision；拒绝不会创建正式提案；
 - Coach 运行可跨页面刷新恢复，最近运行列表展示待确认、批准、拒绝与 stale 状态；
 - 训练执行对照输出增加 `goal_id`，供跨节点 Harness 校验目标范围；
@@ -50,6 +55,8 @@
 
 ### Verified
 
+- Coach 确定性多 Agent 基线18/18通过，Suite Hash 为 `f1bc86ec92be4aa317b033dd469b6c48d6f0f7c959ce106bc750072d731b8451`；任务、韧性、护栏、审核、Schema、事实、血缘与确认边界指标均为100%，错误节点执行数为0；
+- M7-E 全量自动化测试增至130项，项目统一验证通过；只使用合成数据和临时 SQLite，没有调用 COROS 或 DeepSeek；
 - M7-D 全量自动化测试增至125项，训练运营 API、重放批准、stale、前端资源和 Schema 漂移均通过；
 - `chat.js` 与工程观测台 `app.js` 均通过 JavaScript 语法检查；本阶段没有调用 COROS 或 DeepSeek；
 - 应用内浏览器本次无可用实例，未声称完成视觉点击验收，保留本机人工复核项；

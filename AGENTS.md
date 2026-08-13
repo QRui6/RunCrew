@@ -59,7 +59,7 @@ cli.py       人机入口，只做参数编排
 
 1. 阅读 `docs/CURRENT_STATE.md`；
 2. 运行 `git status --short`，保护用户已有修改；
-3. 运行 `\.venv\Scripts\python.exe scripts\verify.py` 建立基线；
+3. 运行 `.\.venv\Scripts\python.exe scripts\verify.py` 建立基线；
 4. 只修改当前里程碑所需模块。
 
 结束任务：
@@ -86,15 +86,16 @@ cli.py       人机入口，只做参数编排
 ## 常用命令
 
 ```powershell
-\.venv\Scripts\python.exe scripts\verify.py
-\.venv\Scripts\python.exe -m pytest
-\.venv\Scripts\runcrew.exe status
-\.venv\Scripts\runcrew.exe sync --provider fixture --days 30 --detail-limit 1
-\.venv\Scripts\runcrew.exe activities review --latest --provider coros
-\.venv\Scripts\runcrew.exe agent review --latest --provider coros
-\.venv\Scripts\runcrew.exe eval review-agent --output data\private\evals\m5-baseline.json
-\.venv\Scripts\runcrew.exe cycle --help
-\.venv\Scripts\runcrew.exe recovery assess --help
-\.venv\Scripts\runcrew.exe planning --help
-\.venv\Scripts\runcrew.exe execution --help
+.\.venv\Scripts\python.exe scripts\verify.py
+.\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\runcrew.exe status
+.\.venv\Scripts\runcrew.exe sync --provider fixture --days 30 --detail-limit 1
+.\.venv\Scripts\runcrew.exe activities review --latest --provider coros
+.\.venv\Scripts\runcrew.exe agent review --latest --provider coros
+.\.venv\Scripts\runcrew.exe eval review-agent --output data\private\evals\m5-baseline.json
+.\.venv\Scripts\runcrew.exe eval coach-agent --output data\private\evals\coach-agent-v1.0.json
+.\.venv\Scripts\runcrew.exe cycle --help
+.\.venv\Scripts\runcrew.exe recovery assess --help
+.\.venv\Scripts\runcrew.exe planning --help
+.\.venv\Scripts\runcrew.exe execution --help
 ```

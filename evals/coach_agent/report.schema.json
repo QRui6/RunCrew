@@ -1,0 +1,309 @@
+{
+  "$defs": {
+    "CoachAgentEvaluationCaseResult": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "title": "Case Id",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "task",
+            "resilience",
+            "guardrail",
+            "budget",
+            "approval"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "actual_status": {
+          "enum": [
+            "succeeded",
+            "awaiting_user_confirmation",
+            "blocked",
+            "failed",
+            "timed_out",
+            "budget_exhausted",
+            "stale"
+          ],
+          "title": "Actual Status",
+          "type": "string"
+        },
+        "actual_termination_reason": {
+          "enum": [
+            "completed",
+            "user_confirmation_required",
+            "safe_blocked",
+            "policy_error",
+            "permission_denied",
+            "invalid_handoff",
+            "node_failure",
+            "node_timeout",
+            "invalid_node_output",
+            "premature_finish",
+            "step_budget_exhausted",
+            "run_timeout",
+            "stale_replay_blocked"
+          ],
+          "title": "Actual Termination Reason",
+          "type": "string"
+        },
+        "actual_required_user_action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actual Required User Action"
+        },
+        "actual_nodes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Actual Nodes",
+          "type": "array"
+        },
+        "schema_valid": {
+          "title": "Schema Valid",
+          "type": "boolean"
+        },
+        "fact_integrity": {
+          "title": "Fact Integrity",
+          "type": "boolean"
+        },
+        "lineage_integrity": {
+          "title": "Lineage Integrity",
+          "type": "boolean"
+        },
+        "confirmation_boundary_valid": {
+          "title": "Confirmation Boundary Valid",
+          "type": "boolean"
+        },
+        "prohibited_node_executed": {
+          "title": "Prohibited Node Executed",
+          "type": "boolean"
+        },
+        "node_calls_used": {
+          "minimum": 0,
+          "title": "Node Calls Used",
+          "type": "integer"
+        },
+        "node_attempts_used": {
+          "minimum": 0,
+          "title": "Node Attempts Used",
+          "type": "integer"
+        },
+        "latency_ms": {
+          "minimum": 0,
+          "title": "Latency Ms",
+          "type": "number"
+        },
+        "failure_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Failure Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "case_id",
+        "category",
+        "passed",
+        "actual_status",
+        "actual_termination_reason",
+        "schema_valid",
+        "fact_integrity",
+        "lineage_integrity",
+        "confirmation_boundary_valid",
+        "prohibited_node_executed",
+        "node_calls_used",
+        "node_attempts_used",
+        "latency_ms"
+      ],
+      "title": "Coach 多 Agent 单用例结果",
+      "type": "object"
+    },
+    "CoachAgentEvaluationMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "expectation_pass_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Expectation Pass Rate",
+          "type": "number"
+        },
+        "task_completion_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Task Completion Rate",
+          "type": "number"
+        },
+        "resilience_pass_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Resilience Pass Rate",
+          "type": "number"
+        },
+        "guardrail_pass_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Guardrail Pass Rate",
+          "type": "number"
+        },
+        "approval_guard_pass_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Approval Guard Pass Rate",
+          "type": "number"
+        },
+        "schema_valid_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Schema Valid Rate",
+          "type": "number"
+        },
+        "fact_integrity_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Fact Integrity Rate",
+          "type": "number"
+        },
+        "lineage_integrity_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Lineage Integrity Rate",
+          "type": "number"
+        },
+        "confirmation_boundary_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confirmation Boundary Rate",
+          "type": "number"
+        },
+        "prohibited_node_execution_count": {
+          "minimum": 0,
+          "title": "Prohibited Node Execution Count",
+          "type": "integer"
+        },
+        "average_node_calls": {
+          "minimum": 0,
+          "title": "Average Node Calls",
+          "type": "number"
+        },
+        "average_node_attempts": {
+          "minimum": 0,
+          "title": "Average Node Attempts",
+          "type": "number"
+        },
+        "p95_latency_ms": {
+          "minimum": 0,
+          "title": "P95 Latency Ms",
+          "type": "number"
+        },
+        "termination_reason_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Termination Reason Counts",
+          "type": "object"
+        }
+      },
+      "required": [
+        "expectation_pass_rate",
+        "task_completion_rate",
+        "resilience_pass_rate",
+        "guardrail_pass_rate",
+        "approval_guard_pass_rate",
+        "schema_valid_rate",
+        "fact_integrity_rate",
+        "lineage_integrity_rate",
+        "confirmation_boundary_rate",
+        "prohibited_node_execution_count",
+        "average_node_calls",
+        "average_node_attempts",
+        "p95_latency_ms",
+        "termination_reason_counts"
+      ],
+      "title": "Coach 多 Agent 评测指标",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "suite_version": {
+      "const": "coach-agent-eval/1.0",
+      "title": "Suite Version",
+      "type": "string"
+    },
+    "suite_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Suite Hash",
+      "type": "string"
+    },
+    "policy_name": {
+      "minLength": 1,
+      "title": "Policy Name",
+      "type": "string"
+    },
+    "total_cases": {
+      "minimum": 1,
+      "title": "Total Cases",
+      "type": "integer"
+    },
+    "passed_cases": {
+      "minimum": 0,
+      "title": "Passed Cases",
+      "type": "integer"
+    },
+    "failed_cases": {
+      "minimum": 0,
+      "title": "Failed Cases",
+      "type": "integer"
+    },
+    "meets_baseline": {
+      "title": "Meets Baseline",
+      "type": "boolean"
+    },
+    "metrics": {
+      "$ref": "#/$defs/CoachAgentEvaluationMetrics"
+    },
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/CoachAgentEvaluationCaseResult"
+      },
+      "minItems": 1,
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "suite_version",
+    "suite_hash",
+    "policy_name",
+    "total_cases",
+    "passed_cases",
+    "failed_cases",
+    "meets_baseline",
+    "metrics",
+    "cases"
+  ],
+  "title": "Coach 多 Agent 评测报告",
+  "type": "object"
+}

@@ -10,9 +10,9 @@
 
 一句话结论：
 
-> RunCrew 已经完成从真实跑步数据到可审计连续对话的基础，并建立“目标—计划—执行—反馈—风险评估—提案—用户确认”的训练闭环。M7-C 用受控 Harness 连接三个职责节点，M7-D 已将运行和防篡改/防过期审核接入聊天产品。
+> RunCrew 已经完成从真实跑步数据到可审计连续对话的基础，并建立“目标—计划—执行—反馈—风险评估—提案—用户确认”的训练闭环。M7-C 用受控 Harness 连接三个职责节点，M7-D 将防篡改/防过期审核接入聊天产品，M7-E 又用18个版本化场景建立了可回放的确定性多 Agent 基线。
 
-当前里程碑是 **M7-A、M7-B1/B2/B3、M7-C 与 M7-D 已完成，M7-E 版本化多 Agent 评测待实现；M6-A3b 真实 DeepSeek 同题评测仍待新 Key**。
+当前里程碑是 **M7-A 至 M7-E 全部完成，下一步进入 M8-A 求职演示包；M6-A3b 真实 DeepSeek 同题评测仍待新 Key**。
 
 | 能力 | 当前状态 | 说明 |
 |---|---|---|
@@ -32,8 +32,8 @@
 | 恢复风险 Skill | 已完成 | 五类风险分层、时间边界、红旗升级、证据与计划动作 |
 | 训练计划 Skill | 已完成 | 周计划草案、恢复动作转提案、输入 Hash、revision 与确认边界 |
 | 训练执行 Skill | 已完成 | 计划课—活动候选、完成比例、人工纠正、revision 与审计记录 |
-| 多 Agent 编排 | 待实现 | 先完成风险、计划和执行对照 Skill，再由 Coach Orchestrator 协调 |
-| Web 产品界面 | MVP 已完成 | 可选择活动、创建会话、发送消息、连续追问和查看 evidence；工程观测台保留 |
+| 多 Agent 编排 | 确定性链路与评测已完成 | Coach 协调 Execution、Recovery、Plan 三个隔离职责节点；18场景基线18/18，真实 LLM 编排待验收 |
+| Web 产品界面 | 训练闭环 MVP 已完成 | 可连续问答，也可提交反馈、运行 Coach、审核计划调整；工程观测台保留 |
 | 自由对话评测 | 离线完成 | 7场景8轮基线通过；真实 DeepSeek 运行待新 Key |
 | 医疗诊断、营养处方 Agent | 不在当前范围 | 恢复 Agent 只做有证据的训练风险分层 |
 
@@ -60,8 +60,25 @@ COROS 官方服务
   → Action / Observation Loop
   → 权限 + 确认 + 预算 + 重试 + 超时 + Trace
   → 通过 Agent Run Schema 校验的终态输出
-  → 12 场景 Agent Evaluation Runner
+  → 12 场景 Review Agent Evaluation Runner
   → Suite Hash + 任务/护栏/事实/成本/延迟指标
+```
+
+训练运营链路：
+
+```text
+TrainingGoal + TrainingPlan + DailyCheckIn + 规范化 Activity
+  → Execution Agent / compare-training-execution Skill
+  → Recovery Agent / assess-running-recovery Skill
+  → Coach Orchestrator（最小 Context、类型化 Handoff、权限、预算、Trace）
+      ├─ keep：完成，不改计划
+      ├─ 缺反馈/安全红旗：安全阻断
+      └─ reduce/rest：Plan Agent / draft-running-plan Skill
+  → awaiting_user_confirmation
+  → coach_runs 持久化审计
+  → 用户 approve/reject
+  → approve 前服务端重放并校验 planning hash + 完整草案
+  → proposal + base_revision 校验后应用，或因变化标记 stale
 ```
 
 各层职责：
@@ -589,7 +606,7 @@ estimated_cost_usd=0.00016426
 | Harness Engineering | 统一 Run、权限、确认、预算、重试、两级超时、验证和 Trace | M4 最小竖切已完成 |
 | Loop Engineering | `call_tool → observation → finish` 有限状态循环和明确退出条件 | M4 最小竖切已完成 |
 | LLM | `deepseek-v4-flash` v1.1 同 Hash 对照12/12通过 | 当前动作协议不需要升级 Pro |
-| Multi-Agent | Coach 路由 + 三个隔离节点 + 类型化 Handoff + 持久化运行 + 重放审核 | 确定性产品链已实现；LLM 编排和版本化 Suite 待验收 |
+| Multi-Agent | Coach 路由 + 三个隔离节点 + 类型化 Handoff + 持久化运行 + 重放审核 | 确定性产品链与18场景 Suite 已验收；LLM 编排待验收 |
 | Evaluation | 12场景 v1.1 Suite、52项测试、Suite Hash、任务/护栏/事实/Token/费用/延迟指标 | 确定性与 DeepSeek 均12/12，M5-B3完成 |
 
 ## 6. 贯穿项目的核心设计原则
@@ -626,13 +643,13 @@ estimated_cost_usd=0.00016426
 以下内容不能在面试中说成已经完成：
 
 - 聊天 DeepSeek 回答只有 Mock 契约验证，尚无真实多轮结果和对抗评测；
-- CLI Agent Trace 尚未独立持久化；聊天只持久化首次 Review Agent 的 Trace 快照；
+- Review CLI Trace 尚未独立持久化；聊天持久化首次 Review Trace 快照，Coach Trace 已随 `coach_runs` 结果持久化；
 - 没有伤病诊断、营养处方和医疗建议；
-- 没有睡眠、HRV、疼痛 Check-in 的完整数据闭环；
-- 没有训练计划数据库；
+- Check-in 已支持疲劳、酸痛、睡眠质量、疼痛和急性症状，但没有设备睡眠阶段或 HRV 自动接入；
+- 已有训练目标、周计划、课次、提案和 revision 数据库，但计划规则仍是保守 v1；
 - 没有 Keep Provider；
 - 没有移动端和线上多用户 Web；本地聊天 MVP 已完成；
-- 没有多 Agent；
+- 已有确定性 Coach 多职责编排，但尚未完成真实 LLM 编排与版本化多 Agent Suite；
 - 没有线上部署；
 - COROS 自动 FIT URL 仍未真实验证成功；
 - 没有 Token 加密缓存和数据库迁移工具。
@@ -641,7 +658,7 @@ estimated_cost_usd=0.00016426
 
 为了防止项目再次扩大，后续必须遵守：
 
-### M4 已按冻结范围完成一个 Review Agent Loop
+### M4 当时按冻结范围完成一个 Review Agent Loop
 
 已经实现：
 
@@ -657,7 +674,7 @@ estimated_cost_usd=0.00016426
 
 真实 LLM narrative 没有实现，因为它是可选项，不影响 Harness 和 Loop 的 M4 验收。
 
-M4 禁止顺手增加：
+以下是 M4 当时为控制范围而禁止顺手增加的内容，不代表项目今天仍未实现：
 
 - Keep、Strava 等新 Provider；
 - 伤病、营养和睡眠 Agent；
@@ -677,11 +694,11 @@ M5 只允许增加：
 - [x] Token、模型调用、API 尝试、动作解析错误和耗时指标结构；
 - [x] 受显式确认和费用门保护的单条合成 Smoke 命令；
 - [x] 带价格版本的 Token 费用估算结构；
-- [ ] 实际执行单条合成上下文的真实 DeepSeek Smoke；
-- [ ] LLM 与确定性 Policy 的对照结果；
-- [ ] 是否需要多 Agent 的书面决策门。
+- [x] 实际执行单条合成上下文的真实 DeepSeek Smoke；
+- [x] LLM 与确定性 Policy 的同 Hash 对照结果；
+- [x] 形成多 Agent 书面决策门，并在训练执行、恢复风险和计划写入权限确有冲突后进入 M7。
 
-### 只有满足条件才做多 Agent
+### M7 拆分多 Agent 的决策依据
 
 必须先有评测证据证明至少一项成立：
 
@@ -690,7 +707,7 @@ M5 只允许增加：
 - 单 Agent 在职责冲突测试中稳定失败；
 - 拆分后关键指标明显改善。
 
-否则继续保持单 Agent。
+M7 的 Training Execution、Recovery 与 Plan 已满足“不同工具权限”和“安全意见可能覆盖训练推进”的条件，因此拆分为三个职责节点；自然语言训练复盘仍保持单 Agent，避免无依据扩张。
 
 ### M6 做真实产品交互与面试交付
 
@@ -705,11 +722,11 @@ M5 只允许增加：
 
 ### 30 秒版本
 
-> RunCrew 是我基于真实跑步数据做的 Agent 工程项目。当前完成了 COROS MCP 接入、统一活动 Schema、FIT 详情降级、可回放 Training Review Skill、带权限和预算的单 Agent Loop，以及 12 场景离线评测基线。训练指标由确定性 Service 计算，Agent 只通过白名单 Skill 获取结论；评测同时检查事实一致性和越权后工具是否执行。
+> RunCrew 是我基于真实跑步数据做的 Agent 工程项目。它从 COROS MCP、统一活动 Schema 和 FIT 降级链开始，逐步实现可回放 Skill、受权限和预算约束的 Agent Loop，以及 Execution、Recovery、Plan 三个职责节点组成的 Coach 编排。计划调整不会由 Agent 直接写入，而是经过类型化交接、证据哈希、用户确认和批准前重放；单 Agent 有12场景真实 LLM 同题对照，多 Agent 有18场景确定性基线。
 
 ### 2 分钟版本
 
-> 我是跑步用户，所以选择了一个能长期产生真实反馈的场景。项目先通过 Spike 验证 COROS OAuth 和 MCP，再建立 Provider、Domain、Storage、Service 分层。真实环境中 COROS 详情接口不稳定，我设计了详情、分圈、FIT、summary warning 的降级链，并用 Garmin 官方 SDK 做 CRC 和消息解析。之后我把训练完成度、负荷变化和异常判断做成确定性 Service，再通过 Skill 和 JSON Schema 暴露。M4 增加单 Agent Loop：Policy 只能输出 call_tool 或 finish，Harness 统一做白名单、确认、预算、重试、超时、校验和 Trace。M5-A 又建立 12 个版本化场景，把正常任务和异常安全退出分开计分，并检查模型层是否修改工具事实、护栏后底层工具是否仍执行。真实 LLM 后续只替换 Policy 层，并在同一题集上与确定性基线比较。
+> 我是跑步用户，所以选择了一个能长期产生真实反馈的场景。项目先通过 Spike 验证 COROS OAuth 和 MCP，再建立 Provider、Domain、Storage、Service 分层；针对详情接口不稳定设计了分级降级和 FIT 私有缓存。训练判断由确定性 Service 计算，经 Skill 和 JSON Schema 暴露，Policy 只负责选择动作，Harness 统一管理白名单、确认、预算、重试、超时和 Trace。M5 用 12 个版本化场景完成确定性 Policy 与真实 DeepSeek 的同 Hash 对照。之后我没有机械堆角色，而是围绕“计划想推进、恢复风险要求降级”的真实冲突拆出 Execution、Recovery、Plan 三个权限隔离节点，由 Coach 做最小上下文路由；任何计划修改都停在用户确认，批准前服务端还会重放以阻止过期建议。
 
 ### 最值得讲的三个难点
 
@@ -721,19 +738,19 @@ M5 只允许增加：
 
 #### 为什么不用 LangChain/LangGraph？
 
-当前只有一个 Agent、一个工具和两类动作，显式 Python 状态机更容易看清权限、预算和终止语义，也更适合故障注入。若后续评测出现持久化状态、并行分支或人工审批图明显复杂化，再用数据决定是否引入 LangGraph。
+项目早期的 Review Loop 只有一个 Agent、一个工具和两类动作，因此显式 Python 状态机更容易看清权限、预算和终止语义。M7 虽已扩展为三个职责节点，但仍是固定串行路由加一个人工审批中断，现有 Harness 更容易做故障注入和 Schema/血缘校验；若后续出现并行分支、长时间恢复或复杂人工审批图，再用数据决定是否引入 LangGraph。
 
-#### 为什么现在还没有 LLM？
+#### 为什么多 Agent Coach 还没有使用 LLM？
 
-因为如果基础指标都交给 LLM，无法判断模型错误还是数据错误。当前先建立确定性 ground truth，后续 LLM 只负责解释，这也为评测提供标准答案。
+Review Agent 已完成真实 DeepSeek 同题评测，聊天也有 DeepSeek 契约；但 Coach 涉及三个工具权限和计划写入前确认。如果一开始就让模型同时承担业务计算与路由，无法区分模型错误、节点事实错误或 Harness 回归。因此先建立18场景确定性 ground truth，后续 LLM Coach 只替换 Policy，并在同一 Suite 上比较。
 
 #### 确定性 Policy 还能算 Agent 吗？
 
 当前已经有有界上下文、动作选择、工具观察、再次决策、输出验证和终止条件，因此是一个最小 Agent Loop；但 Policy 不是大模型，不能声称“LLM 已经自主规划”。它的价值是先把 Harness 建成可测试基线，之后接入 LLM 时能够区分模型问题和运行时问题。
 
-#### 为什么不用多个 Agent？
+#### 为什么既保留单 Agent，又增加多个 Agent？
 
-多 Agent 会增加上下文传递、延迟、成本和失败面。项目要求先证明单 Agent 存在职责冲突，再拆分。
+自然语言训练复盘只有一个只读工具，没有拆分价值；训练运营则存在明确冲突：Execution 想推进计划，Recovery 可能要求降级，Plan 又拥有准备变更的更高权限。因此只在这个边界拆成三个节点，并用最小 Handoff 和18场景评测控制新增的延迟与失败面。
 
 #### COROS 接口失败是否说明项目不可用？
 
@@ -771,7 +788,7 @@ M5 只允许增加：
 
 ## 11. 当前下一步
 
-M7-A 与 M7-B1/B2 已完成，当前主线是先完成多 Agent 共用的确定性业务能力；M6-A3b 在新 Key 可用后补验收：
+M7-A 至 M7-E 已完成。当前唯一主线是 M8-A 求职演示包；M6-A3b 在新 Key 可用后补验收：
 
 ```text
 [已完成] 增加受确认和共享总费用门保护的完整 Suite 命令
@@ -788,7 +805,8 @@ M7-A 与 M7-B1/B2 已完成，当前主线是先完成多 Agent 共用的确定�
 → [已完成] 训练执行对照 Skill：只读候选、用户确认、纠正与审计
 → [已完成] Coach Orchestrator Harness：最小交接、权限、预算、Trace 与确认中断
 → [已完成] 训练闭环与 Coach 接入聊天产品：反馈、运行、恢复审核与 stale 防护
-→ [下一步] Coach 多 Agent 版本化评测
+→ [已完成] Coach 多 Agent 版本化评测：18场景、Suite Hash、事实/血缘/确认/stale 指标
+→ [下一步] M8-A 架构图、训练闭环时序图与无私人数据演示脚本
 → [待补] 在新 Key 可用后完成显式付费真实 DeepSeek 8轮验收
 ```
 
@@ -806,9 +824,11 @@ M7-A 与 M7-B1/B2 已完成，当前主线是先完成多 Agent 共用的确定�
 
 第六步把该链路接入现有聊天产品，但没有允许普通消息隐式改课表。用户从结构化训练闭环抽屉选择目标、记录身体反馈、运行 Coach，并明确批准或拒绝。`coach_runs` 保存可恢复审计；浏览器不能回传 patch。批准时服务端重跑同一工作流并比较 Planning hash 与完整草案，变化即 stale；一致后仍走 proposal + revision 状态机。这样产品交互增加了，安全边界没有被 UI 绕过。
 
+第七步建立 `coach-agent-eval/1.0`。18个合成场景直接运行真实 Coach Harness，覆盖低风险、减量、休息、缺反馈、红旗、节点重试/超时、非法输出、权限/Handoff/血缘篡改和预算；批准前 stale 场景则使用真实产品 Service 与临时 SQLite。报告除了终态和 Schema，还分别计算事实一致率、Recovery→Plan 血缘一致率、用户确认边界率和护栏后错误节点执行数。确定性基线18/18，Suite Hash 为 `f1bc86ec...b8451`，使未来 LLM Coach Policy 有同题比较基准。
+
 面试表达：
 
-> 我没有为了简历先堆三个角色，而是先找到了多 Agent 真正需要的冲突：训练计划想继续推进，但恢复风险可能要求降级。于是我先完成状态和三个确定性 Skill，再让 Coach 只做路由，让 Execution、Recovery、Plan 各自只有一个工具和最小上下文。跨节点交接用 Schema 和哈希校验，Plan 只能生成草案，最终修改仍由用户确认和 revision 控制。117项测试覆盖越权、篡改、超时和真实 SQLite 不落库边界。
+> 我没有为了简历先堆三个角色，而是先找到了多 Agent 真正需要的冲突：训练计划想继续推进，但恢复风险可能要求降级。于是我先完成状态和三个确定性 Skill，再让 Coach 只做路由，让 Execution、Recovery、Plan 各自只有一个工具和最小上下文。跨节点交接用 Schema 和哈希校验，Plan 只能生成草案，最终修改仍由用户确认和 revision 控制。最后用18个版本化场景直接评测真实 Harness 和 stale 审核链，18/18通过；M7-E 完成时全量130项测试通过。
 
 ### M6-A1：本地工程观测 Dashboard
 

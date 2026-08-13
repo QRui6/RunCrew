@@ -143,13 +143,15 @@ M5-B1 已新增 `DeepSeekReviewPolicy`：通过官方 Chat Completions + 普通 
 
 ### Evaluation
 
-位置：`src/runcrew/evaluation/` 和 `evals/review_agent/`
+位置：`src/runcrew/evaluation/`、`evals/review_agent/`、`evals/running_chat/` 与 `evals/coach_agent/`
 
 负责加载版本化无私人数据场景、为 Tool/Policy 注入可重复故障、运行真实 Harness、比较预期终态和确定性业务事实，并聚合任务完成、护栏、Schema、事实一致性、调用成本、延迟和退出原因指标。
 
 评测套件可以进入 Git，生成报告只允许写入 `data/private/`。M5-B 的真实 LLM Policy 必须通过相同 `default_policy_factory` 接口进入评测器，不能创建一套只为模型演示服务的旁路。
 
 Evaluation Report 1.1 已增加通用 Policy Usage：模型调用数、API 尝试、动作解析错误、缓存命中/未命中 Token、输入/输出/思考 Token、带价格版本的估算费用和模型耗时。确定性 Policy 的这些字段固定为零。
+
+`coach-agent-eval/1.0` 直接运行真实 `CoachOrchestratorHarness`，用合成类型化节点结果建立 ground truth，并注入节点故障、非法动作、Handoff 篡改、跨目标输出与预算耗尽。它额外校验 Recovery→Plan 证据血缘和 `persisted=false / approved=false` 的确认中断。批准前 stale 场景运行真实 `TrainingOperationsService + 临时 SQLite`，因此写入安全没有被简化成 Mock。当前18场景确定性基线用于未来 LLM Coach Policy 同题比较。
 
 ## 数据模型
 
@@ -299,3 +301,15 @@ M7-D 产品审核链：
 ```
 
 Decision API 不接受任何计划 patch。浏览器只表达决定，变更内容必须来自服务端保存并重新验证的 Coach 结果。
+
+M7-E 评测链：
+
+```text
+versioned synthetic case
+  → real CoachOrchestratorHarness
+  → typed node fixture / fault injection
+  → Run Result Schema + fact + lineage + confirmation judgement
+  └── approval_stale → real TrainingOperationsService + temporary SQLite
+  → aggregate metrics + suite_hash
+  → private evaluation report
+```

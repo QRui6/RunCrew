@@ -5,7 +5,7 @@
 
 ## 当前里程碑
 
-**M5 与 M6-A1/A2/A3a 已完成；真实 DeepSeek 聊天同题验收仍待新 Key。M7-A、M7-B1/B2/B3、M7-C 与 M7-D 已完成，聊天产品现可运行并审核 Coach 训练闭环；下一步是 M7-E 版本化多 Agent 评测。**
+**M5 与 M6-A1/A2/A3a 已完成；真实 DeepSeek 聊天同题验收仍待新 Key。M7-A 至 M7-E 已全部完成：聊天产品可运行并审核 Coach 训练闭环，18场景版本化多 Agent 确定性基线为18/18；下一步是 M8-A 求职演示包。**
 
 M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
@@ -22,7 +22,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 ## 已验证事实
 
 - Python 3.13 本地环境可运行；
-- 自动化测试：125 passed；
+- 自动化测试：130 passed；
 - fixture 首次同步插入 2 条；
 - fixture 第二次同步插入 0 条、更新 2 条；
 - 真实 COROS OAuth + PKCE 成功；
@@ -157,6 +157,10 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 用户拒绝只关闭 Coach 运行，不创建正式提案；用户批准前服务端重放原请求，结果或草案变化则标记 stale；
 - 重放一致时由服务端从 Coach 草案创建正式提案，再经 `TrainingCycleService` revision 校验应用；
 - 六份训练运营 API Schema 已导出，新增8项产品服务、API、安全和静态资源测试；
+- `coach-agent-eval/1.0` 已建立18个版本化无私人数据场景，覆盖正常路由、恢复/休息、缺反馈、红旗、重试、超时、非法输出、权限、Handoff、血缘、预算和 stale；
+- Coach 评测直接复用真实 Harness，批准前状态漂移场景运行真实 `TrainingOperationsService + 临时 SQLite`；
+- 确定性多 Agent 基线18/18通过，Suite Hash 为 `f1bc86ec92be4aa317b033dd469b6c48d6f0f7c959ce106bc750072d731b8451`；
+- 任务、韧性、护栏、审核、Schema、事实、血缘和用户确认边界通过率均为100%，错误节点执行数为0，平均节点调用1.2778、平均尝试1.3889；
 
 ## 当前已知限制
 
@@ -167,7 +171,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 当前 COROS 规范化活动没有训练负荷字段，因此真实 `load_change` 暂时可能为 `unknown`；
 - 训练目标、计划、反馈、Coach 运行和审核已接入聊天界面；目标与计划首次创建仍通过 CLI；
 - 恢复风险阈值是 RunCrew 保守工程规则，不是临床决策；无训练负荷时的时长代理不能表示强度差异；
-- Coach 多职责 Harness 已实现，但默认路由仍是确定性 Policy，尚未经过版本化多 Agent Suite 或真实 LLM 编排评测；
+- Coach 多职责 Harness 已通过版本化确定性 Suite，但尚未接入或评测真实 LLM Coach Policy；脚本化越权注入只能证明 Harness 防线；
 - 普通自然语言聊天不会隐式触发训练写入；结构化训练闭环抽屉才拥有显式审核入口；
 - 应用内浏览器在本次验收会话中没有可用实例，因此视觉点击验收待本机人工复核；HTTP/DOM/JS 自动化已通过；
 - 计划 v1 主要按时长规划，不处理比赛周、天气、海拔、力量训练或精确配速区间；5%增量和60%降级是保守工程规则；
@@ -193,15 +197,15 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 ## 下一项唯一任务
 
-**M7-E：建立版本化 Coach 多 Agent Evaluation Suite。**
+**M8-A：制作可复现的求职演示包。**
 
-评测将使用无私人数据的版本化场景覆盖正常恢复、减量、休息、缺反馈、红旗升级、跨目标输出、Handoff 篡改、节点超时/重试、调用预算、批准前状态漂移与确定性回放，并聚合任务完成率、护栏通过率、事实/血缘一致率、用户确认边界和延迟。M6-A3b 真实 DeepSeek 8轮评测仍待新 Key，不阻塞本地评测建设。
+先基于已完成实现绘制一张系统架构图和一张训练闭环时序图，再编写不依赖私人数据、可在面试现场重复运行的演示脚本。演示必须展示 Activity/Skill/Coach/Handoff/Trace/Evaluation/用户确认与 stale 边界，并明确哪些是确定性基线、哪些真实 LLM 能力尚未验收。M6-A3b 真实 DeepSeek 8轮评测仍待新 Key，不阻塞 M8-A。
 
 完整模型结论见 [M5-B3 DeepSeek 最终评测报告](M5-B3-DeepSeek最终评测报告.md)。
 
 ## 外部额度约束
 
-未来重试 COROS 自动 FIT URL 获取仍会消耗每日下载额度，执行前必须向用户说明并确认只下载一条活动。聊天默认使用离线模式；界面勾选 DeepSeek 后会把规范化活动摘要、确定性复盘和最近对话发送到官方 API并产生费用，不发送 Provider 原始载荷、外部 ID、坐标或 FIT。M7-D 只运行本地合成测试，没有调用外部账户或付费模型。
+未来重试 COROS 自动 FIT URL 获取仍会消耗每日下载额度，执行前必须向用户说明并确认只下载一条活动。聊天默认使用离线模式；界面勾选 DeepSeek 后会把规范化活动摘要、确定性复盘和最近对话发送到官方 API并产生费用，不发送 Provider 原始载荷、外部 ID、坐标或 FIT。M7-D/M7-E 只运行本地合成测试，没有调用外部账户或付费模型。
 
 ## 验收命令
 
@@ -215,6 +219,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 .\.venv\Scripts\runcrew.exe eval deepseek-suite --help
 .\.venv\Scripts\runcrew.exe eval running-chat --output data\private\evals\running-chat-offline-v1.0.json
 .\.venv\Scripts\runcrew.exe eval deepseek-chat-suite --help
+.\.venv\Scripts\runcrew.exe eval coach-agent --output data\private\evals\coach-agent-v1.0.json
 .\.venv\Scripts\runcrew.exe cycle --help
 .\.venv\Scripts\runcrew.exe recovery assess --help
 .\.venv\Scripts\runcrew.exe demo --no-open-browser

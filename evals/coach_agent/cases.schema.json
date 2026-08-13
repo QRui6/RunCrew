@@ -1,0 +1,225 @@
+{
+  "$defs": {
+    "CoachAgentEvaluationCase": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z0-9][a-z0-9_-]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "task",
+            "resilience",
+            "guardrail",
+            "budget",
+            "approval"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "scenario": {
+          "enum": [
+            "low_risk",
+            "reduce",
+            "rest",
+            "missing_feedback",
+            "red_flag",
+            "approval_stale"
+          ],
+          "title": "Scenario",
+          "type": "string"
+        },
+        "policy_mode": {
+          "default": "default",
+          "enum": [
+            "default",
+            "tamper_handoff",
+            "premature_finish",
+            "invalid_action"
+          ],
+          "title": "Policy Mode",
+          "type": "string"
+        },
+        "tool_mode": {
+          "default": "success",
+          "enum": [
+            "success",
+            "execution_transient_once",
+            "execution_timeout",
+            "execution_invalid_output",
+            "execution_permanent_failure",
+            "execution_cross_goal",
+            "plan_cross_goal",
+            "plan_lineage_tamper"
+          ],
+          "title": "Tool Mode",
+          "type": "string"
+        },
+        "permission_mode": {
+          "default": "default",
+          "enum": [
+            "default",
+            "wrong_execution_access"
+          ],
+          "title": "Permission Mode",
+          "type": "string"
+        },
+        "run": {
+          "$ref": "#/$defs/CoachEvaluationRunOverrides"
+        },
+        "expected_status": {
+          "enum": [
+            "succeeded",
+            "awaiting_user_confirmation",
+            "blocked",
+            "failed",
+            "timed_out",
+            "budget_exhausted",
+            "stale"
+          ],
+          "title": "Expected Status",
+          "type": "string"
+        },
+        "expected_termination_reason": {
+          "enum": [
+            "completed",
+            "user_confirmation_required",
+            "safe_blocked",
+            "policy_error",
+            "permission_denied",
+            "invalid_handoff",
+            "node_failure",
+            "node_timeout",
+            "invalid_node_output",
+            "premature_finish",
+            "step_budget_exhausted",
+            "run_timeout",
+            "stale_replay_blocked"
+          ],
+          "title": "Expected Termination Reason",
+          "type": "string"
+        },
+        "expected_required_user_action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Required User Action"
+        },
+        "expected_nodes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Expected Nodes",
+          "type": "array"
+        },
+        "max_node_calls": {
+          "default": 3,
+          "maximum": 6,
+          "minimum": 0,
+          "title": "Max Node Calls",
+          "type": "integer"
+        },
+        "max_node_attempts": {
+          "default": 3,
+          "maximum": 12,
+          "minimum": 0,
+          "title": "Max Node Attempts",
+          "type": "integer"
+        },
+        "expect_pre_execution_block": {
+          "default": false,
+          "title": "Expect Pre Execution Block",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "description",
+        "category",
+        "scenario",
+        "expected_status",
+        "expected_termination_reason"
+      ],
+      "title": "Coach 多 Agent 评测用例",
+      "type": "object"
+    },
+    "CoachEvaluationRunOverrides": {
+      "additionalProperties": false,
+      "properties": {
+        "max_steps": {
+          "default": 5,
+          "maximum": 12,
+          "minimum": 1,
+          "title": "Max Steps",
+          "type": "integer"
+        },
+        "node_call_budget": {
+          "default": 3,
+          "maximum": 6,
+          "minimum": 0,
+          "title": "Node Call Budget",
+          "type": "integer"
+        },
+        "max_retries": {
+          "default": 1,
+          "maximum": 3,
+          "minimum": 0,
+          "title": "Max Retries",
+          "type": "integer"
+        },
+        "node_timeout_seconds": {
+          "default": 0.01,
+          "exclusiveMinimum": 0,
+          "maximum": 5,
+          "title": "Node Timeout Seconds",
+          "type": "number"
+        },
+        "run_timeout_seconds": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "maximum": 30,
+          "title": "Run Timeout Seconds",
+          "type": "number"
+        }
+      },
+      "title": "Coach 评测运行参数覆盖",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "suite_version": {
+      "const": "coach-agent-eval/1.0",
+      "default": "coach-agent-eval/1.0",
+      "title": "Suite Version",
+      "type": "string"
+    },
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/CoachAgentEvaluationCase"
+      },
+      "minItems": 1,
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "cases"
+  ],
+  "title": "Coach 多 Agent 评测套件",
+  "type": "object"
+}
