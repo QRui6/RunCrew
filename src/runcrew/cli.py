@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from datetime import date
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -21,6 +22,7 @@ from runcrew.domain.training_cycle import (
     PlanSessionPatch,
     TrainingGoal,
 )
+from runcrew.domain.recovery_assessment import RecoveryAssessmentRequest
 from runcrew.evaluation import (
     evaluate_chat_suite,
     evaluate_review_agent_suite,
@@ -39,6 +41,10 @@ from runcrew.services.activity_review import build_activity_review
 from runcrew.services.sync import sync_activities
 from runcrew.services.training_review import execute_training_review
 from runcrew.services.training_cycle import TrainingCycleError, TrainingCycleService
+from runcrew.services.recovery_assessment import (
+    RecoveryAssessmentGoalNotFoundError,
+    execute_recovery_assessment,
+)
 from runcrew.storage.database import Database
 from runcrew.storage.models import ActivityRecord, RawProviderEvent, SyncRunRecord
 from runcrew.storage.repositories import (
@@ -61,11 +67,13 @@ training_app = typer.Typer(help="Run replayable training review skills.")
 agent_app = typer.Typer(help="运行带 Trace、预算和退出条件的单 Agent。")
 evaluation_app = typer.Typer(help="运行可回放的 Agent 离线评测。")
 cycle_app = typer.Typer(help="管理训练目标、周计划、身体反馈和计划变更确认。")
+recovery_app = typer.Typer(help="运行确定性的恢复与训练风险评估。")
 app.add_typer(activities_app, name="activities")
 app.add_typer(training_app, name="training")
 app.add_typer(agent_app, name="agent")
 app.add_typer(evaluation_app, name="eval")
 app.add_typer(cycle_app, name="cycle")
+app.add_typer(recovery_app, name="recovery")
 
 
 def database_url(database_path: Path) -> str:
@@ -98,6 +106,18 @@ def parse_iso_date(value: str, *, option_name: str) -> date:
         raise typer.BadParameter(
             f"{option_name} 必须使用 YYYY-MM-DD 格式。"
         ) from error
+
+
+def parse_iso_datetime(value: str, *, option_name: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError as error:
+        raise typer.BadParameter(
+            f"{option_name} 必须使用带时区的 ISO 8601 格式。"
+        ) from error
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise typer.BadParameter(f"{option_name} 必须包含时区偏移。")
+    return parsed
 
 
 @app.command("init-db")
@@ -273,6 +293,12 @@ def cycle_check_in(
     readiness: Annotated[int | None, typer.Option(min=1, max=5)] = None,
     pain_area: Annotated[str | None, typer.Option()] = None,
     pain_severity: Annotated[int, typer.Option(min=0, max=10)] = 0,
+    acute_symptoms: Annotated[
+        str,
+        typer.Option(
+            help="可选急性症状枚举，逗号分隔；使用 recovery assess --help 查看说明。"
+        ),
+    ] = "",
     note: Annotated[str | None, typer.Option()] = None,
     database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
 ) -> None:
@@ -286,6 +312,11 @@ def cycle_check_in(
             readiness=readiness,
             pain_area=pain_area,
             pain_severity=pain_severity,
+            acute_symptoms=[
+                value.strip()
+                for value in acute_symptoms.split(",")
+                if value.strip()
+            ],
             note=note,
         )
         with database.session() as session:
@@ -405,6 +436,48 @@ def cycle_snapshot(
     except TrainingCycleError as error:
         raise typer.BadParameter(str(error)) from error
     echo_domain(snapshot)
+
+
+@recovery_app.command("assess")
+def recovery_assess(
+    goal_id: Annotated[str, typer.Option(help="训练目标内部 ID。")],
+    assessed_at: Annotated[
+        str | None,
+        typer.Option(
+            help="可选评估时间，必须为带时区 ISO 8601；不传则使用系统本地时间。"
+        ),
+    ] = None,
+    provider_name: Annotated[
+        str | None,
+        typer.Option("--provider", help="可选活动来源，例如 coros 或 fixture。"),
+    ] = None,
+    lookback_days: Annotated[int, typer.Option(min=14, max=28)] = 14,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    """只做训练风险分层，不进行医疗诊断，也不直接修改计划。"""
+    database = open_database(database_path)
+    try:
+        request = RecoveryAssessmentRequest(
+            goal_id=goal_id,
+            assessed_at=(
+                parse_iso_datetime(assessed_at, option_name="--assessed-at")
+                if assessed_at
+                else datetime.now().astimezone()
+            ),
+            lookback_days=lookback_days,
+            provider=provider_name,
+        )
+        with database.session() as session:
+            result = execute_recovery_assessment(
+                request,
+                activities=ActivityRepository(session),
+                check_ins=CheckInRepository(session),
+                plans=TrainingPlanRepository(session),
+                goals=TrainingGoalRepository(session),
+            )
+    except (ValueError, RecoveryAssessmentGoalNotFoundError) as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(result)
 
 
 @app.command("demo")

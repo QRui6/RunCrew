@@ -15,5 +15,6 @@
 | [ADR-0011](0011-grounded-chat-snapshot.md) | 接受 | 连续对话固定证据快照，并只传递有界最近历史 |
 | [ADR-0012](0012-layered-flexible-chat-grounding.md) | 接受 | 个人事实强制 evidence，通用知识与建议保留表达自由 |
 | [ADR-0013](0013-confirmed-plan-change-boundary.md) | 接受 | 激活计划只能通过带版本检查的提案和用户确认变更 |
+| [ADR-0014](0014-deterministic-recovery-risk-boundary.md) | 接受 | 恢复 Agent 只能解释确定性风险结果，不能自行诊断或打分 |
 
 新 ADR 使用四位编号，必须记录背景、决策、原因、后果和替代方案。

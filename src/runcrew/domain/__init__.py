@@ -29,6 +29,12 @@ from runcrew.domain.training_cycle import (
     TrainingPlan,
     UserConfirmation,
 )
+from runcrew.domain.recovery_assessment import (
+    RecoveryAssessmentRequest,
+    RecoveryAssessmentResult,
+    RecoveryEvidence,
+    RecoveryPlanAction,
+)
 
 __all__ = [
     "ActivityDetail",
@@ -49,6 +55,10 @@ __all__ = [
     "PlanChangeProposal",
     "PlanSession",
     "ReviewObservation",
+    "RecoveryAssessmentRequest",
+    "RecoveryAssessmentResult",
+    "RecoveryEvidence",
+    "RecoveryPlanAction",
     "SourceProvider",
     "SourceRef",
     "SportType",

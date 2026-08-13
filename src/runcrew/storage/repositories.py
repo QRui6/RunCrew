@@ -452,6 +452,21 @@ class TrainingPlanRepository:
         )
         return TrainingPlan.model_validate_json(record.canonical_json) if record else None
 
+    def active_from_week(
+        self, goal_id: str, week_start: date, *, limit: int = 2
+    ) -> list[TrainingPlan]:
+        records = self.session.scalars(
+            select(TrainingPlanRecord)
+            .where(
+                TrainingPlanRecord.goal_id == goal_id,
+                TrainingPlanRecord.status == "active",
+                TrainingPlanRecord.week_start >= week_start,
+            )
+            .order_by(TrainingPlanRecord.week_start, TrainingPlanRecord.id)
+            .limit(limit)
+        ).all()
+        return [TrainingPlan.model_validate_json(record.canonical_json) for record in records]
+
 
 class CheckInRepository:
     def __init__(self, session: Session) -> None:
@@ -479,6 +494,17 @@ class CheckInRepository:
             select(DailyCheckInRecord)
             .order_by(desc(DailyCheckInRecord.day))
             .limit(limit)
+        ).all()
+        return [DailyCheckIn.model_validate_json(record.canonical_json) for record in records]
+
+    def between(self, start: date, end: date) -> list[DailyCheckIn]:
+        records = self.session.scalars(
+            select(DailyCheckInRecord)
+            .where(
+                DailyCheckInRecord.day >= start,
+                DailyCheckInRecord.day <= end,
+            )
+            .order_by(DailyCheckInRecord.day, DailyCheckInRecord.id)
         ).all()
         return [DailyCheckIn.model_validate_json(record.canonical_json) for record in records]
 

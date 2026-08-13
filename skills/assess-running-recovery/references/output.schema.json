@@ -1,0 +1,257 @@
+{
+  "$defs": {
+    "RecoveryEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "check_in",
+            "acute_symptom",
+            "pain",
+            "fatigue",
+            "sleep",
+            "readiness",
+            "training_volume",
+            "planned_session",
+            "missing_data"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "values": {
+          "additionalProperties": true,
+          "title": "Values",
+          "type": "object"
+        },
+        "rule_source": {
+          "enum": [
+            "user_report",
+            "runcrew_conservative_rule",
+            "exercise_safety_red_flag",
+            "missing_data_policy"
+          ],
+          "title": "Rule Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "message",
+        "rule_source"
+      ],
+      "title": "RecoveryEvidence",
+      "type": "object"
+    },
+    "RecoveryPlanAction": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "enum": [
+            "keep",
+            "ask_plan_agent_to_reduce",
+            "ask_plan_agent_to_replace_with_rest",
+            "hold_until_professional_review",
+            "wait_for_more_data"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "target_session_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Session Id"
+        },
+        "requires_user_confirmation": {
+          "default": true,
+          "title": "Requires User Confirmation",
+          "type": "boolean"
+        },
+        "reason": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "reason"
+      ],
+      "title": "RecoveryPlanAction",
+      "type": "object"
+    },
+    "RecoveryWindowMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "activity_count": {
+          "minimum": 0,
+          "title": "Activity Count",
+          "type": "integer"
+        },
+        "distance_meters": {
+          "minimum": 0,
+          "title": "Distance Meters",
+          "type": "number"
+        },
+        "duration_seconds": {
+          "minimum": 0,
+          "title": "Duration Seconds",
+          "type": "integer"
+        },
+        "training_load_total": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Training Load Total"
+        },
+        "training_load_coverage": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Training Load Coverage",
+          "type": "number"
+        }
+      },
+      "required": [
+        "activity_count",
+        "distance_meters",
+        "duration_seconds",
+        "training_load_coverage"
+      ],
+      "title": "RecoveryWindowMetrics",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "ruleset_version": {
+      "const": "recovery-risk-rules/1.0",
+      "default": "recovery-risk-rules/1.0",
+      "title": "Ruleset Version",
+      "type": "string"
+    },
+    "input_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Input Hash",
+      "type": "string"
+    },
+    "goal_id": {
+      "title": "Goal Id",
+      "type": "string"
+    },
+    "assessed_at": {
+      "format": "date-time",
+      "title": "Assessed At",
+      "type": "string"
+    },
+    "recommendation": {
+      "enum": [
+        "proceed",
+        "reduce",
+        "rest",
+        "seek_professional_help",
+        "insufficient_data"
+      ],
+      "title": "Recommendation",
+      "type": "string"
+    },
+    "risk_level": {
+      "enum": [
+        "low",
+        "moderate",
+        "high",
+        "escalate",
+        "unknown"
+      ],
+      "title": "Risk Level",
+      "type": "string"
+    },
+    "summary": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Summary",
+      "type": "string"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/RecoveryEvidence"
+      },
+      "maxItems": 30,
+      "minItems": 1,
+      "title": "Evidence",
+      "type": "array"
+    },
+    "missing_data": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Missing Data",
+      "type": "array"
+    },
+    "confidence": {
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "title": "Confidence",
+      "type": "string"
+    },
+    "current_7d": {
+      "$ref": "#/$defs/RecoveryWindowMetrics"
+    },
+    "previous_7d": {
+      "$ref": "#/$defs/RecoveryWindowMetrics"
+    },
+    "plan_action": {
+      "$ref": "#/$defs/RecoveryPlanAction"
+    }
+  },
+  "required": [
+    "input_hash",
+    "goal_id",
+    "assessed_at",
+    "recommendation",
+    "risk_level",
+    "summary",
+    "evidence",
+    "confidence",
+    "current_7d",
+    "previous_7d",
+    "plan_action"
+  ],
+  "title": "跑步恢复风险评估输出",
+  "type": "object"
+}

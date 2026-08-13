@@ -54,6 +54,16 @@ Training Cycle Foundation
   ├── Goal → weekly Plan → planned Sessions
   ├── Daily Check-in
   └── Change Proposal → user Confirmation → revisioned Plan
+  │
+  ▼
+Recovery Context Builder
+  │ assessed_at 边界 + Provider 过滤 + 7d/14d窗口 + next session
+  ▼
+assess-running-recovery Skill
+  │ red flag > rest > reduce > proceed / insufficient_data
+  ▼
+RecoveryAssessmentResult
+  └── evidence + missing data + input hash + plan_action（不直接写计划）
 ```
 
 ## 分层职责
@@ -116,6 +126,8 @@ Training Cycle Foundation
 位置：`skills/review-running-training/`
 
 负责告诉 Agent 如何选择规范化数据、调用确定性 Service、验证输入输出并解释 evidence。Skill 不直接计算指标，也不读取 COROS 原始文本。
+
+`skills/assess-running-recovery/` 是第二个领域 Skill。它以显式评估时间构建有界 Context，分开处理运动安全红旗和 RunCrew 自定义保守阈值。其 `plan_action` 只表达下一步协作意图，不拥有正式课表写入权限。
 
 ### Agent Harness
 
@@ -203,6 +215,9 @@ provider + external_id
 | Agent 尝试直接修改激活计划 | Service 拒绝，要求提交变更提案 |
 | 用户批准旧 revision 的提案 | 提案标记 `stale`，计划保持不变 |
 | 休息课仍包含距离或时长 | Domain Schema 拒绝矛盾状态 |
+| 缺少当天或前一天身体反馈 | `insufficient_data`，不默认正常训练 |
+| 出现心肺红旗 | 覆盖普通负荷判断，停止自动训练建议并提示专业帮助 |
+| 训练负荷覆盖不足 | 使用时长变化代理并显式标记 method；无历史则保留缺失项 |
 
 ## Agent 边界
 

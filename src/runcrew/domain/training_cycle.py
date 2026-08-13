@@ -12,6 +12,14 @@ EventType = Literal["5k", "10k", "half_marathon", "marathon", "general_fitness"]
 SessionType = Literal[
     "easy", "long_run", "tempo", "interval", "recovery", "rest", "test"
 ]
+AcuteSymptom = Literal[
+    "chest_pain_or_pressure",
+    "fainting_or_severe_dizziness",
+    "unusual_or_severe_shortness_of_breath",
+    "new_irregular_heartbeat",
+    "fever_or_acute_illness",
+    "sudden_pain_swelling_or_redness",
+]
 
 
 def new_id() -> str:
@@ -139,6 +147,7 @@ class DailyCheckIn(BaseModel):
     readiness: int | None = Field(default=None, ge=1, le=5)
     pain_area: str | None = Field(default=None, min_length=1, max_length=80)
     pain_severity: int = Field(default=0, ge=0, le=10)
+    acute_symptoms: list[AcuteSymptom] = Field(default_factory=list, max_length=6)
     note: str | None = Field(default=None, max_length=500)
     created_at: datetime = Field(default_factory=utc_now)
 
@@ -147,6 +156,15 @@ class DailyCheckIn(BaseModel):
         if self.pain_severity > 0 and not self.pain_area:
             raise ValueError("疼痛程度大于0时必须填写疼痛部位")
         return self
+
+    @field_validator("acute_symptoms")
+    @classmethod
+    def symptoms_must_be_unique(
+        cls, value: list[AcuteSymptom]
+    ) -> list[AcuteSymptom]:
+        if len(value) != len(set(value)):
+            raise ValueError("急性症状不能重复")
+        return sorted(value)
 
     @field_validator("created_at")
     @classmethod

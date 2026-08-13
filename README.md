@@ -29,6 +29,8 @@ RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前�
 - 使用不含位置的合成 FIT 进行离线开发和回归测试。
 - 管理训练目标、周计划、主观身体反馈和计划变更提案；
 - 激活后的计划不能由 Agent 直接修改，只有用户批准的提案才能递增版本并生效。
+- 通过确定性的恢复风险 Skill 综合近期训练、身体反馈与下一课表，输出带 evidence 的训练决策边界；
+- 心肺红旗会停止自动训练建议；疲劳、睡眠和训练量阈值明确标记为项目保守规则，不冒充医疗诊断。
 
 ## 文档导航
 
@@ -61,6 +63,7 @@ python -m pip install -e ".[dev]"
 .\.venv\Scripts\runcrew.exe eval review-agent --output data\private\evals\m5-baseline.json
 .\.venv\Scripts\runcrew.exe eval running-chat --output data\private\evals\running-chat-offline-v1.0.json
 .\.venv\Scripts\runcrew.exe cycle --help
+.\.venv\Scripts\runcrew.exe recovery assess --help
 .\.venv\Scripts\runcrew.exe demo
 .\.venv\Scripts\python.exe scripts\verify.py
 ```
@@ -115,6 +118,16 @@ M7-A 提供本地 `cycle` 命令组，用于创建目标、周计划、主观反
 ```
 
 激活后的计划不能直接编辑。计划 Agent 或恢复 Agent 未来只能创建变更提案，用户通过 `change-decide` 批准后才会生效；如果计划 revision 已变化，旧提案会标记为 `stale`。
+
+恢复风险评估：
+
+```powershell
+.\.venv\Scripts\runcrew.exe recovery assess `
+  --goal-id <目标ID> `
+  --provider coros
+```
+
+该命令不会直接修改课表，也不进行伤病诊断。缺少近期身体反馈时返回数据不足；出现结构化心肺红旗时停止自动训练建议。
 
 ## 同步真实 COROS 数据
 

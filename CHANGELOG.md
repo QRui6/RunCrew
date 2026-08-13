@@ -2,6 +2,29 @@
 
 本项目使用阶段化变更记录。当前处于早期开发阶段，尚未发布稳定版本。
 
+## 2026-08-13
+
+### Added
+
+- 增加 `assess-running-recovery` 中文 Skill、输入输出 Schema、安全边界参考和官方 UI 元数据；
+- 增加确定性恢复风险 Context 与 Service，输出五类 recommendation、evidence、缺失数据、置信度和计划动作；
+- `DailyCheckIn` 增加结构化急性症状枚举，避免从自由文本猜测心肺红旗；
+- 增加 `runcrew recovery assess` CLI 和带时区历史回放；
+- 增加12项恢复规则、未来数据隔离、负荷代理、持久化、CLI 和 Schema 测试；
+- 增加 ADR-0014，固定恢复风险规则与未来 Recovery Agent 的职责边界。
+
+### Changed
+
+- 训练负荷覆盖不足80%时改用七天训练时长变化代理，并在 evidence 中公开方法；
+- 下一计划课可跨当前周读取到下一训练周；
+- 恢复风险建议仍通过 M7-A 提案与用户确认边界修改计划，Skill 不直接写入。
+
+### Verified
+
+- `assess-running-recovery` 通过官方 `quick_validate.py`；
+- 12项专项测试和85项全量测试通过；
+- 本阶段没有调用 COROS 或 DeepSeek，没有产生外部费用。
+
 ## 2026-08-12
 
 ### Added

@@ -1,6 +1,6 @@
 # RunCrew 实施状态导航
 
-> 本文件不再维护重复的阶段快照，避免多份“当前状态”相互冲突。最后调整：2026-08-12。
+> 本文件不再维护重复的阶段快照，避免多份“当前状态”相互冲突。最后调整：2026-08-13。
 
 请按以下顺序阅读：
 
@@ -10,7 +10,7 @@
 4. [ROADMAP.md](ROADMAP.md)：后续阶段和验收条件；
 5. [adr/README.md](adr/README.md)：关键架构选择及其原因。
 
-当前一句话状态：73项自动化测试通过；M7-A 已建立目标—计划—反馈—提案—用户确认的数据和权限基础；下一步实现确定性的恢复与风险评估 Skill，真实 DeepSeek 聊天评测仍待新 Key。
+当前一句话状态：85项自动化测试通过；M7-B1 已完成可回放的恢复风险 Skill，但尚未创建 Recovery Agent；下一步实现训练计划草案与调整 Skill，真实 DeepSeek 聊天评测仍待新 Key。
 
 常用验收命令：
 
@@ -22,4 +22,5 @@
 .\.venv\Scripts\runcrew.exe eval deepseek-suite --help
 .\.venv\Scripts\runcrew.exe demo --no-open-browser
 .\.venv\Scripts\runcrew.exe cycle --help
+.\.venv\Scripts\runcrew.exe recovery assess --help
 ```

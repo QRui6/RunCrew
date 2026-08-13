@@ -1,0 +1,55 @@
+{
+  "$defs": {
+    "SourceProvider": {
+      "enum": [
+        "coros",
+        "fit",
+        "keep",
+        "manual",
+        "fixture"
+      ],
+      "title": "SourceProvider",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "goal_id": {
+      "description": "RunCrew 内部训练目标 ID。",
+      "minLength": 1,
+      "title": "Goal Id",
+      "type": "string"
+    },
+    "assessed_at": {
+      "description": "评估时间，必须包含时区。",
+      "format": "date-time",
+      "title": "Assessed At",
+      "type": "string"
+    },
+    "lookback_days": {
+      "default": 14,
+      "maximum": 28,
+      "minimum": 14,
+      "title": "Lookback Days",
+      "type": "integer"
+    },
+    "provider": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SourceProvider"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "可选活动来源过滤；多来源可能重复时应显式指定。"
+    }
+  },
+  "required": [
+    "goal_id",
+    "assessed_at"
+  ],
+  "title": "跑步恢复风险评估输入",
+  "type": "object"
+}

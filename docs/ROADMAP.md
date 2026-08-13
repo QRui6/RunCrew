@@ -129,14 +129,14 @@
 
 ## M7：多智能体训练运营闭环
 
-状态：**进行中（M7-A 已完成）**
+状态：**进行中（M7-A、M7-B1 已完成）**
 
 目标不是堆叠角色，而是让不同职责的 Agent 围绕同一个训练状态协作，并由 Harness 管理权限、冲突、确认、失败和回放。
 
 - [x] M7-A：训练目标、周计划、主观反馈、变更提案和用户确认的领域模型；
 - [x] M7-A：激活计划不可直接修改，提案使用 `base_revision` 防止旧建议覆盖；
 - [x] M7-A：五张 SQLite 表、Repository、Service 状态机和 `runcrew cycle` CLI；
-- [ ] M7-B1：确定性的恢复与风险评估 Skill；
+- [x] M7-B1：确定性的恢复与风险评估 Skill；
 - [ ] M7-B2：确定性的训练计划草案与调整 Skill；
 - [ ] M7-B3：训练执行对照 Skill，连接计划课与实际 Activity；
 - [ ] M7-C：Coach Orchestrator 编排训练分析、计划和恢复职责；
