@@ -23,6 +23,7 @@ from runcrew.domain.training_cycle import (
     TrainingGoal,
 )
 from runcrew.domain.recovery_assessment import RecoveryAssessmentRequest
+from runcrew.domain.training_planning import WeeklyPlanDraftRequest
 from runcrew.evaluation import (
     evaluate_chat_suite,
     evaluate_review_agent_suite,
@@ -44,6 +45,12 @@ from runcrew.services.training_cycle import TrainingCycleError, TrainingCycleSer
 from runcrew.services.recovery_assessment import (
     RecoveryAssessmentGoalNotFoundError,
     execute_recovery_assessment,
+)
+from runcrew.services.training_planning import (
+    TrainingPlanningError,
+    adjustment_request_from_recovery,
+    execute_plan_adjustment,
+    execute_weekly_plan_draft,
 )
 from runcrew.storage.database import Database
 from runcrew.storage.models import ActivityRecord, RawProviderEvent, SyncRunRecord
@@ -68,12 +75,14 @@ agent_app = typer.Typer(help="运行带 Trace、预算和退出条件的单 Agen
 evaluation_app = typer.Typer(help="运行可回放的 Agent 离线评测。")
 cycle_app = typer.Typer(help="管理训练目标、周计划、身体反馈和计划变更确认。")
 recovery_app = typer.Typer(help="运行确定性的恢复与训练风险评估。")
+planning_app = typer.Typer(help="生成可回放的训练周草案与待确认调整提案。")
 app.add_typer(activities_app, name="activities")
 app.add_typer(training_app, name="training")
 app.add_typer(agent_app, name="agent")
 app.add_typer(evaluation_app, name="eval")
 app.add_typer(cycle_app, name="cycle")
 app.add_typer(recovery_app, name="recovery")
+app.add_typer(planning_app, name="planning")
 
 
 def database_url(database_path: Path) -> str:
@@ -476,6 +485,97 @@ def recovery_assess(
                 goals=TrainingGoalRepository(session),
             )
     except (ValueError, RecoveryAssessmentGoalNotFoundError) as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(result)
+
+
+@planning_app.command("draft")
+def planning_draft(
+    goal_id: Annotated[str, typer.Option(help="训练目标内部 ID。")],
+    week_start: Annotated[str, typer.Option(help="待规划周的周一，格式 YYYY-MM-DD。")],
+    as_of: Annotated[
+        str | None,
+        typer.Option(help="可选知识截止时间；不传则使用系统本地时间。"),
+    ] = None,
+    provider_name: Annotated[
+        str | None,
+        typer.Option("--provider", help="可选活动来源，例如 coros 或 fixture。"),
+    ] = None,
+    lookback_days: Annotated[int, typer.Option(min=14, max=56)] = 28,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    """生成草案但不写入数据库，不会覆盖已有周计划。"""
+    database = open_database(database_path)
+    try:
+        request = WeeklyPlanDraftRequest(
+            goal_id=goal_id,
+            week_start=parse_iso_date(week_start, option_name="--week-start"),
+            as_of=(
+                parse_iso_datetime(as_of, option_name="--as-of")
+                if as_of
+                else datetime.now().astimezone()
+            ),
+            lookback_days=lookback_days,
+            provider=provider_name,
+        )
+        with database.session() as session:
+            result = execute_weekly_plan_draft(
+                request,
+                activities=ActivityRepository(session),
+                goals=TrainingGoalRepository(session),
+                plans=TrainingPlanRepository(session),
+            )
+    except (ValueError, TrainingPlanningError) as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(result)
+
+
+@planning_app.command("adjust")
+def planning_adjust(
+    goal_id: Annotated[str, typer.Option(help="训练目标内部 ID。")],
+    assessed_at: Annotated[
+        str | None,
+        typer.Option(help="可选评估时间；不传则使用系统本地时间。"),
+    ] = None,
+    provider_name: Annotated[
+        str | None,
+        typer.Option("--provider", help="可选活动来源，例如 coros 或 fixture。"),
+    ] = None,
+    lookback_days: Annotated[int, typer.Option(min=14, max=28)] = 14,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    """先运行恢复 Skill，再生成计划提案参数；全程不保存或批准提案。"""
+    database = open_database(database_path)
+    try:
+        moment = (
+            parse_iso_datetime(assessed_at, option_name="--assessed-at")
+            if assessed_at
+            else datetime.now().astimezone()
+        )
+        recovery_request = RecoveryAssessmentRequest(
+            goal_id=goal_id,
+            assessed_at=moment,
+            provider=provider_name,
+            lookback_days=lookback_days,
+        )
+        with database.session() as session:
+            recovery_result = execute_recovery_assessment(
+                recovery_request,
+                activities=ActivityRepository(session),
+                check_ins=CheckInRepository(session),
+                plans=TrainingPlanRepository(session),
+                goals=TrainingGoalRepository(session),
+            )
+            result = execute_plan_adjustment(
+                adjustment_request_from_recovery(recovery_result),
+                goals=TrainingGoalRepository(session),
+                plans=TrainingPlanRepository(session),
+            )
+    except (
+        ValueError,
+        RecoveryAssessmentGoalNotFoundError,
+        TrainingPlanningError,
+    ) as error:
         raise typer.BadParameter(str(error)) from error
     echo_domain(result)
 

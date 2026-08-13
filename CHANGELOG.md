@@ -6,6 +6,11 @@
 
 ### Added
 
+- 增加 `draft-running-plan` 中文 Skill、周计划/调整输入 Schema、统一输出 Schema、规则边界资料和官方 UI 元数据；
+- 增加确定性训练计划 Service，可根据目标、可训练星期与截止时点前历史活动生成可回放周草案；
+- 增加 `runcrew planning draft` 与 `runcrew planning adjust`，后者串联 Recovery Skill 并生成带 revision 的待确认提案参数；
+- 增加10项计划回放、未来数据隔离、运动类型过滤、保守模板、权限边界与 CLI 测试，全量测试增至95项；
+- 增加 ADR-0015，固定计划 Skill 不保存、不批准、不覆盖正式计划的边界。
 - 增加 `assess-running-recovery` 中文 Skill、输入输出 Schema、安全边界参考和官方 UI 元数据；
 - 增加确定性恢复风险 Context 与 Service，输出五类 recommendation、evidence、缺失数据、置信度和计划动作；
 - `DailyCheckIn` 增加结构化急性症状枚举，避免从自由文本猜测心肺红旗；
@@ -15,6 +20,8 @@
 
 ### Changed
 
+- 计划历史不足时使用低强度模板，不按目标成绩推导高强度处方；具体增量、时长分配与降级比例显式归属 RunCrew 工程规则；
+- Recovery 的 `plan_action` 成为 Plan Skill 的结构化输入；`keep` 不生成提案，数据不足与专业升级信号安全阻塞。
 - 训练负荷覆盖不足80%时改用七天训练时长变化代理，并在 evidence 中公开方法；
 - 下一计划课可跨当前周读取到下一训练周；
 - 恢复风险建议仍通过 M7-A 提案与用户确认边界修改计划，Skill 不直接写入。

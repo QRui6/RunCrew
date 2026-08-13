@@ -95,4 +95,5 @@ cli.py       人机入口，只做参数编排
 \.venv\Scripts\runcrew.exe eval review-agent --output data\private\evals\m5-baseline.json
 \.venv\Scripts\runcrew.exe cycle --help
 \.venv\Scripts\runcrew.exe recovery assess --help
+\.venv\Scripts\runcrew.exe planning --help
 ```

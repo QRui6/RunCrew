@@ -1,0 +1,100 @@
+{
+  "$defs": {
+    "RecoveryPlanAction": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "enum": [
+            "keep",
+            "ask_plan_agent_to_reduce",
+            "ask_plan_agent_to_replace_with_rest",
+            "hold_until_professional_review",
+            "wait_for_more_data"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "target_session_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Session Id"
+        },
+        "requires_user_confirmation": {
+          "default": true,
+          "title": "Requires User Confirmation",
+          "type": "boolean"
+        },
+        "reason": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "reason"
+      ],
+      "title": "RecoveryPlanAction",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "goal_id": {
+      "description": "RunCrew 内部训练目标 ID。",
+      "minLength": 1,
+      "title": "Goal Id",
+      "type": "string"
+    },
+    "assessed_at": {
+      "description": "恢复评估时间，必须包含时区。",
+      "format": "date-time",
+      "title": "Assessed At",
+      "type": "string"
+    },
+    "recovery_input_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Recovery Input Hash",
+      "type": "string"
+    },
+    "recovery_recommendation": {
+      "enum": [
+        "proceed",
+        "reduce",
+        "rest",
+        "seek_professional_help",
+        "insufficient_data"
+      ],
+      "title": "Recovery Recommendation",
+      "type": "string"
+    },
+    "plan_action": {
+      "$ref": "#/$defs/RecoveryPlanAction"
+    },
+    "evidence_refs": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 30,
+      "title": "Evidence Refs",
+      "type": "array"
+    }
+  },
+  "required": [
+    "goal_id",
+    "assessed_at",
+    "recovery_input_hash",
+    "recovery_recommendation",
+    "plan_action"
+  ],
+  "title": "恢复建议转计划调整输入",
+  "type": "object"
+}

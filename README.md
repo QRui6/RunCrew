@@ -129,6 +129,25 @@ M7-A 提供本地 `cycle` 命令组，用于创建目标、周计划、主观反
 
 该命令不会直接修改课表，也不进行伤病诊断。缺少近期身体反馈时返回数据不足；出现结构化心肺红旗时停止自动训练建议。
 
+生成待确认的周计划草案：
+
+```powershell
+.\.venv\Scripts\runcrew.exe planning draft `
+  --goal-id <目标ID> `
+  --week-start 2026-08-17 `
+  --provider coros
+```
+
+根据最新恢复评估生成待确认的调整提案参数：
+
+```powershell
+.\.venv\Scripts\runcrew.exe planning adjust `
+  --goal-id <目标ID> `
+  --provider coros
+```
+
+两条 `planning` 命令都不会写入或批准正式计划。具体增量与降级幅度是版本化的 RunCrew 保守工程规则，不是医学标准。
+
 ## 同步真实 COROS 数据
 
 ```powershell

@@ -5,7 +5,7 @@
 
 ## 当前里程碑
 
-**M5 与 M6-A1/A2/A3a 已完成；真实 DeepSeek 聊天同题验收仍待新 Key。M7-A 训练闭环基础与 M7-B1 恢复风险 Skill 已完成，下一步是 M7-B2 训练计划草案与调整 Skill。**
+**M5 与 M6-A1/A2/A3a 已完成；真实 DeepSeek 聊天同题验收仍待新 Key。M7-A 训练闭环基础与 M7-B1/B2 恢复风险、训练计划 Skill 已完成，下一步是 M7-B3 训练执行对照 Skill。**
 
 M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
@@ -22,7 +22,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 ## 已验证事实
 
 - Python 3.13 本地环境可运行；
-- 自动化测试：85 passed；
+- 自动化测试：95 passed；
 - fixture 首次同步插入 2 条；
 - fixture 第二次同步插入 0 条、更新 2 条；
 - 真实 COROS OAuth + PKCE 成功；
@@ -128,6 +128,14 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - `plan_action` 只请求计划 Agent 产生变更提案，Recovery Skill 不直接修改正式计划；
 - 历史回放排除评估时间之后的活动和反馈，下一计划课可从当前周或下一周读取；
 - M7-B1 增加12项专项测试，全量自动化测试增至85项；没有调用外部账户或付费模型。
+- `draft-running-plan` Skill 已提供中文流程、两类输入 Schema、统一输出 Schema、规则边界和 UI 元数据，并通过官方校验；
+- `planning draft` 根据目标、可训练星期、截止时间前历史活动生成待确认周计划草案，不覆盖已有周计划；
+- 草案使用 `training-plan-rules/1.0 + input_hash + UUIDv5 session id` 支持同输入稳定回放；
+- 历史不足时只安排低强度入门模板；目标成绩不会被直接换算为高强度处方；
+- `planning adjust` 已串联 Recovery Skill 与 Plan Skill：消费 `plan_action` 后返回带 `base_revision` 的 `PlanChangeProposal` 参数；
+- `keep` 不生成提案；缺数据与专业评估升级信号返回 blocked；reduce/rest 仍需用户确认；
+- Plan Skill 不保存、不批准提案，专项测试证明命令执行后 pending proposal 为空；
+- M7-B2 增加10项专项测试，全量自动化测试增至95项；没有读取私人活动或调用外部账户。
 
 ## 当前已知限制
 
@@ -136,9 +144,10 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - `queryActivityFitFileDownloadUrls` 在参数符合实时 schema 的情况下返回 `isError=true`，没有下发下载 URL；
 - 自动 FIT URL 未能验证，但用户手动导出的真实 FIT 已通过私有缓存完成端到端验收；
 - 当前 COROS 规范化活动没有训练负荷字段，因此真实 `load_change` 暂时可能为 `unknown`；
-- 训练目标、周计划和主观反馈已经持久化，但尚未接入聊天界面，也不会自动生成或匹配实际 Activity；
+- 训练目标、周计划和主观反馈已经持久化，计划草案可由 CLI 生成，但尚未接入聊天界面，也不会自动匹配实际 Activity；
 - 恢复风险阈值是 RunCrew 保守工程规则，不是临床决策；无训练负荷时的时长代理不能表示强度差异；
-- Recovery Skill 已完成，但 Recovery Agent、Plan Agent 和 Coach Orchestrator 尚未实现，不能声称已有多 Agent 协作；
+- Recovery 与 Plan Skill 已能确定性串联，但 Recovery Agent、Plan Agent 和 Coach Orchestrator Harness 尚未实现，不能声称已有多 Agent 协作；
+- 计划 v1 主要按时长规划，不处理比赛周、天气、海拔、力量训练或精确配速区间；5%增量和60%降级是保守工程规则；
 - 当前12场景中，3个非法动作场景使用脚本化 Policy 注入，只能证明 Harness 能拦截，不能声称真实 DeepSeek 在提示注入或恶意诱导下同样安全；
 - 当前模型任务只有一个工具和两种动作，12/12通过不代表复杂规划、多工具协作或生产稳定性已经验收；
 - 本地费用门只能在收到真实 usage 后停止后续动作，不能阻止第一笔请求，也不能替代 DeepSeek 账户侧余额控制；
@@ -160,15 +169,15 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 ## 下一项唯一任务
 
-**M7-B2：实现确定性的训练计划草案与调整 Skill。**
+**M7-B3：实现训练执行对照 Skill。**
 
-该 Skill 根据训练目标、可训练日期、当前周计划和 M7-B1 的 `plan_action`，生成结构化周计划草案或 `PlanChangeProposal` 参数。它不能批准自己的提案，也不能直接修改激活计划。完成后再用 Harness 连接 Recovery Agent 与 Plan Agent，形成第一个可评测的跨职责协作切片。M6-A3b 真实 DeepSeek 8轮评测仍待新 Key，不阻塞本地确定性业务建设。
+该 Skill 把计划课与实际 Activity 建立可审计匹配，输出完成、部分完成、跳过或无法匹配，并保留用户人工纠正入口。完成后再用 Harness 连接 Recovery Agent、Plan Agent 与执行对照，形成第一个可评测的训练运营闭环。M6-A3b 真实 DeepSeek 8轮评测仍待新 Key，不阻塞本地确定性业务建设。
 
 完整模型结论见 [M5-B3 DeepSeek 最终评测报告](M5-B3-DeepSeek最终评测报告.md)。
 
 ## 外部额度约束
 
-未来重试 COROS 自动 FIT URL 获取仍会消耗每日下载额度，执行前必须向用户说明并确认只下载一条活动。聊天默认使用离线模式；界面勾选 DeepSeek 后会把规范化活动摘要、确定性复盘和最近对话发送到官方 API并产生费用，不发送 Provider 原始载荷、外部 ID、坐标或 FIT。M7-B1 只运行本地合成测试并查阅公开安全资料，没有调用外部账户或付费模型。
+未来重试 COROS 自动 FIT URL 获取仍会消耗每日下载额度，执行前必须向用户说明并确认只下载一条活动。聊天默认使用离线模式；界面勾选 DeepSeek 后会把规范化活动摘要、确定性复盘和最近对话发送到官方 API并产生费用，不发送 Provider 原始载荷、外部 ID、坐标或 FIT。M7-B2 只运行本地合成测试并查阅公开资料，没有调用外部账户或付费模型。
 
 ## 验收命令
 

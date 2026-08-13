@@ -10,7 +10,7 @@
 4. [ROADMAP.md](ROADMAP.md)：后续阶段和验收条件；
 5. [adr/README.md](adr/README.md)：关键架构选择及其原因。
 
-当前一句话状态：85项自动化测试通过；M7-B1 已完成可回放的恢复风险 Skill，但尚未创建 Recovery Agent；下一步实现训练计划草案与调整 Skill，真实 DeepSeek 聊天评测仍待新 Key。
+当前一句话状态：95项自动化测试通过；M7-B1/B2 已完成可回放的恢复风险与计划草案 Skill，并能在本地串联，但尚未创建多 Agent Harness；下一步实现训练执行对照 Skill，真实 DeepSeek 聊天评测仍待新 Key。
 
 常用验收命令：
 
@@ -23,4 +23,5 @@
 .\.venv\Scripts\runcrew.exe demo --no-open-browser
 .\.venv\Scripts\runcrew.exe cycle --help
 .\.venv\Scripts\runcrew.exe recovery assess --help
+.\.venv\Scripts\runcrew.exe planning --help
 ```

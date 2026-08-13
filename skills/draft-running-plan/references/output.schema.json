@@ -1,0 +1,579 @@
+{
+  "$defs": {
+    "PlanChangeProposalDraft": {
+      "additionalProperties": false,
+      "description": "可交给 TrainingCycleService 的提案参数，不代表已保存或已批准。",
+      "properties": {
+        "plan_id": {
+          "minLength": 1,
+          "title": "Plan Id",
+          "type": "string"
+        },
+        "base_revision": {
+          "minimum": 1,
+          "title": "Base Revision",
+          "type": "integer"
+        },
+        "proposed_by": {
+          "const": "plan_agent",
+          "default": "plan_agent",
+          "title": "Proposed By",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "changes": {
+          "items": {
+            "$ref": "#/$defs/PlanSessionPatch"
+          },
+          "maxItems": 14,
+          "minItems": 1,
+          "title": "Changes",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "requires_user_confirmation": {
+          "const": true,
+          "default": true,
+          "title": "Requires User Confirmation",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "plan_id",
+        "base_revision",
+        "reason",
+        "changes"
+      ],
+      "title": "PlanChangeProposalDraft",
+      "type": "object"
+    },
+    "PlanSession": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "scheduled_for": {
+          "format": "date",
+          "title": "Scheduled For",
+          "type": "string"
+        },
+        "session_type": {
+          "enum": [
+            "easy",
+            "long_run",
+            "tempo",
+            "interval",
+            "recovery",
+            "rest",
+            "test"
+          ],
+          "title": "Session Type",
+          "type": "string"
+        },
+        "distance_meters": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distance Meters"
+        },
+        "duration_seconds": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Seconds"
+        },
+        "intensity": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intensity"
+        },
+        "purpose": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Purpose",
+          "type": "string"
+        },
+        "status": {
+          "default": "planned",
+          "enum": [
+            "planned",
+            "completed",
+            "skipped"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "linked_activity_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Linked Activity Id"
+        }
+      },
+      "required": [
+        "scheduled_for",
+        "session_type",
+        "purpose"
+      ],
+      "title": "PlanSession",
+      "type": "object"
+    },
+    "PlanSessionPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "scheduled_for": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scheduled For"
+        },
+        "session_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "easy",
+                "long_run",
+                "tempo",
+                "interval",
+                "recovery",
+                "rest",
+                "test"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Type"
+        },
+        "distance_meters": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distance Meters"
+        },
+        "duration_seconds": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Seconds"
+        },
+        "clear_distance": {
+          "default": false,
+          "title": "Clear Distance",
+          "type": "boolean"
+        },
+        "clear_duration": {
+          "default": false,
+          "title": "Clear Duration",
+          "type": "boolean"
+        },
+        "clear_intensity": {
+          "default": false,
+          "title": "Clear Intensity",
+          "type": "boolean"
+        },
+        "intensity": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intensity"
+        },
+        "purpose": {
+          "anyOf": [
+            {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Purpose"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "title": "PlanSessionPatch",
+      "type": "object"
+    },
+    "PlanningEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "goal",
+            "availability",
+            "training_history",
+            "current_plan",
+            "recovery_action",
+            "engineering_rule",
+            "missing_data"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "values": {
+          "additionalProperties": true,
+          "title": "Values",
+          "type": "object"
+        },
+        "rule_source": {
+          "enum": [
+            "user_goal",
+            "normalized_activity",
+            "active_plan",
+            "recovery_assessment",
+            "runcrew_conservative_rule",
+            "missing_data_policy"
+          ],
+          "title": "Rule Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "message",
+        "rule_source"
+      ],
+      "title": "PlanningEvidence",
+      "type": "object"
+    },
+    "RecoveryAssessmentSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "input_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Hash",
+          "type": "string"
+        },
+        "recommendation": {
+          "enum": [
+            "proceed",
+            "reduce",
+            "rest",
+            "seek_professional_help",
+            "insufficient_data"
+          ],
+          "title": "Recommendation",
+          "type": "string"
+        },
+        "plan_action": {
+          "$ref": "#/$defs/RecoveryPlanAction"
+        }
+      },
+      "required": [
+        "input_hash",
+        "recommendation",
+        "plan_action"
+      ],
+      "title": "RecoveryAssessmentSnapshot",
+      "type": "object"
+    },
+    "RecoveryPlanAction": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "enum": [
+            "keep",
+            "ask_plan_agent_to_reduce",
+            "ask_plan_agent_to_replace_with_rest",
+            "hold_until_professional_review",
+            "wait_for_more_data"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "target_session_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Session Id"
+        },
+        "requires_user_confirmation": {
+          "default": true,
+          "title": "Requires User Confirmation",
+          "type": "boolean"
+        },
+        "reason": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "reason"
+      ],
+      "title": "RecoveryPlanAction",
+      "type": "object"
+    },
+    "WeeklyPlanDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "goal_id": {
+          "minLength": 1,
+          "title": "Goal Id",
+          "type": "string"
+        },
+        "week_start": {
+          "format": "date",
+          "title": "Week Start",
+          "type": "string"
+        },
+        "sessions": {
+          "items": {
+            "$ref": "#/$defs/PlanSession"
+          },
+          "maxItems": 7,
+          "minItems": 1,
+          "title": "Sessions",
+          "type": "array"
+        },
+        "total_duration_seconds": {
+          "minimum": 0,
+          "title": "Total Duration Seconds",
+          "type": "integer"
+        },
+        "rationale": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "requires_user_confirmation": {
+          "const": true,
+          "default": true,
+          "title": "Requires User Confirmation",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "goal_id",
+        "week_start",
+        "sessions",
+        "total_duration_seconds",
+        "rationale"
+      ],
+      "title": "WeeklyPlanDraft",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "ruleset_version": {
+      "const": "training-plan-rules/1.0",
+      "default": "training-plan-rules/1.0",
+      "title": "Ruleset Version",
+      "type": "string"
+    },
+    "operation": {
+      "enum": [
+        "draft_week",
+        "adjust_from_recovery"
+      ],
+      "title": "Operation",
+      "type": "string"
+    },
+    "input_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Input Hash",
+      "type": "string"
+    },
+    "goal_id": {
+      "minLength": 1,
+      "title": "Goal Id",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "ready",
+        "no_change",
+        "blocked"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "summary": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Summary",
+      "type": "string"
+    },
+    "weekly_plan_draft": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/WeeklyPlanDraft"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "change_proposal_draft": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PlanChangeProposalDraft"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source_recovery_assessment": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RecoveryAssessmentSnapshot"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/PlanningEvidence"
+      },
+      "maxItems": 30,
+      "minItems": 1,
+      "title": "Evidence",
+      "type": "array"
+    },
+    "missing_data": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Missing Data",
+      "type": "array"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 20,
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "operation",
+    "input_hash",
+    "goal_id",
+    "status",
+    "summary",
+    "evidence"
+  ],
+  "title": "跑步计划草案或调整提案输出",
+  "type": "object"
+}

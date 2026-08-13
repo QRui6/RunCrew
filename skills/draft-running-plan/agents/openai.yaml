@@ -1,0 +1,4 @@
+interface:
+  display_name: "跑步训练计划草案"
+  short_description: "根据目标、可训练日期、历史训练与恢复建议生成可回放计划草案"
+  default_prompt: "使用 $draft-running-plan 为我的训练周生成有依据的计划草案，或把恢复建议转换成待确认调整提案。"
