@@ -299,11 +299,13 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     assert "/api/training/coach-runs" in script
     assert "window.confirm" in script
     assert "innerHTML" not in script
-    assert "跑步训练智能工作台" in html
-    assert "Agent 协作状态" in html
-    assert "训练运营中心" in html
+    assert "个人跑步助手" in html
+    assert "智能体协作" in html
+    assert "运行详情" in html
     assert 'id="crew-overview"' in html
     assert "setCrewOverview" in script
+    assert "toggleContext" in script
+    assert 'id="context-panel" class="context-panel" aria-label="运行详情" hidden' in html
 
     references = Path("schemas/training-operations")
     expected = {

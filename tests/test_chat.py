@@ -157,7 +157,7 @@ def test_chat_api_creates_conversation_and_executes_paid_mode_only_when_requeste
 
     page = application.handle("GET", "/")
     engineering = application.handle("GET", "/engineering")
-    assert "连续对话" in page.body.decode("utf-8")
+    assert "个人跑步助手" in page.body.decode("utf-8")
     assert "只读" in engineering.body.decode("utf-8")
 
     created = application.handle(
