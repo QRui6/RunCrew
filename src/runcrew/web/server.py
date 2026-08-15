@@ -51,37 +51,37 @@ class DemoApplication:
         )
         static_root = resources.files("runcrew.web").joinpath("static")
         self._static = {
-            "/": ("text/html; charset=utf-8", static_root.joinpath("chat.html").read_bytes()),
+            "/": ("text/html; charset=utf-8", static_root.joinpath("chat.html")),
             "/engineering": (
                 "text/html; charset=utf-8",
-                static_root.joinpath("index.html").read_bytes(),
+                static_root.joinpath("index.html"),
             ),
             "/assets/chat.css": (
                 "text/css; charset=utf-8",
-                static_root.joinpath("chat.css").read_bytes(),
+                static_root.joinpath("chat.css"),
             ),
             "/assets/chat.js": (
                 "text/javascript; charset=utf-8",
-                static_root.joinpath("chat.js").read_bytes(),
+                static_root.joinpath("chat.js"),
             ),
             "/assets/styles.css": (
                 "text/css; charset=utf-8",
-                static_root.joinpath("styles.css").read_bytes(),
+                static_root.joinpath("styles.css"),
             ),
             "/assets/app.js": (
                 "text/javascript; charset=utf-8",
-                static_root.joinpath("app.js").read_bytes(),
+                static_root.joinpath("app.js"),
             ),
         }
 
     def handle(self, method: str, target: str, body: bytes = b"") -> DemoResponse:
         parsed = urlparse(target)
         if method == "GET" and parsed.path in self._static:
-            content_type, body = self._static[parsed.path]
+            content_type, resource = self._static[parsed.path]
             return DemoResponse(
                 status=HTTPStatus.OK,
                 content_type=content_type,
-                body=body,
+                body=resource.read_bytes(),
                 headers={"Cache-Control": "no-cache"},
             )
         if method == "GET" and parsed.path == "/api/dashboard":

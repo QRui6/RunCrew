@@ -293,6 +293,7 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     )
     html = application.handle("GET", "/").body.decode("utf-8")
     script = application.handle("GET", "/assets/chat.js").body.decode("utf-8")
+    style = application.handle("GET", "/assets/chat.css?v=20260815-3").body.decode("utf-8")
     assert "训练闭环" in html
     assert "记录今日状态" in html
     assert "运行跨职责评估" in html
@@ -306,6 +307,9 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     assert "setCrewOverview" in script
     assert "toggleContext" in script
     assert 'id="context-panel" class="context-panel" aria-label="运行详情" hidden' in html
+    assert "/assets/chat.css?v=20260815-3" in html
+    assert "--ivory" in style
+    assert "#b9e845" not in style
 
     references = Path("schemas/training-operations")
     expected = {

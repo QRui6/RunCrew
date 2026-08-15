@@ -27,6 +27,7 @@
 | 2026-08-13 | M7-E Coach 多 Agent 版本化评测 | 完成 | [M7-E Coach 评测](progress/2026-08-13-m7e-coach-agent-evaluation.md) |
 | 2026-08-13 | M8-A1 正式产品界面重构 | 完成 | [M8-A1 产品界面](progress/2026-08-13-m8a1-product-interface-redesign.md) |
 | 2026-08-15 | M8-A1.1 产品界面收敛 | 完成 | [M8-A1.1 界面收敛](progress/2026-08-15-m8a1-product-interface-convergence.md) |
+| 2026-08-15 | M8-A1.2 克制型视觉系统与静态资源刷新 | 完成 | [M8-A1.2 高级视觉](progress/2026-08-15-m8a1-premium-visual-system.md) |
 
 ## 新阶段记录模板
 
