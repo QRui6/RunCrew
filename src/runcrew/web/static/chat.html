@@ -4,86 +4,92 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="RunCrew：围绕个人跑步数据持续提供有依据的训练分析与建议。">
-  <title>RunCrew · 个人跑步助手</title>
-  <link rel="stylesheet" href="/assets/chat.css?v=20260815-3">
+  <title>RunCrew · 个人跑步办公室</title>
+  <link rel="stylesheet" href="/assets/chat.css?v=20260815-4">
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="/" aria-label="RunCrew 首页">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 32 32">
-          <path d="M7 22.5c2.8-7.8 7.1-11.8 12.8-11.8 2.5 0 4.2 1.2 5.2 3.5-2.5-.6-4.7-.1-6.7 1.5-2 1.6-3.8 4.1-5.3 7.5"/>
-          <circle cx="22.8" cy="7.4" r="2.2"/>
-        </svg>
-      </span>
-      <span class="brand-copy"><strong>RunCrew</strong><small>个人跑步助手</small></span>
+      <span class="brand-mark" aria-hidden="true">RC</span>
+      <span class="brand-copy"><strong>RunCrew</strong><small>个人跑步办公室</small></span>
     </a>
 
     <nav class="product-nav" aria-label="产品导航">
-      <span class="nav-item active">对话</span>
-      <button id="training-toggle" class="nav-item" type="button" aria-controls="training-drawer" aria-expanded="false">训练计划</button>
-      <a class="nav-item" href="/engineering">开发者</a>
+      <span class="nav-item active">训练对话</span>
+      <button id="training-toggle" class="nav-item" type="button" aria-controls="training-drawer" aria-expanded="false">训练运营</button>
+      <a class="nav-item" href="/engineering">工程观测</a>
     </nav>
 
     <div class="top-actions">
-      <span class="privacy"><i></i>数据仅存本机</span>
-      <span class="user-avatar" aria-label="个人训练空间">RC</span>
+      <span class="privacy"><i></i>本地数据空间</span>
+      <span class="edition">私人训练档案</span>
     </div>
   </header>
 
   <main class="workspace">
     <aside class="rail">
       <div class="rail-heading">
-        <div><strong>训练记录</strong><small>选择一次跑步开始分析</small></div>
+        <div><span class="eyebrow">TRAINING INDEX</span><strong>训练索引</strong></div>
         <span class="workspace-status" title="本地数据空间正常"></span>
       </div>
 
       <button id="new-chat" class="new-chat" type="button">
-        <span aria-hidden="true">＋</span><b>新对话</b><small>Ctrl N</small>
+        <b>开始新对话</b><span aria-hidden="true">＋</span>
       </button>
 
       <section class="rail-section activity-section">
-        <div class="section-label"><span>最近跑步</span><small id="activity-count">0 条</small></div>
+        <div class="section-label"><span>本周训练</span><small id="activity-count">0 条</small></div>
         <div id="activity-list" class="activity-list" aria-live="polite"></div>
       </section>
 
       <section class="rail-section history-section">
-        <div class="section-label"><span>历史对话</span><small>本机保存</small></div>
+        <div class="section-label"><span>对话记录</span><small>本机保存</small></div>
         <div id="conversation-list" class="conversation-list"></div>
       </section>
 
       <div class="rail-foot">
-        <span class="shield-icon">✓</span>
-        <p><strong>隐私保护已开启</strong><small>位置和原始设备数据不会发送给模型</small></p>
+        <span>LOCAL / PRIVATE</span>
+        <p>位置与原始轨迹不会进入模型上下文</p>
       </div>
     </aside>
 
     <section class="chat-stage">
       <header class="chat-heading">
         <div class="heading-copy">
+          <div class="run-kicker" id="run-kicker">RUN — · 等待选择记录</div>
           <h1 id="chat-title">选择一次跑步</h1>
-          <p id="chat-subtitle" class="heading-subtitle">我会基于真实记录回答，并说明判断依据</p>
+          <p id="chat-subtitle" class="heading-subtitle">从一份真实训练记录开始对话</p>
         </div>
         <div class="heading-actions">
           <span id="context-badge" class="context-badge">尚未建立上下文</span>
           <button id="context-toggle" class="context-toggle" type="button" aria-controls="context-panel" aria-expanded="false">
-            <span class="status-dot"></span>运行详情
+            <span class="status-dot"></span>查看依据
           </button>
         </div>
       </header>
 
+      <section class="run-summary" aria-label="当前活动关键数据">
+        <div class="summary-metric"><span>距离</span><strong id="metric-distance">—</strong></div>
+        <div class="summary-metric"><span>用时</span><strong id="metric-duration">—</strong></div>
+        <div class="summary-metric"><span>平均配速</span><strong id="metric-pace">—</strong></div>
+        <div class="summary-metric"><span>平均心率</span><strong id="metric-heart-rate">—</strong></div>
+        <div class="run-rhythm" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+      </section>
+
       <div id="messages" class="messages" aria-live="polite">
         <div class="welcome" id="welcome">
-          <span class="welcome-mark" aria-hidden="true">RC</span>
-          <h2>今天想了解哪次训练？</h2>
-          <p class="welcome-copy">选择左侧的一次跑步，可以复盘表现、查看近期负荷，或讨论下一次训练安排。</p>
+          <span class="welcome-label">从这里开始</span>
+          <h2>想从这次训练里<br>确认什么？</h2>
+          <p class="welcome-copy">RunCrew 会先核对记录和训练证据，再给出解释。你可以继续追问判断过程，而不必重新描述背景。</p>
           <div class="suggestions">
-            <button type="button"><span>训练表现</span><b>这次跑得怎么样？</b><i>→</i></button>
-            <button type="button"><span>数据依据</span><b>哪些指标值得关注？</b><i>→</i></button>
-            <button type="button"><span>近期负荷</span><b>最近七天有什么变化？</b><i>→</i></button>
-            <button type="button"><span>后续安排</span><b>下一次应该怎么练？</b><i>→</i></button>
+            <button type="button"><span>01</span><b>这次跑得怎么样？</b><i>训练复盘 →</i></button>
+            <button type="button"><span>02</span><b>哪些指标值得关注？</b><i>数据依据 →</i></button>
+            <button type="button"><span>03</span><b>最近七天有什么变化？</b><i>近期负荷 →</i></button>
+            <button type="button"><span>04</span><b>下一次应该怎么练？</b><i>后续安排 →</i></button>
           </div>
-          <p class="grounding-note"><span>✓</span>个人结论会区分数据事实、分析推断和训练建议</p>
+          <p class="grounding-note"><span>证据原则</span>个人事实、分析推断和训练建议会分层表达</p>
         </div>
       </div>
 
@@ -100,7 +106,7 @@
                 <span></span>
                 <b>增强回答</b>
               </label>
-              <span class="context-scope">仅使用脱敏数据和最近对话</span>
+              <span class="context-scope">脱敏活动证据 · 最近 8 条消息</span>
             </div>
             <button id="send-button" type="submit" aria-label="发送消息"><span>发送</span><b>↑</b></button>
           </div>
@@ -111,10 +117,10 @@
   </main>
 
   <div id="context-backdrop" class="context-backdrop" hidden></div>
-  <aside id="context-panel" class="context-panel" aria-label="运行详情" hidden>
+  <aside id="context-panel" class="context-panel" aria-label="回答依据" hidden>
     <header class="inspector-head">
-      <div><h2>运行详情</h2><p>查看本轮使用的数据、协作过程和安全边界</p></div>
-      <button id="context-close" type="button" aria-label="关闭运行详情">×</button>
+      <div><span class="eyebrow">EVIDENCE NOTES</span><h2>回答依据</h2><p>查看本轮使用的数据、协作过程和安全边界</p></div>
+      <button id="context-close" type="button" aria-label="关闭回答依据">×</button>
     </header>
 
     <div class="inspector-status"><span><i></i>上下文已隔离</span><small id="crew-summary">等待运行</small></div>
@@ -224,6 +230,6 @@
   </aside>
 
   <div id="toast" class="toast" role="status" hidden></div>
-  <script src="/assets/chat.js?v=20260815-3" defer></script>
+  <script src="/assets/chat.js?v=20260815-4" defer></script>
 </body>
 </html>

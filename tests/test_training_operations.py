@@ -293,21 +293,26 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     )
     html = application.handle("GET", "/").body.decode("utf-8")
     script = application.handle("GET", "/assets/chat.js").body.decode("utf-8")
-    style = application.handle("GET", "/assets/chat.css?v=20260815-3").body.decode("utf-8")
+    style = application.handle("GET", "/assets/chat.css?v=20260815-4").body.decode("utf-8")
     assert "训练闭环" in html
     assert "记录今日状态" in html
     assert "运行跨职责评估" in html
     assert "/api/training/coach-runs" in script
     assert "window.confirm" in script
     assert "innerHTML" not in script
-    assert "个人跑步助手" in html
+    assert "个人跑步办公室" in html
     assert "智能体协作" in html
-    assert "运行详情" in html
+    assert "回答依据" in html
+    assert "训练索引" in html
+    assert "TRAINING INDEX" in html
+    assert 'class="run-summary"' in html
+    assert 'id="metric-distance"' in html
     assert 'id="crew-overview"' in html
     assert "setCrewOverview" in script
+    assert "renderRunHeader" in script
     assert "toggleContext" in script
-    assert 'id="context-panel" class="context-panel" aria-label="运行详情" hidden' in html
-    assert "/assets/chat.css?v=20260815-3" in html
+    assert 'id="context-panel" class="context-panel" aria-label="回答依据" hidden' in html
+    assert "/assets/chat.css?v=20260815-4" in html
     assert "--ivory" in style
     assert "#b9e845" not in style
 

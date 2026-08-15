@@ -6,7 +6,8 @@ const elements = {
   activities: $("#activity-list"), conversations: $("#conversation-list"), messages: $("#messages"),
   input: $("#message-input"), composer: $("#composer"), send: $("#send-button"), title: $("#chat-title"),
   subtitle: $("#chat-subtitle"), badge: $("#context-badge"), selected: $("#selected-activity"), deepseek: $("#use-deepseek"),
-  modelToggle: $("#model-toggle"), toast: $("#toast"), turnMeta: $("#turn-meta"),
+  modelToggle: $("#model-toggle"), toast: $("#toast"), turnMeta: $("#turn-meta"), kicker: $("#run-kicker"),
+  metricDistance: $("#metric-distance"), metricDuration: $("#metric-duration"), metricPace: $("#metric-pace"), metricHeartRate: $("#metric-heart-rate"), rhythm: $(".run-rhythm"),
   contextToggle: $("#context-toggle"), contextPanel: $("#context-panel"), contextBackdrop: $("#context-backdrop"), contextClose: $("#context-close"),
   crewSummary: $("#crew-summary"), crewExecution: $("#crew-execution"), crewRecovery: $("#crew-recovery"), crewPlan: $("#crew-plan"),
   crewExecutionStatus: $("#crew-execution-status"), crewRecoveryStatus: $("#crew-recovery-status"), crewPlanStatus: $("#crew-plan-status")
@@ -31,9 +32,33 @@ function localDateValue() { const now = new Date(); return `${now.getFullYear()}
 function statusLabel(value) { return ({ completed: "已完成", awaiting_user_confirmation: "等待确认", blocked: "安全阻断", failed: "运行失败", approved: "已批准", rejected: "已拒绝", stale: "已过期" })[value] || value; }
 function recommendationLabel(value) { return ({ proceed: "可以按计划", reduce: "建议减量", rest: "建议休息", seek_professional_help: "建议专业评估", insufficient_data: "数据不足" })[value] || value || "—"; }
 function activitySubtitle(activity) {
-  if (!activity) return "我会基于真实记录回答，并说明判断依据";
-  const parts = [activity.distance_km == null ? null : `${activity.distance_km} 公里`, activity.duration, activity.average_pace, activity.provider.toUpperCase()];
-  return parts.filter(Boolean).join(" · ");
+  if (!activity) return "从一份真实训练记录开始对话";
+  return activity.detail_available ? "活动详情已就绪，可以围绕本次训练连续追问" : "已载入活动摘要；缺少的细节会在回答中明确说明";
+}
+
+function renderRunHeader(activity) {
+  if (!activity) {
+    elements.title.textContent = "选择一次跑步";
+    elements.subtitle.textContent = activitySubtitle(null);
+    elements.kicker.textContent = "RUN — · 等待选择记录";
+    elements.metricDistance.textContent = "—";
+    elements.metricDuration.textContent = "—";
+    elements.metricPace.textContent = "—";
+    elements.metricHeartRate.textContent = "—";
+    elements.rhythm.classList.remove("active");
+    return;
+  }
+  const index = state.activities.findIndex((item) => item.id === activity.id);
+  const issue = String(Math.max(1, state.activities.length - Math.max(index, 0))).padStart(3, "0");
+  const date = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(activity.started_at)).replaceAll("/", ".");
+  elements.title.textContent = activity.title;
+  elements.subtitle.textContent = activitySubtitle(activity);
+  elements.kicker.textContent = `RUN ${issue} · ${date} · ${activity.provider.toUpperCase()}`;
+  elements.metricDistance.textContent = activity.distance_km == null ? "—" : `${activity.distance_km} km`;
+  elements.metricDuration.textContent = activity.duration || "—";
+  elements.metricPace.textContent = activity.average_pace || "—";
+  elements.metricHeartRate.textContent = activity.average_heart_rate == null ? "—" : `${activity.average_heart_rate} bpm`;
+  elements.rhythm.classList.add("active");
 }
 
 function renderActivities() {
@@ -95,8 +120,7 @@ function setCrewOverview(mode, result = null) {
 function selectActivity(id) {
   state.selectedActivityId = id; state.activeConversationId = null;
   const activity = state.activities.find((item) => item.id === id);
-  elements.title.textContent = activity ? activity.title : "选择一次跑步";
-  elements.subtitle.textContent = activitySubtitle(activity);
+  renderRunHeader(activity);
   elements.badge.textContent = activity ? "数据已连接" : "尚未建立上下文";
   renderActivities(); renderConversations(); renderSelectedActivity(activity); setCrewOverview(activity ? "ready" : "waiting"); resetMessages(); elements.input.focus();
 }
@@ -117,16 +141,16 @@ function renderSelectedActivity(activity) {
 function resetMessages() {
   elements.messages.replaceChildren();
   const welcome = document.createElement("div"); welcome.className = "welcome";
-  const mark = document.createElement("span"); mark.className = "welcome-mark"; mark.textContent = "RC";
+  const label = document.createElement("span"); label.className = "welcome-label"; label.textContent = "从这里开始";
   const activity = state.activities.find((item) => item.id === state.selectedActivityId);
-  const title = document.createElement("h2"); title.textContent = activity ? `关于“${activity.title}”，你想了解什么？` : "今天想了解哪次训练？";
-  const p = document.createElement("p"); p.className = "welcome-copy"; p.textContent = activity ? "可以复盘这次训练、核对判断依据，或者结合近期记录讨论下一步安排。" : "选择左侧的一次跑步，可以复盘表现、查看近期负荷，或讨论下一次训练安排。";
+  const title = document.createElement("h2"); title.textContent = activity ? "想从这次训练里确认什么？" : "想从哪次训练开始？";
+  const p = document.createElement("p"); p.className = "welcome-copy"; p.textContent = activity ? "RunCrew 会先核对记录和训练证据，再给出解释。你可以继续追问判断过程，而不必重新描述背景。" : "选择左侧的一次跑步。RunCrew 会先核对真实记录，再与你讨论表现、负荷和下一步安排。";
   const suggestions = document.createElement("div"); suggestions.className = "suggestions";
-  [["训练表现", "这次跑得怎么样？"], ["数据依据", "哪些指标值得关注？"], ["近期负荷", "最近七天有什么变化？"], ["后续安排", "下一次应该怎么练？"]].forEach(([label, text]) => {
-    const button = document.createElement("button"); button.type = "button"; const tag = document.createElement("span"); tag.textContent = label; const copy = document.createElement("b"); copy.textContent = text; const arrow = document.createElement("i"); arrow.textContent = "→"; button.append(tag, copy, arrow); button.addEventListener("click", () => { elements.input.value = text; elements.input.focus(); }); suggestions.append(button);
+  [["训练复盘", "这次跑得怎么样？"], ["数据依据", "哪些指标值得关注？"], ["近期负荷", "最近七天有什么变化？"], ["后续安排", "下一次应该怎么练？"]].forEach(([category, text], index) => {
+    const button = document.createElement("button"); button.type = "button"; const tag = document.createElement("span"); tag.textContent = String(index + 1).padStart(2, "0"); const copy = document.createElement("b"); copy.textContent = text; const arrow = document.createElement("i"); arrow.textContent = `${category} →`; button.append(tag, copy, arrow); button.addEventListener("click", () => { elements.input.value = text; elements.input.focus(); }); suggestions.append(button);
   });
-  const note = document.createElement("p"); note.className = "grounding-note"; const check = document.createElement("span"); check.textContent = "✓"; note.append(check, "个人结论会区分数据事实、分析推断和训练建议");
-  welcome.append(mark, title, p, suggestions, note); elements.messages.append(welcome);
+  const note = document.createElement("p"); note.className = "grounding-note"; const check = document.createElement("span"); check.textContent = "证据原则"; note.append(check, "个人事实、分析推断和训练建议会分层表达");
+  welcome.append(label, title, p, suggestions, note); elements.messages.append(welcome);
 }
 
 function renderMessages(messages) {
@@ -138,7 +162,7 @@ function renderMessages(messages) {
 
 function appendMessage(message) {
   const row = document.createElement("article"); row.className = `message ${message.role}`;
-  const avatar = document.createElement("span"); avatar.className = "avatar"; avatar.textContent = message.role === "assistant" ? "RC" : "我";
+  const avatar = document.createElement("span"); avatar.className = "avatar"; avatar.textContent = message.role === "assistant" ? "RunCrew" : "你问";
   const bubble = document.createElement("div"); bubble.className = "bubble";
   const content = document.createElement("p"); content.textContent = message.content; bubble.append(content);
   if (message.role === "assistant") {
@@ -160,7 +184,7 @@ async function loadConversation(id) {
     const conversation = await api(`/api/chat/conversations/${encodeURIComponent(id)}`);
     state.activeConversationId = id; state.selectedActivityId = conversation.target_activity_id;
     const activity = state.activities.find((item) => item.id === state.selectedActivityId);
-    elements.title.textContent = conversation.title; elements.subtitle.textContent = activitySubtitle(activity); elements.badge.textContent = conversation.review_input_hash ? "证据已建立" : "等待首次分析";
+    renderRunHeader(activity); elements.badge.textContent = conversation.review_input_hash ? "证据已建立" : "等待首次分析";
     renderActivities(); renderConversations(); renderSelectedActivity(activity); renderMessages(conversation.messages);
   } catch (error) { showToast(error.message); }
 }
@@ -183,14 +207,14 @@ async function sendMessage(event) {
     renderMessages([...before.messages, { role: "user", content }]);
     appendTyping();
     const result = await api(`/api/chat/conversations/${encodeURIComponent(conversationId)}/messages`, { method: "POST", body: JSON.stringify({ content, use_deepseek: elements.deepseek.checked }) });
-    renderMessages(result.conversation.messages); elements.title.textContent = result.conversation.title;
+    renderMessages(result.conversation.messages);
     elements.badge.textContent = "证据已建立";
     updateTurnMeta(result); await refreshBootstrap(false);
   } catch (error) { showToast(error.message); if (state.activeConversationId) await loadConversation(state.activeConversationId); }
   finally { state.sending = false; elements.send.disabled = false; elements.input.focus(); }
 }
 
-function appendTyping() { const row = document.createElement("article"); row.className = "message assistant typing"; const avatar = document.createElement("span"); avatar.className = "avatar"; avatar.textContent = "RC"; const bubble = document.createElement("div"); bubble.className = "bubble"; for (let i = 0; i < 3; i += 1) bubble.append(document.createElement("i")); row.append(avatar, bubble); elements.messages.append(row); elements.messages.scrollTop = elements.messages.scrollHeight; }
+function appendTyping() { const row = document.createElement("article"); row.className = "message assistant typing"; const avatar = document.createElement("span"); avatar.className = "avatar"; avatar.textContent = "RunCrew"; const bubble = document.createElement("div"); bubble.className = "bubble"; for (let i = 0; i < 3; i += 1) bubble.append(document.createElement("i")); row.append(avatar, bubble); elements.messages.append(row); elements.messages.scrollTop = elements.messages.scrollHeight; }
 function updateTurnMeta(result) { elements.turnMeta.hidden = false; $("#meta-model").textContent = result.usage.model; $("#meta-context").textContent = `${result.context_message_count} 条${result.context_truncated ? " · 已裁剪" : ""}`; $("#meta-tokens").textContent = result.usage.total_tokens || "离线"; $("#meta-cost").textContent = result.usage.estimated_cost_usd ? `$${result.usage.estimated_cost_usd.toFixed(8)}` : "$0"; }
 function showToast(message) { elements.toast.textContent = message; elements.toast.hidden = false; window.setTimeout(() => { elements.toast.hidden = true; }, 3800); }
 
@@ -302,12 +326,12 @@ async function refreshBootstrap(initial = true) {
   if (initial && state.activities.length) state.selectedActivityId = state.activities[0].id;
   const selectedActivity = state.activities.find((item) => item.id === state.selectedActivityId);
   renderActivities(); renderConversations(); renderSelectedActivity(selectedActivity);
-  if (initial && selectedActivity) { elements.title.textContent = selectedActivity.title; elements.subtitle.textContent = activitySubtitle(selectedActivity); elements.badge.textContent = "数据已连接"; }
+  if (initial) { renderRunHeader(selectedActivity); elements.badge.textContent = selectedActivity ? "数据已连接" : "尚未建立上下文"; }
   setCrewOverview(state.selectedActivityId ? "ready" : "waiting");
   if (initial) resetMessages();
 }
 
-$("#new-chat").addEventListener("click", () => { state.activeConversationId = null; const activity = state.activities.find((item) => item.id === state.selectedActivityId); renderConversations(); resetMessages(); elements.title.textContent = activity ? activity.title : "选择一次跑步"; elements.subtitle.textContent = activitySubtitle(activity); elements.badge.textContent = activity ? "数据已连接" : "尚未建立上下文"; elements.input.focus(); });
+$("#new-chat").addEventListener("click", () => { state.activeConversationId = null; const activity = state.activities.find((item) => item.id === state.selectedActivityId); renderConversations(); resetMessages(); renderRunHeader(activity); elements.badge.textContent = activity ? "数据已连接" : "尚未建立上下文"; elements.input.focus(); });
 elements.composer.addEventListener("submit", sendMessage);
 elements.input.addEventListener("keydown", (event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); elements.composer.requestSubmit(); } });
 elements.input.addEventListener("input", () => { elements.input.style.height = "auto"; elements.input.style.height = `${Math.min(elements.input.scrollHeight, 170)}px`; });
