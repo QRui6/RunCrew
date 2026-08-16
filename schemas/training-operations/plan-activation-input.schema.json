@@ -1,0 +1,58 @@
+{
+  "$defs": {
+    "SourceProvider": {
+      "enum": [
+        "coros",
+        "fit",
+        "keep",
+        "manual",
+        "fixture"
+      ],
+      "title": "SourceProvider",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "week_start": {
+      "format": "date",
+      "title": "Week Start",
+      "type": "string"
+    },
+    "as_of": {
+      "format": "date-time",
+      "title": "As Of",
+      "type": "string"
+    },
+    "lookback_days": {
+      "default": 28,
+      "maximum": 56,
+      "minimum": 14,
+      "title": "Lookback Days",
+      "type": "integer"
+    },
+    "provider": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SourceProvider"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "expected_input_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Expected Input Hash",
+      "type": "string"
+    }
+  },
+  "required": [
+    "week_start",
+    "as_of",
+    "expected_input_hash"
+  ],
+  "title": "周计划草案确认输入",
+  "type": "object"
+}

@@ -18,7 +18,13 @@ from runcrew.domain.training_operations import (
     CoachRunSubmission,
     CoachRunDecisionResult,
     CoachRunView,
+    ExecutionDecisionSubmission,
+    TrainingGoalSubmission,
     TrainingOperationsBootstrap,
+    TrainingWeekView,
+    WeeklyPlanActivationRequest,
+    WeeklyPlanActivationResult,
+    WeeklyPlanDraftSubmission,
 )
 from runcrew.services.training_cycle import TrainingCycleService
 from runcrew.services.training_operations import TrainingOperationsService
@@ -285,6 +291,131 @@ def test_training_write_routes_reject_unsupported_methods(tmp_path: Path) -> Non
     assert application.handle("PUT", "/api/training/goals/goal-1/check-ins").status == 405
 
 
+def test_web_user_can_create_preview_replay_and_activate_week_plan(tmp_path: Path) -> None:
+    path = tmp_path / "onboarding.db"
+    application = DemoApplication(
+        DemoDashboardService(database_path=path, evaluation_directory=tmp_path / "evals")
+    )
+    created = application.handle(
+        "POST",
+        "/api/training/goals",
+        json.dumps(
+            {
+                "name": "秋季十公里",
+                "event_type": "10k",
+                "target_date": "2026-10-18",
+                "target_time_seconds": 3000,
+                "available_weekdays": ["tue", "thu", "sat"],
+            },
+            ensure_ascii=False,
+        ).encode("utf-8"),
+    )
+    assert created.status == 201
+    goal_id = json.loads(created.body)["id"]
+    draft_input = {
+        "week_start": "2026-08-24",
+        "as_of": "2026-08-16T08:00:00Z",
+        "lookback_days": 28,
+        "provider": None,
+    }
+    drafted = application.handle(
+        "POST",
+        f"/api/training/goals/{goal_id}/plan-drafts",
+        json.dumps(draft_input).encode("utf-8"),
+    )
+    draft_payload = json.loads(drafted.body)
+    assert drafted.status == 200
+    assert draft_payload["status"] == "ready"
+    assert draft_payload["weekly_plan_draft"]["requires_user_confirmation"] is True
+
+    stale = application.handle(
+        "POST",
+        f"/api/training/goals/{goal_id}/plans/activate",
+        json.dumps({**draft_input, "expected_input_hash": "0" * 64}).encode("utf-8"),
+    )
+    assert stale.status == 400
+    activated = application.handle(
+        "POST",
+        f"/api/training/goals/{goal_id}/plans/activate",
+        json.dumps(
+            {**draft_input, "expected_input_hash": draft_payload["input_hash"]}
+        ).encode("utf-8"),
+    )
+    activated_payload = json.loads(activated.body)
+    assert activated.status == 201
+    assert activated_payload["plan"]["status"] == "active"
+    assert activated_payload["plan"]["source"] == "deterministic"
+
+    week = application.handle(
+        "GET",
+        f"/api/training/goals/{goal_id}/week?as_of=2026-08-24T08:00:00Z",
+    )
+    week_payload = json.loads(week.body)
+    assert week.status == 200
+    assert week_payload["plan"]["id"] == activated_payload["plan"]["id"]
+    assert week_payload["progress"]["upcoming_sessions"] == 3
+
+
+def test_web_execution_match_requires_user_confirmation_and_updates_week(tmp_path: Path) -> None:
+    path = tmp_path / "execution-loop.db"
+    database = seed(path)
+    with database.session() as session:
+        ActivityRepository(session).upsert(
+            ActivitySummary(
+                id="run-match",
+                source_ref=SourceRef(
+                    provider=SourceProvider.FIXTURE,
+                    external_id="match-provider-id",
+                    fetched_at=ANCHOR,
+                    raw_payload_hash="match-raw-hash",
+                ),
+                sport_type=SportType.RUN,
+                started_at=datetime(2026, 8, 15, 8, tzinfo=timezone.utc),
+                duration_seconds=2380,
+                distance_meters=5980,
+            )
+        )
+        session.commit()
+    application = DemoApplication(
+        DemoDashboardService(database_path=path, evaluation_directory=tmp_path / "evals")
+    )
+    before = application.handle(
+        "GET",
+        "/api/training/goals/goal-1/week?as_of=2026-08-16T08:00:00Z&provider=fixture",
+    )
+    before_payload = json.loads(before.body)
+    comparison = before_payload["execution"]["sessions"][0]
+    assert comparison["match_state"] == "suggested"
+    assert comparison["requires_user_confirmation"] is True
+
+    decision = application.handle(
+        "POST",
+        "/api/training/plans/plan-1/execution-decisions",
+        json.dumps(
+            {
+                "base_revision": before_payload["plan"]["revision"],
+                "session_id": "quality-1",
+                "decision": "confirm_match",
+                "as_of": "2026-08-16T08:00:00Z",
+                "activity_id": "run-match",
+                "comment": "确认是本次计划训练",
+            },
+            ensure_ascii=False,
+        ).encode("utf-8"),
+    )
+    assert decision.status == 200
+    assert json.loads(decision.body)["confirmation"]["status"] == "applied"
+
+    after = application.handle(
+        "GET",
+        "/api/training/goals/goal-1/week?as_of=2026-08-16T08:00:00Z&provider=fixture",
+    )
+    after_payload = json.loads(after.body)
+    assert after_payload["execution"]["sessions"][0]["match_state"] == "confirmed"
+    assert after_payload["progress"]["confirmed_sessions"] == 1
+    assert after_payload["progress"]["completion_rate"] == 1.0
+
+
 def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> None:
     path = tmp_path / "assets.db"
     seed(path)
@@ -293,9 +424,12 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     )
     html = application.handle("GET", "/").body.decode("utf-8")
     script = application.handle("GET", "/assets/chat.js").body.decode("utf-8")
-    style = application.handle("GET", "/assets/chat.css?v=20260816-6").body.decode("utf-8")
+    style = application.handle("GET", "/assets/chat.css?v=20260816-7").body.decode("utf-8")
     assert "训练闭环" in html
-    assert "记录今日状态" in html
+    assert "今日训练与执行" in html
+    assert "新建训练目标" in html
+    assert "预览保守周计划" in html
+    assert "跑后反馈" in html
     assert "运行跨职责评估" in html
     assert "/api/training/coach-runs" in script
     assert "window.confirm" in script
@@ -312,7 +446,7 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     assert "renderRunHeader" in script
     assert "toggleContext" in script
     assert 'id="context-panel" class="context-panel" aria-label="回答依据" hidden' in html
-    assert "/assets/chat.css?v=20260816-6" in html
+    assert "/assets/chat.css?v=20260816-7" in html
     assert "grid-template-rows: 68px minmax(0, 1fr)" in style
     assert "position: sticky" in style
     assert ".workspace {" in style and "overflow: hidden" in style
@@ -329,6 +463,12 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
         "coach-run-output.schema.json": CoachRunView,
         "decision-input.schema.json": CoachRunDecisionRequest,
         "decision-output.schema.json": CoachRunDecisionResult,
+        "goal-input.schema.json": TrainingGoalSubmission,
+        "plan-draft-input.schema.json": WeeklyPlanDraftSubmission,
+        "plan-activation-input.schema.json": WeeklyPlanActivationRequest,
+        "plan-activation-output.schema.json": WeeklyPlanActivationResult,
+        "week-view.schema.json": TrainingWeekView,
+        "execution-decision-input.schema.json": ExecutionDecisionSubmission,
     }
     for name, model in expected.items():
         assert json.loads((references / name).read_text("utf-8")) == model.model_json_schema()

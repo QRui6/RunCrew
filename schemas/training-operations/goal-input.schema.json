@@ -1,0 +1,66 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "event_type": {
+      "enum": [
+        "5k",
+        "10k",
+        "half_marathon",
+        "marathon",
+        "general_fitness"
+      ],
+      "title": "Event Type",
+      "type": "string"
+    },
+    "target_date": {
+      "format": "date",
+      "title": "Target Date",
+      "type": "string"
+    },
+    "target_time_seconds": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Time Seconds"
+    },
+    "available_weekdays": {
+      "items": {
+        "enum": [
+          "mon",
+          "tue",
+          "wed",
+          "thu",
+          "fri",
+          "sat",
+          "sun"
+        ],
+        "type": "string"
+      },
+      "maxItems": 7,
+      "minItems": 1,
+      "title": "Available Weekdays",
+      "type": "array"
+    }
+  },
+  "required": [
+    "name",
+    "event_type",
+    "target_date",
+    "available_weekdays"
+  ],
+  "title": "训练目标创建输入",
+  "type": "object"
+}

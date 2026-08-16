@@ -9,7 +9,13 @@ from runcrew.domain.training_operations import (
     CoachRunDecisionResult,
     CoachRunSubmission,
     CoachRunView,
+    ExecutionDecisionSubmission,
+    TrainingGoalSubmission,
     TrainingOperationsBootstrap,
+    TrainingWeekView,
+    WeeklyPlanActivationRequest,
+    WeeklyPlanActivationResult,
+    WeeklyPlanDraftSubmission,
 )
 
 
@@ -23,6 +29,12 @@ def main() -> None:
         "coach-run-output.schema.json": CoachRunView.model_json_schema(),
         "decision-input.schema.json": CoachRunDecisionRequest.model_json_schema(),
         "decision-output.schema.json": CoachRunDecisionResult.model_json_schema(),
+        "goal-input.schema.json": TrainingGoalSubmission.model_json_schema(),
+        "plan-draft-input.schema.json": WeeklyPlanDraftSubmission.model_json_schema(),
+        "plan-activation-input.schema.json": WeeklyPlanActivationRequest.model_json_schema(),
+        "plan-activation-output.schema.json": WeeklyPlanActivationResult.model_json_schema(),
+        "week-view.schema.json": TrainingWeekView.model_json_schema(),
+        "execution-decision-input.schema.json": ExecutionDecisionSubmission.model_json_schema(),
     }
     for name, schema in schemas.items():
         (target / name).write_text(

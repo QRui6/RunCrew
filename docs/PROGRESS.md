@@ -31,6 +31,7 @@
 | 2026-08-15 | M8-A1.3 运动编辑部式个人跑步办公室 | 完成 | [M8-A1.3 编辑式跑步办公室](progress/2026-08-15-m8a1-editorial-running-office.md) |
 | 2026-08-16 | M8-A1.3a 顶部导航视口稳定性修复 | 完成 | [M8-A1.3a 顶栏修复](progress/2026-08-16-m8a1-topbar-viewport-fix.md) |
 | 2026-08-16 | M8-A1.3b 底部工作区边界修复 | 完成 | [M8-A1.3b 底部边界修复](progress/2026-08-16-m8a1-bottom-boundary-fix.md) |
+| 2026-08-16 | M8-B 网页训练产品闭环 | 完成 | [M8-B 训练产品闭环](progress/2026-08-16-m8b-training-product-loop.md) |
 
 ## 新阶段记录模板
 

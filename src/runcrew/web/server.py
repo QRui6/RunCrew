@@ -4,6 +4,7 @@ import asyncio
 import json
 import webbrowser
 from dataclasses import dataclass
+from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
@@ -23,6 +24,10 @@ from runcrew.domain.training_operations import (
     CheckInSubmission,
     CoachRunDecisionRequest,
     CoachRunSubmission,
+    ExecutionDecisionSubmission,
+    TrainingGoalSubmission,
+    WeeklyPlanActivationRequest,
+    WeeklyPlanDraftSubmission,
 )
 from runcrew.web.dashboard import DemoDashboardService
 
@@ -117,6 +122,61 @@ class DemoApplication:
                 HTTPStatus.OK,
                 self.training_service.bootstrap().model_dump(mode="json"),
             )
+        if method == "POST" and parsed.path == "/api/training/goals":
+            try:
+                submission = TrainingGoalSubmission.model_validate(self._decode_json(body))
+                goal = self.training_service.create_goal(submission)
+            except (TrainingOperationsError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(HTTPStatus.CREATED, goal.model_dump(mode="json"))
+        training_goal_id, training_goal_action = _training_goal_route(parsed.path)
+        if method == "POST" and training_goal_id and training_goal_action == "plan-drafts":
+            try:
+                submission = WeeklyPlanDraftSubmission.model_validate(self._decode_json(body))
+                result = self.training_service.draft_week_plan(
+                    goal_id=training_goal_id, submission=submission
+                )
+            except (TrainingOperationsError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(HTTPStatus.OK, result.model_dump(mode="json"))
+        if method == "POST" and training_goal_id and training_goal_action == "plans/activate":
+            try:
+                request = WeeklyPlanActivationRequest.model_validate(self._decode_json(body))
+                result = self.training_service.activate_week_plan(
+                    goal_id=training_goal_id, request=request
+                )
+            except (TrainingOperationsError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(HTTPStatus.CREATED, result.model_dump(mode="json"))
+        if method == "GET" and training_goal_id and training_goal_action == "week":
+            try:
+                query = parse_qs(parsed.query)
+                raw_as_of = _single(query, "as_of")
+                as_of = (
+                    datetime.fromisoformat(raw_as_of.replace("Z", "+00:00"))
+                    if raw_as_of
+                    else datetime.now().astimezone()
+                )
+                result = self.training_service.week_view(
+                    goal_id=training_goal_id,
+                    as_of=as_of,
+                    provider=_single(query, "provider") or None,
+                )
+            except (TrainingOperationsError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(HTTPStatus.OK, result.model_dump(mode="json"))
+        training_plan_id = _training_execution_route(parsed.path)
+        if method == "POST" and training_plan_id:
+            try:
+                submission = ExecutionDecisionSubmission.model_validate(
+                    self._decode_json(body)
+                )
+                result = self.training_service.decide_execution(
+                    plan_id=training_plan_id, submission=submission
+                )
+            except (TrainingOperationsError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(HTTPStatus.OK, result.model_dump(mode="json"))
         goal_id = _training_check_in_route(parsed.path)
         if method == "POST" and goal_id:
             try:
@@ -368,6 +428,31 @@ def _chat_conversation_route(path: str) -> tuple[str | None, bool]:
 def _training_check_in_route(path: str) -> str | None:
     parts = [part for part in path.split("/") if part]
     if len(parts) == 5 and parts[:3] == ["api", "training", "goals"] and parts[4] == "check-ins":
+        return parts[3]
+    return None
+
+
+def _training_goal_route(path: str) -> tuple[str | None, str | None]:
+    parts = [part for part in path.split("/") if part]
+    if len(parts) == 5 and parts[:3] == ["api", "training", "goals"]:
+        if parts[4] in {"plan-drafts", "week"}:
+            return parts[3], parts[4]
+    if (
+        len(parts) == 6
+        and parts[:3] == ["api", "training", "goals"]
+        and parts[4:] == ["plans", "activate"]
+    ):
+        return parts[3], "plans/activate"
+    return None, None
+
+
+def _training_execution_route(path: str) -> str | None:
+    parts = [part for part in path.split("/") if part]
+    if (
+        len(parts) == 5
+        and parts[:3] == ["api", "training", "plans"]
+        and parts[4] == "execution-decisions"
+    ):
         return parts[3]
     return None
 

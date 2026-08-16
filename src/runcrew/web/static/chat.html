@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="RunCrew：围绕个人跑步数据持续提供有依据的训练分析与建议。">
   <title>RunCrew · 个人跑步办公室</title>
-  <link rel="stylesheet" href="/assets/chat.css?v=20260816-6">
+  <link rel="stylesheet" href="/assets/chat.css?v=20260816-7">
 </head>
 <body>
   <header class="topbar">
@@ -167,7 +167,7 @@
   <div id="training-backdrop" class="training-backdrop" hidden></div>
   <aside id="training-drawer" class="training-drawer" aria-label="训练计划" hidden>
     <header class="drawer-head">
-      <div><h2>训练计划</h2><small>记录身体状态，运行联合评估并审核调整建议</small></div>
+      <div><h2>训练闭环</h2><small>从目标、周计划到执行复盘与调整确认</small></div>
       <button id="training-close" type="button" aria-label="关闭训练计划">×</button>
     </header>
 
@@ -177,7 +177,7 @@
     </div>
 
     <section class="operations-section plan-section">
-      <div class="operations-heading"><div><span>1</span><h3>当前训练计划</h3></div><small>选择分析范围</small></div>
+      <div class="operations-heading"><div><span>1</span><h3>目标与周计划</h3></div><small>由你确认后生效</small></div>
       <div class="select-grid">
         <label class="operations-label" for="training-goal">训练目标
           <select id="training-goal"><option value="">尚无激活目标</option></select>
@@ -186,18 +186,46 @@
           <select id="training-provider"><option value="">全部来源</option></select>
         </label>
       </div>
-      <div id="training-plan" class="plan-card empty">先在终端创建并激活训练计划。</div>
+      <details class="setup-panel">
+        <summary>新建训练目标</summary>
+        <form id="goal-form" class="compact-form">
+          <label>目标名称<input id="goal-name" type="text" maxlength="80" placeholder="例如：秋季 10 公里" required></label>
+          <div class="select-grid">
+            <label>目标类型<select id="goal-event"><option value="5k">5 公里</option><option value="10k" selected>10 公里</option><option value="half_marathon">半程马拉松</option><option value="marathon">马拉松</option><option value="general_fitness">日常体能</option></select></label>
+            <label>目标日期<input id="goal-date" type="date" required></label>
+          </div>
+          <label>目标用时（分钟，可选）<input id="goal-time" type="number" min="10" max="600" placeholder="例如：50"></label>
+          <fieldset class="weekday-fieldset"><legend>通常可以跑步的日期</legend>
+            <label><input type="checkbox" name="training-weekday" value="mon">一</label><label><input type="checkbox" name="training-weekday" value="tue" checked>二</label><label><input type="checkbox" name="training-weekday" value="wed">三</label><label><input type="checkbox" name="training-weekday" value="thu" checked>四</label><label><input type="checkbox" name="training-weekday" value="fri">五</label><label><input type="checkbox" name="training-weekday" value="sat" checked>六</label><label><input type="checkbox" name="training-weekday" value="sun">日</label>
+          </fieldset>
+          <button class="secondary-action" type="submit">保存训练目标</button>
+        </form>
+      </details>
+      <div id="training-plan" class="plan-card empty">创建目标后，可以直接在这里生成下一周计划。</div>
+      <form id="plan-draft-form" class="plan-draft-form">
+        <label>计划周（周一）<input id="plan-week-start" type="date" required></label>
+        <button class="secondary-action" type="submit">预览保守周计划</button>
+      </form>
+      <div id="plan-draft" class="plan-draft" hidden></div>
     </section>
 
     <section class="operations-section">
-      <div class="operations-heading"><div><span>2</span><h3>记录今日状态</h3></div><small>保存在本机</small></div>
-      <p class="operations-copy">身体反馈会用于恢复评估，但不能替代医疗判断。</p>
+      <div class="operations-heading"><div><span>2</span><h3>今日训练与执行</h3></div><small>活动匹配需要确认</small></div>
+      <div id="week-progress" class="week-progress empty">选择目标后加载本周进度。</div>
+      <div id="today-session" class="today-session empty">尚未找到今日训练。</div>
+      <div id="execution-list" class="execution-list"></div>
+    </section>
+
+    <section class="operations-section">
+      <div class="operations-heading"><div><span>3</span><h3>跑后反馈</h3></div><small>保存在本机</small></div>
+      <p class="operations-copy">完成跑步后记录主观状态；它会成为恢复评估的结构化输入，但不能替代医疗判断。</p>
       <form id="check-in-form" class="check-in-form">
         <label>日期<input id="check-in-day" type="date" required></label>
         <div class="metric-grid">
           <label>疲劳 1–5<input id="check-in-fatigue" type="number" min="1" max="5" value="3" required></label>
           <label>酸痛 0–10<input id="check-in-soreness" type="number" min="0" max="10" value="2" required></label>
           <label>睡眠 1–5<input id="check-in-sleep" type="number" min="1" max="5" value="3" required></label>
+          <label>准备度 1–5<input id="check-in-readiness" type="number" min="1" max="5" value="3"></label>
           <label>疼痛 0–10<input id="check-in-pain" type="number" min="0" max="10" value="0" required></label>
         </div>
         <label>疼痛部位（疼痛大于 0 时必填）<input id="check-in-pain-area" type="text" maxlength="80" placeholder="例如：右膝外侧"></label>
@@ -216,7 +244,7 @@
     </section>
 
     <section class="operations-section coach-section">
-      <div class="operations-heading"><div><span>3</span><h3>联合训练评估</h3></div><small>三个职责依次协作</small></div>
+      <div class="operations-heading"><div><span>4</span><h3>联合训练评估</h3></div><small>三个职责依次协作</small></div>
       <p class="operations-copy">系统先核对训练执行，再评估恢复；只有需要调整时才生成计划草案。</p>
       <div class="operations-flow" aria-hidden="true"><span>训练执行</span><i>→</i><span>恢复评估</span><i>→</i><span>计划调整</span></div>
       <button id="coach-run" class="primary-action" type="button">运行跨职责评估 <b>↑</b></button>
@@ -224,12 +252,13 @@
     </section>
 
     <section class="operations-section recent-section">
-      <div class="operations-heading"><div><span>4</span><h3>运行记录</h3></div><small>可以恢复审核</small></div>
+      <div class="operations-heading"><div><span>5</span><h3>本周总结与运行记录</h3></div><small>可以恢复审核</small></div>
+      <div id="week-summary" class="week-summary empty">本周总结将在计划载入后生成。</div>
       <div id="coach-runs" class="coach-runs"></div>
     </section>
   </aside>
 
   <div id="toast" class="toast" role="status" hidden></div>
-  <script src="/assets/chat.js?v=20260816-6" defer></script>
+  <script src="/assets/chat.js?v=20260816-7" defer></script>
 </body>
 </html>

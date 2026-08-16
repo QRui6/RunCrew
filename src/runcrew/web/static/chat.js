@@ -1,4 +1,4 @@
-const state = { activities: [], conversations: [], selectedActivityId: null, activeConversationId: null, sending: false, training: { goals: [], recent_coach_runs: [] }, selectedGoalId: null, activeCoachRunId: null, coachRunning: false };
+const state = { activities: [], conversations: [], selectedActivityId: null, activeConversationId: null, sending: false, training: { goals: [], recent_coach_runs: [] }, trainingWeek: null, planDraft: null, planDraftSubmission: null, selectedGoalId: null, activeCoachRunId: null, coachRunning: false };
 const responseModeLabels = { data_analysis: "个人数据分析", mixed_coaching: "数据＋训练思路", general_knowledge: "通用跑步知识", clarification: "需要补充信息", safety_redirect: "安全边界" };
 const claimKindLabels = { observed_fact: "数据事实", data_inference: "基于数据的推断", general_knowledge: "通用知识", coaching_suggestion: "可选建议" };
 const $ = (selector) => document.querySelector(selector);
@@ -15,8 +15,10 @@ const elements = {
 const trainingElements = {
   toggle: $("#training-toggle"), drawer: $("#training-drawer"), backdrop: $("#training-backdrop"), close: $("#training-close"),
   goal: $("#training-goal"), provider: $("#training-provider"), plan: $("#training-plan"), checkIn: $("#check-in-form"), day: $("#check-in-day"),
-  fatigue: $("#check-in-fatigue"), soreness: $("#check-in-soreness"), sleep: $("#check-in-sleep"), pain: $("#check-in-pain"),
-  painArea: $("#check-in-pain-area"), note: $("#check-in-note"), run: $("#coach-run"), result: $("#coach-result"), runs: $("#coach-runs")
+  fatigue: $("#check-in-fatigue"), soreness: $("#check-in-soreness"), sleep: $("#check-in-sleep"), readiness: $("#check-in-readiness"), pain: $("#check-in-pain"),
+  painArea: $("#check-in-pain-area"), note: $("#check-in-note"), run: $("#coach-run"), result: $("#coach-result"), runs: $("#coach-runs"),
+  goalForm: $("#goal-form"), goalName: $("#goal-name"), goalEvent: $("#goal-event"), goalDate: $("#goal-date"), goalTime: $("#goal-time"),
+  planForm: $("#plan-draft-form"), planWeekStart: $("#plan-week-start"), planDraft: $("#plan-draft"), weekProgress: $("#week-progress"), today: $("#today-session"), executions: $("#execution-list"), weekSummary: $("#week-summary")
 };
 
 async function api(path, options = {}) {
@@ -29,6 +31,11 @@ async function api(path, options = {}) {
 function dateLabel(value) { return new Intl.DateTimeFormat("zh-CN", { month: "2-digit", day: "2-digit" }).format(new Date(value)); }
 function fullDate(value) { return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
 function localDateValue() { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; }
+function dateInputValue(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
+function nextMondayValue() { const date = new Date(); const days = ((8 - date.getDay()) % 7) || 7; date.setDate(date.getDate() + days); return dateInputValue(date); }
+function futureDateValue(days = 84) { const date = new Date(); date.setDate(date.getDate() + days); return dateInputValue(date); }
+function sessionTypeLabel(value) { return ({ easy: "轻松跑", long_run: "长距离", tempo: "节奏跑", interval: "间歇跑", recovery: "恢复跑", rest: "休息", test: "测试跑" })[value] || value; }
+function durationLabel(seconds) { if (!seconds) return "未设时长"; const minutes = Math.round(seconds / 60); return `${minutes} 分钟`; }
 function statusLabel(value) { return ({ completed: "已完成", awaiting_user_confirmation: "等待确认", blocked: "安全阻断", failed: "运行失败", approved: "已批准", rejected: "已拒绝", stale: "已过期" })[value] || value; }
 function recommendationLabel(value) { return ({ proceed: "可以按计划", reduce: "建议减量", rest: "建议休息", seek_professional_help: "建议专业评估", insufficient_data: "数据不足" })[value] || value || "—"; }
 function activitySubtitle(activity) {
@@ -250,13 +257,109 @@ function renderTraining() {
 
 function renderPlan(view) {
   trainingElements.plan.replaceChildren();
-  if (!view || !view.active_plan) { trainingElements.plan.className = "plan-card empty"; trainingElements.plan.textContent = "所选目标没有激活计划，请先在终端建立课表。"; return; }
+  trainingElements.planForm.hidden = !view;
+  if (!view || !view.active_plan) { trainingElements.plan.className = "plan-card empty"; trainingElements.plan.textContent = view ? "当前没有激活计划。选择下一周并生成草案，确认后才会写入。" : "请先选择或新建一个训练目标。"; return; }
   const plan = view.active_plan; trainingElements.plan.className = "plan-card";
-  const title = document.createElement("h4"); title.textContent = `${plan.week_start} 当周 · revision ${plan.revision}`;
+  const title = document.createElement("h4"); title.textContent = `${plan.week_start} 当周 · 第 ${plan.revision} 版`;
   const detail = document.createElement("p"); detail.textContent = `${plan.sessions.length} 节计划课 · ${view.latest_check_in ? `最近反馈 ${view.latest_check_in.day}` : "尚无身体反馈"}`;
   const chips = document.createElement("div"); chips.className = "session-chips";
-  plan.sessions.forEach((session) => { const chip = document.createElement("span"); chip.textContent = `${session.scheduled_for.slice(5)} · ${session.session_type}`; chips.append(chip); });
+  plan.sessions.forEach((session) => { const chip = document.createElement("span"); chip.textContent = `${session.scheduled_for.slice(5)} · ${sessionTypeLabel(session.session_type)}`; chips.append(chip); });
   trainingElements.plan.append(title, detail, chips);
+}
+
+async function createGoal(event) {
+  event.preventDefault();
+  const weekdays = [...document.querySelectorAll('input[name="training-weekday"]:checked')].map((item) => item.value);
+  if (!weekdays.length) return showToast("请至少选择一个可训练日期。");
+  const button = trainingElements.goalForm.querySelector("button"); button.disabled = true;
+  const minutes = Number(trainingElements.goalTime.value || 0);
+  try {
+    const goal = await api("/api/training/goals", { method: "POST", body: JSON.stringify({ name: trainingElements.goalName.value.trim(), event_type: trainingElements.goalEvent.value, target_date: trainingElements.goalDate.value, target_time_seconds: minutes ? Math.round(minutes * 60) : null, available_weekdays: weekdays }) });
+    state.selectedGoalId = goal.id; trainingElements.goalForm.reset(); trainingElements.goalDate.value = futureDateValue();
+    await refreshTraining(); showToast("训练目标已保存在本机，可以生成周计划了。");
+  } catch (error) { showToast(error.message); } finally { button.disabled = false; }
+}
+
+async function draftPlan(event) {
+  event.preventDefault(); const view = selectedGoalView(); if (!view) return showToast("请先选择训练目标。");
+  const button = trainingElements.planForm.querySelector("button"); button.disabled = true;
+  const submission = { week_start: trainingElements.planWeekStart.value, as_of: new Date().toISOString(), lookback_days: 28, provider: trainingElements.provider.value || null };
+  try {
+    const result = await api(`/api/training/goals/${encodeURIComponent(view.goal.id)}/plan-drafts`, { method: "POST", body: JSON.stringify(submission) });
+    state.planDraft = result; state.planDraftSubmission = submission; renderPlanDraft();
+  } catch (error) { showToast(error.message); } finally { button.disabled = false; }
+}
+
+function renderPlanDraft() {
+  trainingElements.planDraft.replaceChildren();
+  const result = state.planDraft;
+  if (!result) { trainingElements.planDraft.hidden = true; return; }
+  trainingElements.planDraft.hidden = false; trainingElements.planDraft.className = `plan-draft${result.status === "ready" ? "" : " blocked"}`;
+  const label = document.createElement("span"); label.textContent = result.status === "ready" ? "待确认草案" : "暂不能生成";
+  const title = document.createElement("h4"); title.textContent = result.summary;
+  trainingElements.planDraft.append(label, title);
+  if (result.weekly_plan_draft) {
+    const rationale = document.createElement("p"); rationale.textContent = result.weekly_plan_draft.rationale; trainingElements.planDraft.append(rationale);
+    const list = document.createElement("div"); list.className = "draft-sessions";
+    result.weekly_plan_draft.sessions.forEach((session) => { const row = document.createElement("div"); const name = document.createElement("strong"); name.textContent = `${session.scheduled_for.slice(5)} · ${sessionTypeLabel(session.session_type)}`; const volume = document.createElement("small"); volume.textContent = durationLabel(session.duration_seconds); row.append(name, volume); list.append(row); });
+    const approve = document.createElement("button"); approve.type = "button"; approve.className = "primary-action"; approve.textContent = "确认并激活这份周计划"; approve.addEventListener("click", activatePlan); trainingElements.planDraft.append(list, approve);
+  }
+  (result.warnings || []).forEach((warning) => { const note = document.createElement("small"); note.textContent = warning; trainingElements.planDraft.append(note); });
+}
+
+async function activatePlan() {
+  const view = selectedGoalView(); if (!view || !state.planDraft || !state.planDraftSubmission) return;
+  if (!window.confirm("确认激活这份计划？系统会先重放草案并校验数据是否变化。")) return;
+  try {
+    await api(`/api/training/goals/${encodeURIComponent(view.goal.id)}/plans/activate`, { method: "POST", body: JSON.stringify({ ...state.planDraftSubmission, expected_input_hash: state.planDraft.input_hash }) });
+    state.planDraft = null; state.planDraftSubmission = null; renderPlanDraft(); await refreshTraining(); showToast("周计划已激活，后续修改仍需你的确认。");
+  } catch (error) { showToast(error.message); }
+}
+
+function renderTrainingWeek() {
+  const view = state.trainingWeek;
+  [trainingElements.weekProgress, trainingElements.today, trainingElements.executions, trainingElements.weekSummary].forEach((node) => node.replaceChildren());
+  if (!view || !view.plan || !view.execution || !view.progress) {
+    trainingElements.weekProgress.className = "week-progress empty"; trainingElements.weekProgress.textContent = "当前目标还没有可执行的激活计划。";
+    trainingElements.today.className = "today-session empty"; trainingElements.today.textContent = "激活计划后，这里会显示今日或下一节训练。";
+    trainingElements.weekSummary.className = "week-summary empty"; trainingElements.weekSummary.textContent = "尚无可总结的训练周。"; return;
+  }
+  const progress = view.progress; trainingElements.weekProgress.className = "week-progress";
+  [["已确认", `${progress.confirmed_sessions}/${progress.due_sessions}`], ["待核对", String(progress.pending_confirmation_sessions)], ["待执行", String(progress.upcoming_sessions)], ["反馈", `${progress.check_in_days} 天`]].forEach(([name, value]) => { const item = document.createElement("div"); const small = document.createElement("small"); small.textContent = name; const strong = document.createElement("strong"); strong.textContent = value; item.append(small, strong); trainingElements.weekProgress.append(item); });
+  const focusId = view.today_session_ids.find((id) => view.plan.sessions.find((item) => item.id === id && item.session_type !== "rest")) || view.next_session_id;
+  const focus = view.plan.sessions.find((item) => item.id === focusId);
+  trainingElements.today.className = focus ? "today-session" : "today-session empty";
+  if (focus) { const label = document.createElement("span"); label.textContent = view.today_session_ids.includes(focus.id) ? "今日训练" : "下一节训练"; const title = document.createElement("h4"); title.textContent = sessionTypeLabel(focus.session_type); const detail = document.createElement("p"); detail.textContent = `${focus.scheduled_for} · ${durationLabel(focus.duration_seconds)} · ${focus.purpose}`; trainingElements.today.append(label, title, detail); }
+  else trainingElements.today.textContent = "本周已没有待执行训练。";
+  view.execution.sessions.filter((item) => item.outcome !== "rest" && item.outcome !== "upcoming").forEach((comparison) => renderExecutionRow(comparison, view.plan));
+  trainingElements.weekSummary.className = "week-summary"; const headline = document.createElement("strong"); headline.textContent = progress.headline; const copy = document.createElement("p"); const rate = progress.completion_rate == null ? "尚未形成" : `${Math.round(progress.completion_rate * 100)}%`; copy.textContent = `计划总时长 ${durationLabel(progress.planned_duration_seconds)}；到期训练确认率 ${rate}；跳过 ${progress.skipped_sessions} 节。`; trainingElements.weekSummary.append(headline, copy);
+}
+
+function renderExecutionRow(comparison, plan) {
+  const session = plan.sessions.find((item) => item.id === comparison.session_id); if (!session) return;
+  const row = document.createElement("article"); row.className = "execution-row";
+  const copy = document.createElement("div"); const title = document.createElement("strong"); title.textContent = `${session.scheduled_for.slice(5)} · ${sessionTypeLabel(session.session_type)}`; const status = document.createElement("small"); status.textContent = comparison.match_state === "confirmed" ? "活动已确认" : comparison.match_state === "suggested" ? "发现高匹配候选" : comparison.match_state === "ambiguous" ? "存在多个候选" : comparison.outcome === "skipped" ? "已标记跳过" : "没有找到匹配活动"; copy.append(title, status); row.append(copy);
+  const actions = document.createElement("div"); actions.className = "execution-actions";
+  if (comparison.match_state === "confirmed") { const review = document.createElement("button"); review.type = "button"; review.textContent = "去复盘"; review.addEventListener("click", () => openActivityReview(comparison.suggested_activity_id)); const clear = document.createElement("button"); clear.type = "button"; clear.textContent = "解除"; clear.addEventListener("click", () => decideExecution(comparison, "clear_execution")); actions.append(review, clear); }
+  else if (comparison.outcome === "skipped") { const clear = document.createElement("button"); clear.type = "button"; clear.textContent = "解除跳过"; clear.addEventListener("click", () => decideExecution(comparison, "clear_execution")); actions.append(clear); }
+  else if (comparison.candidates.length) { comparison.candidates.slice(0, 2).forEach((candidate, index) => { const confirm = document.createElement("button"); confirm.type = "button"; confirm.textContent = `${index ? "候选" : "确认匹配"} ${dateLabel(candidate.started_at)}`; confirm.addEventListener("click", () => decideExecution(comparison, "confirm_match", candidate.activity_id)); actions.append(confirm); }); }
+  if (comparison.match_state !== "confirmed" && comparison.outcome !== "skipped") { const skip = document.createElement("button"); skip.type = "button"; skip.className = "muted"; skip.textContent = "标记跳过"; skip.addEventListener("click", () => decideExecution(comparison, "mark_skipped")); actions.append(skip); }
+  row.append(actions); trainingElements.executions.append(row);
+}
+
+async function decideExecution(comparison, decision, activityId = null) {
+  const view = state.trainingWeek; if (!view || !view.plan) return;
+  if (decision === "mark_skipped" && !window.confirm("确认将这节训练标记为跳过？之后仍可解除。")) return;
+  try {
+    const result = await api(`/api/training/plans/${encodeURIComponent(view.plan.id)}/execution-decisions`, { method: "POST", body: JSON.stringify({ base_revision: view.plan.revision, session_id: comparison.session_id, decision, as_of: new Date().toISOString(), activity_id: activityId, comment: null }) });
+    if (result.confirmation.status === "stale") showToast("计划版本已经变化，请重新核对。"); else showToast(decision === "confirm_match" ? "活动已与计划课确认关联。" : decision === "mark_skipped" ? "训练已标记为跳过。" : "执行状态已解除。");
+    await refreshTraining();
+  } catch (error) { showToast(error.message); }
+}
+
+function openActivityReview(activityId) {
+  if (!activityId || !state.activities.some((item) => item.id === activityId)) return showToast("该活动不在当前跑步列表中。");
+  selectActivity(activityId); toggleTraining(false); elements.input.value = "复盘这次训练，并告诉我下一次训练需要注意什么。"; elements.input.focus();
 }
 
 function renderCoachRuns() {
@@ -292,22 +395,29 @@ function renderCoachResult(view) {
   }
 }
 
-async function refreshTraining() { state.training = await api("/api/training/bootstrap"); renderTraining(); }
+async function refreshWeek() {
+  const view = selectedGoalView();
+  if (!view) { state.trainingWeek = null; renderTrainingWeek(); return; }
+  const query = new URLSearchParams({ as_of: new Date().toISOString() });
+  if (trainingElements.provider.value) query.set("provider", trainingElements.provider.value);
+  state.trainingWeek = await api(`/api/training/goals/${encodeURIComponent(view.goal.id)}/week?${query.toString()}`); renderTrainingWeek();
+}
+async function refreshTraining() { state.training = await api("/api/training/bootstrap"); renderTraining(); await refreshWeek(); }
 async function loadCoachRun(runId) { try { renderCoachResult(await api(`/api/training/coach-runs/${encodeURIComponent(runId)}`)); } catch (error) { showToast(error.message); } }
 
 async function saveCheckIn(event) {
   event.preventDefault(); const view = selectedGoalView(); if (!view) return showToast("请先选择训练目标。");
   const symptoms = [...document.querySelectorAll('input[name="acute-symptom"]:checked')].map((item) => item.value);
-  const payload = { day: trainingElements.day.value, fatigue: Number(trainingElements.fatigue.value), soreness: Number(trainingElements.soreness.value), sleep_quality: Number(trainingElements.sleep.value), pain_severity: Number(trainingElements.pain.value), pain_area: trainingElements.painArea.value.trim() || null, acute_symptoms: symptoms, note: trainingElements.note.value.trim() || null };
+  const payload = { day: trainingElements.day.value, fatigue: Number(trainingElements.fatigue.value), soreness: Number(trainingElements.soreness.value), sleep_quality: Number(trainingElements.sleep.value), readiness: trainingElements.readiness.value ? Number(trainingElements.readiness.value) : null, pain_severity: Number(trainingElements.pain.value), pain_area: trainingElements.painArea.value.trim() || null, acute_symptoms: symptoms, note: trainingElements.note.value.trim() || null };
   const button = trainingElements.checkIn.querySelector("button"); button.disabled = true;
   try { await api(`/api/training/goals/${encodeURIComponent(view.goal.id)}/check-ins`, { method: "POST", body: JSON.stringify(payload) }); showToast("身体反馈已保存到本机。"); await refreshTraining(); }
   catch (error) { showToast(error.message); } finally { button.disabled = false; }
 }
 
 async function runCoach() {
-  const view = selectedGoalView(); if (!view || !view.active_plan) return showToast("所选目标没有激活计划。");
+  const view = selectedGoalView(); const plan = state.trainingWeek && state.trainingWeek.plan; if (!view || !plan) return showToast("所选目标没有激活计划。");
   trainingElements.run.disabled = true; state.coachRunning = true; setCrewOverview("running"); trainingElements.result.className = "coach-result empty"; trainingElements.result.textContent = "三个职责节点正在按权限运行…";
-  try { const result = await api("/api/training/coach-runs", { method: "POST", body: JSON.stringify({ goal_id: view.goal.id, plan_id: view.active_plan.id, as_of: new Date().toISOString(), provider: trainingElements.provider.value || null }) }); renderCoachResult(result); await refreshTraining(); showToast("联合评估已完成，计划草案不会自动生效。"); }
+  try { const result = await api("/api/training/coach-runs", { method: "POST", body: JSON.stringify({ goal_id: view.goal.id, plan_id: plan.id, as_of: new Date().toISOString(), provider: trainingElements.provider.value || null }) }); renderCoachResult(result); await refreshTraining(); showToast("联合评估已完成，计划草案不会自动生效。"); }
   catch (error) { showToast(error.message); setCrewOverview("failed"); trainingElements.result.textContent = "运行失败，请检查数据和计划状态。"; }
   finally { state.coachRunning = false; trainingElements.run.disabled = false; }
 }
@@ -338,10 +448,15 @@ elements.input.addEventListener("input", () => { elements.input.style.height = "
 
 refreshBootstrap().catch((error) => showToast(error.message));
 trainingElements.day.value = localDateValue();
+trainingElements.planWeekStart.value = nextMondayValue();
+trainingElements.goalDate.value = futureDateValue();
 trainingElements.toggle.addEventListener("click", () => toggleTraining(true));
 trainingElements.close.addEventListener("click", () => toggleTraining(false));
 trainingElements.backdrop.addEventListener("click", () => toggleTraining(false));
-trainingElements.goal.addEventListener("change", () => { state.selectedGoalId = trainingElements.goal.value || null; renderPlan(selectedGoalView()); });
+trainingElements.goal.addEventListener("change", () => { state.selectedGoalId = trainingElements.goal.value || null; state.planDraft = null; renderPlan(selectedGoalView()); renderPlanDraft(); refreshWeek().catch((error) => showToast(error.message)); });
+trainingElements.provider.addEventListener("change", () => refreshWeek().catch((error) => showToast(error.message)));
+trainingElements.goalForm.addEventListener("submit", createGoal);
+trainingElements.planForm.addEventListener("submit", draftPlan);
 trainingElements.checkIn.addEventListener("submit", saveCheckIn);
 trainingElements.run.addEventListener("click", runCoach);
 elements.contextToggle.addEventListener("click", () => toggleContext(true));

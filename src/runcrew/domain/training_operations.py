@@ -10,12 +10,19 @@ from runcrew.domain.coach import CoachAgentRunRequest, CoachAgentRunResult
 from runcrew.domain.training_cycle import (
     AcuteSymptom,
     DailyCheckIn,
+    EventType,
     PlanChangeProposal,
     PlanSession,
     TrainingGoal,
     TrainingPlan,
     UserConfirmation,
+    Weekday,
 )
+from runcrew.domain.training_execution import (
+    TrainingExecutionDecisionRequest,
+    TrainingExecutionResult,
+)
+from runcrew.domain.training_planning import TrainingPlanningResult, WeeklyPlanDraftRequest
 
 
 class TrainingOperationsGoalView(BaseModel):
@@ -48,6 +55,111 @@ class TrainingOperationsBootstrap(BaseModel):
     goals: list[TrainingOperationsGoalView]
     providers: list[SourceProvider] = Field(default_factory=list)
     recent_coach_runs: list[CoachRunSummary] = Field(default_factory=list)
+
+
+class TrainingGoalSubmission(BaseModel):
+    model_config = ConfigDict(extra="forbid", title="训练目标创建输入")
+
+    name: str = Field(min_length=1, max_length=80)
+    event_type: EventType
+    target_date: date
+    target_time_seconds: int | None = Field(default=None, gt=0)
+    available_weekdays: list[Weekday] = Field(min_length=1, max_length=7)
+
+    def to_domain(self) -> TrainingGoal:
+        return TrainingGoal.model_validate(self.model_dump())
+
+
+class WeeklyPlanDraftSubmission(BaseModel):
+    model_config = ConfigDict(extra="forbid", title="网页周计划草案输入")
+
+    week_start: date
+    as_of: datetime
+    lookback_days: int = Field(default=28, ge=14, le=56)
+    provider: SourceProvider | None = None
+
+    @field_validator("week_start")
+    @classmethod
+    def require_monday(cls, value: date) -> date:
+        if value.weekday() != 0:
+            raise ValueError("训练周必须从星期一开始")
+        return value
+
+    @field_validator("as_of")
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("as_of 必须包含时区")
+        return value
+
+    def to_request(self, goal_id: str) -> WeeklyPlanDraftRequest:
+        return WeeklyPlanDraftRequest(goal_id=goal_id, **self.model_dump())
+
+
+class WeeklyPlanActivationRequest(WeeklyPlanDraftSubmission):
+    model_config = ConfigDict(extra="forbid", title="周计划草案确认输入")
+
+    expected_input_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    def to_request(self, goal_id: str) -> WeeklyPlanDraftRequest:
+        return WeeklyPlanDraftRequest(
+            goal_id=goal_id,
+            **self.model_dump(exclude={"expected_input_hash"}),
+        )
+
+
+class WeekProgressSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    due_sessions: int = Field(ge=0)
+    confirmed_sessions: int = Field(ge=0)
+    pending_confirmation_sessions: int = Field(ge=0)
+    skipped_sessions: int = Field(ge=0)
+    upcoming_sessions: int = Field(ge=0)
+    completion_rate: float | None = Field(default=None, ge=0, le=1)
+    planned_duration_seconds: int = Field(ge=0)
+    check_in_days: int = Field(ge=0)
+    headline: str = Field(min_length=1, max_length=200)
+
+
+class TrainingWeekView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: datetime
+    goal: TrainingGoal
+    plan: TrainingPlan | None
+    execution: TrainingExecutionResult | None
+    today_session_ids: list[str] = Field(default_factory=list)
+    next_session_id: str | None = None
+    progress: WeekProgressSummary | None = None
+
+
+class WeeklyPlanActivationResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    plan: TrainingPlan
+    replayed_draft: TrainingPlanningResult
+
+
+class ExecutionDecisionSubmission(BaseModel):
+    model_config = ConfigDict(extra="forbid", title="网页训练执行确认输入")
+
+    base_revision: int = Field(ge=1)
+    session_id: str = Field(min_length=1)
+    decision: Literal["confirm_match", "mark_skipped", "clear_execution"]
+    as_of: datetime
+    activity_id: str | None = None
+    comment: str | None = Field(default=None, max_length=500)
+
+    @field_validator("as_of")
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("as_of 必须包含时区")
+        return value
+
+    def to_request(self, plan_id: str) -> TrainingExecutionDecisionRequest:
+        return TrainingExecutionDecisionRequest(plan_id=plan_id, **self.model_dump())
 
 
 class CheckInSubmission(BaseModel):

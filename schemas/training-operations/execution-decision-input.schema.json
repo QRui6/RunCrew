@@ -1,0 +1,62 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "base_revision": {
+      "minimum": 1,
+      "title": "Base Revision",
+      "type": "integer"
+    },
+    "session_id": {
+      "minLength": 1,
+      "title": "Session Id",
+      "type": "string"
+    },
+    "decision": {
+      "enum": [
+        "confirm_match",
+        "mark_skipped",
+        "clear_execution"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "as_of": {
+      "format": "date-time",
+      "title": "As Of",
+      "type": "string"
+    },
+    "activity_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Activity Id"
+    },
+    "comment": {
+      "anyOf": [
+        {
+          "maxLength": 500,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Comment"
+    }
+  },
+  "required": [
+    "base_revision",
+    "session_id",
+    "decision",
+    "as_of"
+  ],
+  "title": "网页训练执行确认输入",
+  "type": "object"
+}
