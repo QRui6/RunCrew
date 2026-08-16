@@ -1,8 +1,64 @@
 # RunCrew
 
-RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前已经形成可靠数据竖切、可回放 Skill、具备有界上下文与 Trace 的 Agent Loop、真实 LLM 同题评测、围绕跑步数据的连续对话产品，以及由 Execution、Recovery、Plan 三个隔离职责节点组成的训练运营闭环。
+RunCrew 是一个由真实跑步数据驱动、强调证据与人工确认的本地多 Agent 训练运营系统。它不是把多个角色名称拼进 Prompt，而是让 Execution、Recovery、Plan 三个隔离职责围绕同一训练状态协作，并用 Skill、Context、Harness、Loop、Trace 和版本化 Evaluation 约束整个过程。
+
+用户可以在网页完成：创建训练目标、预览并激活周计划、查看今日训练、确认活动匹配、连续对话复盘、记录跑后反馈、运行跨职责评估、审核计划调整和查看周总结。
+
+> 当前定位：可运行的本地优先产品原型与 Agent 工程作品，不是医疗诊断工具，也不宣称生产级大规模用户验证。
 
 > AI 或新开发者开始工作时，请先阅读 [AGENTS.md](AGENTS.md)，然后阅读 [当前状态](docs/CURRENT_STATE.md)。
+
+## 为什么做这个项目
+
+跑步平台通常可以记录活动，聊天模型也可以生成训练建议，但“计划了什么、实际完成了什么、身体反馈如何、是否需要调整”经常彼此割裂。RunCrew 试图把这些状态接成一个可追溯闭环，同时解决三个 Agent 工程问题：
+
+- 数据事实不能由 LLM 编造，个人结论必须能追溯到规范化 Activity 或确定性 evidence；
+- Agent 可以生成候选和草案，但不能绕过用户直接修改训练事实；
+- 多职责协作必须可以测试、回放和审计，而不只是一次看起来合理的对话。
+
+## 核心闭环
+
+```mermaid
+flowchart LR
+    A[COROS / FIT / Fixture] --> B[统一 Activity Schema]
+    B --> C[训练目标与周计划]
+    C --> D[Execution<br/>执行对照]
+    D --> E[用户确认活动匹配]
+    E --> F[Recovery<br/>恢复评估]
+    F --> G[Plan<br/>调整草案]
+    G --> H[用户批准或拒绝]
+    H --> C
+    E --> I[连续对话复盘与周总结]
+```
+
+候选活动只有经过用户确认才成为执行事实；计划草案在批准前会由服务端重放并校验 `input_hash`，正式写入还受计划 `revision` 保护。
+
+## 当前验证结果
+
+| 维度 | 当前结果 |
+|---|---:|
+| 自动化测试 | 132 passed |
+| 多 Agent 确定性评测 | 18 / 18 |
+| DeepSeek 单 Agent 同题评测 | 12 / 12 |
+| 连续对话上下文窗口 | 最近 8 条消息 + 不可变 evidence 快照 |
+| 数据与服务边界 | 本地 SQLite + `127.0.0.1` |
+
+## 技术栈与分层
+
+- Python 3.11+、Pydantic、SQLAlchemy、SQLite、Typer、HTTPX；
+- DeepSeek Tool Calls、MCP、OAuth 2.0 + PKCE、Garmin FIT SDK；
+- 原生 HTML/CSS/JavaScript 本地产品界面；
+- Pytest、版本化 JSON Schema、确定性与真实 LLM 同题 Evaluation。
+
+```text
+providers/   外部数据接入、OAuth/MCP、FIT 获取与解析
+domain/      与厂商无关的 Activity、训练周期和 Agent Schema
+services/    同步、复盘、计划、执行、恢复和产品编排
+harness/     工具权限、Handoff、预算、重试、超时、Loop 与 Trace
+evaluation/  单 Agent、连续对话和多 Agent 版本化评测
+web/         本地聊天产品与工程观测台
+skills/      中文 Skill 说明、边界和输入输出契约
+```
 
 ## 当前能力
 
@@ -54,21 +110,21 @@ RunCrew 是一个以真实跑步数据为驱动的 Agent 工程项目。当前�
 
 ## 本地运行
 
+Windows PowerShell，建议使用 Python 3.11 及以上版本：
+
 ```powershell
-python -m pip install -e ".[dev]"
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 .\.venv\Scripts\runcrew.exe init-db
 .\.venv\Scripts\runcrew.exe sync --provider fixture --days 30
-.\.venv\Scripts\runcrew.exe status
-.\.venv\Scripts\runcrew.exe activities list
-.\.venv\Scripts\runcrew.exe activities review --latest
-.\.venv\Scripts\runcrew.exe training review --latest --provider fixture
-.\.venv\Scripts\runcrew.exe agent review --latest --provider fixture
-.\.venv\Scripts\runcrew.exe eval review-agent --output data\private\evals\m5-baseline.json
-.\.venv\Scripts\runcrew.exe eval running-chat --output data\private\evals\running-chat-offline-v1.0.json
-.\.venv\Scripts\runcrew.exe eval coach-agent --output data\private\evals\coach-agent-v1.0.json
-.\.venv\Scripts\runcrew.exe cycle --help
-.\.venv\Scripts\runcrew.exe recovery assess --help
 .\.venv\Scripts\runcrew.exe demo
+```
+
+然后打开 `http://127.0.0.1:8766`。首次体验不需要 DeepSeek Key，fixture 和离线证据回答即可运行；停止服务请在终端按 `Ctrl+C`。
+
+完整验证：
+
+```powershell
 .\.venv\Scripts\python.exe scripts\verify.py
 ```
 
@@ -88,6 +144,11 @@ python -m pip install -e ".[dev]"
 - 自由讨论训练假设、通用跑步知识和下一步思路，并区分个人事实、推断、知识和建议；
 - 查看回答引用的 evidence、置信度、缺失数据、Token 和估算费用；
 - 显式开启 DeepSeek 回答，或在没有 Key 时使用离线证据回答。
+- 点击“训练闭环”创建目标、预览并确认下一周计划；
+- 查看今日/下一节训练，对候选活动进行确认、跳过或解除；
+- 从已确认活动直接进入连续对话复盘；
+- 保存跑后反馈，运行 Execution、Recovery、Plan 联合评估并审核调整；
+- 查看到期训练确认率、计划时长、反馈天数和周总结。
 
 原来的工程展示页位于 `http://127.0.0.1:8766/engineering`。服务只绑定本机回环地址；聊天 API 允许写入本地会话，但不会向浏览器返回 Provider 外部 ID、原始事件、坐标或 Token。停止服务请在终端按 `Ctrl+C`。不希望自动打开浏览器时使用：
 
@@ -190,7 +251,7 @@ Coach 会依次委派训练执行和恢复评估；只有需要降级时才调�
 .\.venv\Scripts\runcrew.exe demo
 ```
 
-页面可以记录身体反馈、运行 Coach、恢复历史运行并批准或拒绝建议。浏览器不能提交计划 patch；批准时服务端会重放同一 Coach 请求，只有结果未变化才通过 revision 状态机应用，否则返回 stale。
+页面可以创建目标、预览并激活周计划、核对活动匹配、记录身体反馈、运行 Coach、恢复历史运行并批准或拒绝建议。浏览器不能提交计划 patch；计划激活和 Coach 批准都会先在服务端重放，只有依据未变化才通过 hash/revision 状态机应用，否则拒绝旧操作。
 
 ## 运行 Coach 多 Agent 离线评测
 
