@@ -293,7 +293,7 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     )
     html = application.handle("GET", "/").body.decode("utf-8")
     script = application.handle("GET", "/assets/chat.js").body.decode("utf-8")
-    style = application.handle("GET", "/assets/chat.css?v=20260816-5").body.decode("utf-8")
+    style = application.handle("GET", "/assets/chat.css?v=20260816-6").body.decode("utf-8")
     assert "训练闭环" in html
     assert "记录今日状态" in html
     assert "运行跨职责评估" in html
@@ -312,9 +312,12 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     assert "renderRunHeader" in script
     assert "toggleContext" in script
     assert 'id="context-panel" class="context-panel" aria-label="回答依据" hidden' in html
-    assert "/assets/chat.css?v=20260816-5" in html
+    assert "/assets/chat.css?v=20260816-6" in html
     assert "grid-template-rows: 68px minmax(0, 1fr)" in style
     assert "position: sticky" in style
+    assert ".workspace {" in style and "overflow: hidden" in style
+    assert "grid-template-rows: auto auto minmax(0, 1fr) auto" in style
+    assert "max(10px, env(safe-area-inset-bottom))" in style
     assert "--ivory" in style
     assert "#b9e845" not in style
 
