@@ -36,7 +36,7 @@ flowchart LR
 
 | 维度 | 当前结果 |
 |---|---:|
-| 自动化测试 | 181 passed |
+| 自动化测试 | 189 passed |
 | 多 Agent 确定性评测 | 18 / 18 |
 | DeepSeek 单 Agent 同题评测 | 12 / 12 |
 | Memory Manager 确定性评测 | 16 / 16，意外正式写入 0 |
@@ -55,6 +55,7 @@ providers/   外部数据接入、OAuth/MCP、FIT 获取与解析
 domain/      与厂商无关的 Activity、训练周期和 Agent Schema
 services/    同步、复盘、计划、执行、恢复和产品编排
 harness/     工具权限、Handoff、预算、重试、超时、Loop 与 Trace
+domain/ + services/ runtime_governance  Tool Manifest、统一前后置 Guardrail 与脱敏决策
 evaluation/  单 Agent、连续对话、多 Agent 和 Memory 版本化评测
 web/         本地聊天产品与工程观测台
 skills/      中文 Skill 说明、边界和输入输出契约
@@ -71,6 +72,7 @@ skills/      中文 Skill 说明、边界和输入输出契约
 - 通过 `input_hash + ruleset_version` 回放同一结论；
 - 通过 `agent review` 在白名单、预算、超时和输出校验约束下运行 Skill；
 - 输出成功、失败、超时或预算耗尽终态，以及完整脱敏 Trace；
+- 用四个版本化 Tool Manifest 统一声明职责、访问、副作用、风险、Schema 与运行上限；Review/Coach 在执行前检查权限、确认和参数 Hash，执行后统一拒绝非法输出；
 - 用 12 个版本化离线场景评测任务完成、故障恢复、护栏和预算行为；
 - 输出 Suite Hash、事实一致性、工具执行和调用成本等可比较指标；
 - 提供 `DeepSeekReviewPolicy` 非思考 Tool Calls 适配器，并以 Mock 验证请求、解析、重试、脱敏和 Harness 护栏；

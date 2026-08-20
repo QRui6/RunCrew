@@ -40,6 +40,11 @@ from runcrew.domain.training_execution import (
 )
 from runcrew.domain.training_planning import PlanAdjustmentRequest, TrainingPlanningResult
 from runcrew.services.training_planning import adjustment_request_from_recovery
+from runcrew.services.runtime_governance import (
+    RuntimeGuardrailEngine,
+    guardrail_trace_details,
+)
+from runcrew.domain.runtime_governance import GuardrailDecision, ToolOutputGuardrailResult
 
 
 class CoachPolicy(Protocol):
@@ -183,6 +188,7 @@ class CoachOrchestratorHarness:
         *,
         policy: CoachPolicy | None = None,
         permissions: list[CoachNodePermission] | None = None,
+        guardrails: RuntimeGuardrailEngine | None = None,
         run_id_factory: Callable[[], str] | None = None,
     ) -> None:
         configured = permissions or [
@@ -217,6 +223,7 @@ class CoachOrchestratorHarness:
                 node="plan_agent", tool_name=PLAN_TOOL_NAME, access="prepare_change"
             )
         )
+        self.guardrails = guardrails or RuntimeGuardrailEngine()
         self.run_id_factory = run_id_factory or (lambda: uuid.uuid4().hex)
 
     async def run(
@@ -359,24 +366,19 @@ class CoachOrchestratorHarness:
                 recovery_request=recovery_request,
                 plan_request=state["plan_request"],
             )
-            permission_error = self._validate_permission(action, recorder)
+            permission_error = self._validate_permission(
+                action,
+                expected=expected,
+                request=request,
+                recorder=recorder,
+            )
             if permission_error is not None:
+                code, message = permission_error
                 return self._failure_result(
                     run_id=run_id,
                     workflow_hash=workflow_hash,
-                    code="permission_denied",
-                    message=permission_error,
-                    retryable=False,
-                    recorder=recorder,
-                    usage=usage,
-                    state=state,
-                )
-            if expected is None or action.arguments != expected:
-                return self._failure_result(
-                    run_id=run_id,
-                    workflow_hash=workflow_hash,
-                    code="invalid_handoff",
-                    message="职责节点收到的参数不是 Harness 生成的最小可信交接。",
+                    code=code,
+                    message=message,
                     retryable=False,
                     recorder=recorder,
                     usage=usage,
@@ -415,7 +417,7 @@ class CoachOrchestratorHarness:
             )
             usage.node_calls += 1
             try:
-                output = await self._call_node(
+                output, output_guardrail = await self._call_node(
                     action=action,
                     tools=tools,
                     request=request,
@@ -440,7 +442,11 @@ class CoachOrchestratorHarness:
                 event="node_output_validated",
                 node=action.node,
                 tool_name=action.tool_name,
-                details={"output_schema": type(output).__name__},
+                details={
+                    "output_schema": type(output).__name__,
+                    "guardrail_rule_id": output_guardrail.decision.rule_id,
+                    "guardrail_outcome": output_guardrail.decision.outcome,
+                },
             )
             if isinstance(action, DelegateExecutionAction):
                 state["execution"] = output
@@ -481,33 +487,63 @@ class CoachOrchestratorHarness:
     def _validate_permission(
         self,
         action: DelegateExecutionAction | DelegateRecoveryAction | DelegatePlanAction,
+        *,
+        expected: Any,
+        request: CoachAgentRunRequest,
         recorder: _TraceRecorder,
-    ) -> str | None:
+    ) -> tuple[str, str] | None:
         permission = self._permissions.get(action.node)
-        allowed = (
-            permission is not None
-            and permission.tool_name == action.tool_name
-            and not permission.can_persist
-            and not permission.can_approve
+        access = permission.access if permission else (
+            "prepare_change" if action.node == "plan_agent" else "read"
         )
+        governance = self.guardrails.evaluate_invocation(
+            tool_name=action.tool_name,
+            owner_role=action.node,
+            granted_access=access,
+            actual_arguments=action.arguments,
+            expected_arguments=expected,
+            timeout_seconds=request.node_timeout_seconds,
+            max_retries=request.max_retries,
+            can_persist=permission.can_persist if permission else False,
+            can_approve=permission.can_approve if permission else False,
+        )
+        permission_matches_action = permission is not None and permission.tool_name == action.tool_name
+        if not permission_matches_action and governance.allowed:
+            governance = governance.model_copy(
+                update={
+                    "allowed": False,
+                    "decisions": [
+                        *governance.decisions,
+                        GuardrailDecision(
+                            rule_id="tool.permission-binding/1.0",
+                            stage="permission",
+                            outcome="deny",
+                            reason="Harness 权限绑定与动作工具不一致。",
+                        )
+                    ],
+                }
+            )
         recorder.add(
             state="routing",
             event="node_permission_checked",
             node=action.node,
             tool_name=action.tool_name,
             details={
-                "allowed": allowed,
+                **guardrail_trace_details(governance),
                 "access": permission.access if permission else None,
                 "can_persist": permission.can_persist if permission else None,
                 "can_approve": permission.can_approve if permission else None,
             },
         )
-        if not allowed:
-            return "职责节点请求了白名单外的工具或写入权限，调用已拒绝。"
-        expected_access = "prepare_change" if action.node == "plan_agent" else "read"
-        if permission.access != expected_access:
-            return "职责节点权限级别与固定职责不一致，调用已拒绝。"
-        return None
+        if governance.allowed and permission_matches_action:
+            return None
+        if any(
+            item.rule_id == "tool.argument-integrity/1.0"
+            and item.outcome == "deny"
+            for item in governance.decisions
+        ):
+            return "invalid_handoff", "职责节点收到的参数不是 Harness 生成的最小可信交接。"
+        return "permission_denied", "职责节点请求了白名单外的工具或写入权限，调用已拒绝。"
 
     async def _call_node(
         self,
@@ -517,7 +553,10 @@ class CoachOrchestratorHarness:
         request: CoachAgentRunRequest,
         recorder: _TraceRecorder,
         usage: _Usage,
-    ) -> TrainingExecutionResult | RecoveryAssessmentResult | TrainingPlanningResult:
+    ) -> tuple[
+        TrainingExecutionResult | RecoveryAssessmentResult | TrainingPlanningResult,
+        ToolOutputGuardrailResult,
+    ]:
         for attempt in range(1, request.max_retries + 2):
             usage.node_attempts += 1
             recorder.add(
@@ -531,13 +570,24 @@ class CoachOrchestratorHarness:
                 async with asyncio.timeout(request.node_timeout_seconds):
                     if isinstance(action, DelegateExecutionAction):
                         raw = await self.execution_node.run(action.arguments, tools.execution)
-                        output = TrainingExecutionResult.model_validate(raw)
+                        output_model = TrainingExecutionResult
                     elif isinstance(action, DelegateRecoveryAction):
                         raw = await self.recovery_node.run(action.arguments, tools.recovery)
-                        output = RecoveryAssessmentResult.model_validate(raw)
+                        output_model = RecoveryAssessmentResult
                     else:
                         raw = await self.plan_node.run(action.arguments, tools.planning)
-                        output = TrainingPlanningResult.model_validate(raw)
+                        output_model = TrainingPlanningResult
+                    output, output_guardrail = self.guardrails.validate_output(
+                        tool_name=action.tool_name,
+                        raw_output=raw,
+                        output_model=output_model,
+                    )
+                    if output is None:
+                        raise _NodeFailure(
+                            "invalid_node_output",
+                            "职责节点返回内容不符合输出 Schema，已拒绝继续编排。",
+                            retryable=False,
+                        )
                 recorder.add(
                     state="calling_node",
                     event="node_call_succeeded",
@@ -545,7 +595,23 @@ class CoachOrchestratorHarness:
                     tool_name=action.tool_name,
                     attempt=attempt,
                 )
-                return output
+                return output, output_guardrail
+            except _NodeFailure as error:
+                recorder.add(
+                    state="failed",
+                    event="node_call_failed",
+                    node=action.node,
+                    tool_name=action.tool_name,
+                    attempt=attempt,
+                    details={
+                        "error_type": type(error).__name__,
+                        "retryable": error.retryable,
+                        "guardrail_rule_id": output_guardrail.decision.rule_id,
+                        "guardrail_outcome": output_guardrail.decision.outcome,
+                        **output_guardrail.decision.details,
+                    },
+                )
+                raise
             except ValidationError as error:
                 recorder.add(
                     state="failed",

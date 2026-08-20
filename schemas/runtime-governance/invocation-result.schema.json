@@ -1,0 +1,129 @@
+{
+  "$defs": {
+    "GuardrailDecision": {
+      "additionalProperties": false,
+      "description": "一条可稳定测试的治理规则决策。",
+      "properties": {
+        "rule_id": {
+          "minLength": 1,
+          "pattern": "^[a-z0-9_.-]+/\\d+\\.\\d+$",
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "stage": {
+          "enum": [
+            "registration",
+            "permission",
+            "confirmation",
+            "input_integrity",
+            "runtime_limits",
+            "output_validation"
+          ],
+          "title": "Stage",
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "allow",
+            "deny",
+            "require_confirmation"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "details": {
+          "additionalProperties": true,
+          "title": "Details",
+          "type": "object"
+        }
+      },
+      "required": [
+        "rule_id",
+        "stage",
+        "outcome",
+        "reason"
+      ],
+      "title": "Runtime Guardrail Decision",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "工具执行前的完整、脱敏治理结果。",
+  "properties": {
+    "schema_version": {
+      "const": "runtime-guardrail-result/1.0",
+      "default": "runtime-guardrail-result/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "tool_name": {
+      "minLength": 1,
+      "title": "Tool Name",
+      "type": "string"
+    },
+    "allowed": {
+      "title": "Allowed",
+      "type": "boolean"
+    },
+    "manifest_hash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Manifest Hash"
+    },
+    "input_hash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Input Hash"
+    },
+    "expected_input_hash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expected Input Hash"
+    },
+    "decisions": {
+      "items": {
+        "$ref": "#/$defs/GuardrailDecision"
+      },
+      "minItems": 1,
+      "title": "Decisions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "tool_name",
+    "allowed",
+    "decisions"
+  ],
+  "title": "Tool Invocation Guardrail Result",
+  "type": "object"
+}

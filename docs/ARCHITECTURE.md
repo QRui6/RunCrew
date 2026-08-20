@@ -151,6 +151,30 @@ M5-B1 已新增 `DeepSeekReviewPolicy`：通过官方 Chat Completions + 普通 
 
 真实首次 Smoke 证明首轮 Tool Call 可用，但第二轮仅传 Context JSON 会让模型重复调用工具。修复后在单次 Run 内保留 assistant Tool Call，并以相同 `tool_call_id` 回传已校验 Tool Result，形成标准 `assistant(tool_calls) → tool(result)` 对话。该链路已通过真实 Smoke 和 v1.1 完整同题评测。
 
+### Agent Runtime Governance
+
+位置：`src/runcrew/domain/runtime_governance.py`、`src/runcrew/services/runtime_governance.py`
+
+M10-A 在 Policy 与既有 Harness 执行器之间增加统一治理决策层。四个真实 Agent 工具先注册 `tool-manifest/1.0`，声明责任角色、访问级别、副作用、风险、输入/输出 Schema、确认要求、持久化/审批能力、幂等性以及超时/重试上限。
+
+```text
+Policy Action
+  → ToolCapabilityRegistry（拒绝未知/重复工具）
+  → RuntimeGuardrailEngine
+       ├── owner role / access / capability ceiling
+       ├── confirmation
+       ├── actual arguments hash == trusted arguments hash
+       └── timeout / retry limits
+  → Existing Review / Coach Harness Executor
+  → Manifest output schema + Pydantic validation
+  → domain scope / lineage validation
+  → redacted Trace decision
+```
+
+治理层不直接执行工具，不访问 Provider/数据库，也不保存参数正文。Trace 只记录 Manifest Hash、参数 Hash 是否匹配、规则 ID/结果和允许公开的运行上限。`adjust_running_plan` 只声明 `prepare_change + state_proposal`，不能持久化或审批；正式计划写入仍由用户确认、服务端重放、Hash 和 revision 共同保护。
+
+当前 `AgentTraceEvent` 与 `CoachTraceEvent` 仍是两种运行结果契约。M10-B 才会把它们映射并持久化为统一 Runtime Run/Span；M10-A 不宣称已经具备跨运行追踪平台。
+
 ### Evaluation
 
 位置：`src/runcrew/evaluation/`、`evals/review_agent/`、`evals/running_chat/` 与 `evals/coach_agent/`

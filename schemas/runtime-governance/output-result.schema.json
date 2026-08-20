@@ -1,0 +1,91 @@
+{
+  "$defs": {
+    "GuardrailDecision": {
+      "additionalProperties": false,
+      "description": "一条可稳定测试的治理规则决策。",
+      "properties": {
+        "rule_id": {
+          "minLength": 1,
+          "pattern": "^[a-z0-9_.-]+/\\d+\\.\\d+$",
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "stage": {
+          "enum": [
+            "registration",
+            "permission",
+            "confirmation",
+            "input_integrity",
+            "runtime_limits",
+            "output_validation"
+          ],
+          "title": "Stage",
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "allow",
+            "deny",
+            "require_confirmation"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "details": {
+          "additionalProperties": true,
+          "title": "Details",
+          "type": "object"
+        }
+      },
+      "required": [
+        "rule_id",
+        "stage",
+        "outcome",
+        "reason"
+      ],
+      "title": "Runtime Guardrail Decision",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "工具返回值的 Schema 治理结果，不保存返回正文。",
+  "properties": {
+    "schema_version": {
+      "const": "runtime-output-guardrail/1.0",
+      "default": "runtime-output-guardrail/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "tool_name": {
+      "minLength": 1,
+      "title": "Tool Name",
+      "type": "string"
+    },
+    "allowed": {
+      "title": "Allowed",
+      "type": "boolean"
+    },
+    "output_schema": {
+      "minLength": 1,
+      "title": "Output Schema",
+      "type": "string"
+    },
+    "decision": {
+      "$ref": "#/$defs/GuardrailDecision"
+    }
+  },
+  "required": [
+    "tool_name",
+    "allowed",
+    "output_schema",
+    "decision"
+  ],
+  "title": "Tool Output Guardrail Result",
+  "type": "object"
+}

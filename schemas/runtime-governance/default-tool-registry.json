@@ -1,0 +1,85 @@
+[
+  {
+    "schema_version": "tool-manifest/1.0",
+    "tool_name": "adjust_running_plan",
+    "owner_role": "plan_agent",
+    "description": "把恢复结论转换为待用户审核的训练计划调整提案。",
+    "input_schema": "PlanAdjustmentRequest",
+    "output_schema": "TrainingPlanningResult",
+    "access_level": "prepare_change",
+    "side_effect": "state_proposal",
+    "risk_level": "sensitive",
+    "confirmation_required": false,
+    "can_persist": false,
+    "can_approve": false,
+    "idempotent": true,
+    "maximum_timeout_seconds": 60.0,
+    "maximum_retries": 3,
+    "sensitive_fields": [
+      "goal_id",
+      "evidence_refs"
+    ]
+  },
+  {
+    "schema_version": "tool-manifest/1.0",
+    "tool_name": "assess_running_recovery",
+    "owner_role": "recovery_agent",
+    "description": "根据确定性训练与主观反馈上下文评估恢复风险。",
+    "input_schema": "RecoveryAssessmentRequest",
+    "output_schema": "RecoveryAssessmentResult",
+    "access_level": "read",
+    "side_effect": "none",
+    "risk_level": "sensitive",
+    "confirmation_required": false,
+    "can_persist": false,
+    "can_approve": false,
+    "idempotent": true,
+    "maximum_timeout_seconds": 60.0,
+    "maximum_retries": 3,
+    "sensitive_fields": [
+      "goal_id",
+      "pain_level",
+      "fatigue_level"
+    ]
+  },
+  {
+    "schema_version": "tool-manifest/1.0",
+    "tool_name": "compare_training_execution",
+    "owner_role": "execution_agent",
+    "description": "对照已激活训练计划与规范化活动，生成待确认执行判断。",
+    "input_schema": "TrainingExecutionRequest",
+    "output_schema": "TrainingExecutionResult",
+    "access_level": "read",
+    "side_effect": "none",
+    "risk_level": "low",
+    "confirmation_required": false,
+    "can_persist": false,
+    "can_approve": false,
+    "idempotent": true,
+    "maximum_timeout_seconds": 60.0,
+    "maximum_retries": 3,
+    "sensitive_fields": [
+      "plan_id"
+    ]
+  },
+  {
+    "schema_version": "tool-manifest/1.0",
+    "tool_name": "review_running_training",
+    "owner_role": "review_agent",
+    "description": "基于规范化活动和近期训练上下文生成可验证训练复盘。",
+    "input_schema": "TrainingReviewRequest",
+    "output_schema": "TrainingReviewResult",
+    "access_level": "read",
+    "side_effect": "none",
+    "risk_level": "low",
+    "confirmation_required": false,
+    "can_persist": false,
+    "can_approve": false,
+    "idempotent": true,
+    "maximum_timeout_seconds": 60.0,
+    "maximum_retries": 3,
+    "sensitive_fields": [
+      "target_activity_id"
+    ]
+  }
+]

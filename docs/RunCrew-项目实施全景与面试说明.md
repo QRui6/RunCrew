@@ -12,7 +12,7 @@
 
 > RunCrew 已经完成从真实跑步数据到可审计连续对话的基础，并建立“目标—计划—执行—反馈—风险评估—提案—用户确认”的训练闭环。M7-C 用受控 Harness 连接三个职责节点，M7-D 将防篡改/防过期审核接入聊天产品，M7-E 又用18个版本化场景建立了可回放的确定性多 Agent 基线。
 
-当前里程碑是 **M7 多职责训练闭环、M8 产品与求职演示包、M9-A 至 M9-F 可审计 Memory 链路、版本化评测与用户控制面均已完成；下一步只做本机最终目视验收，M6-A3b 真实 DeepSeek 聊天同题评测作为可选项仍待补**。
+当前里程碑是 **M7 多职责训练闭环、M8 产品与求职演示包、M9 可审计 Memory 链路均已完成；M10-A 已统一四个 Agent 工具的 Manifest、前后置 Guardrail 与脱敏 Trace。下一步进入 M10-B 持久化 Runtime Run/Span；本机目视验收与 M6-A3b 真实 DeepSeek 聊天同题评测仍是独立收尾项**。
 
 | 能力 | 当前状态 | 说明 |
 |---|---|---|
@@ -789,7 +789,7 @@ Review Agent 已完成真实 DeepSeek 同题评测，聊天也有 DeepSeek 契�
 
 ## 11. 当前下一步
 
-M7-A 至 M7-E 已完成。当前唯一主线是 M8-A 求职演示包；M6-A3b 在新 Key 可用后补验收：
+M7、M9 与 M10-A 已完成。当前唯一工程主线是 M10-B；M8-A1.4 本机目视验收与 M6-A3b 真实 DeepSeek 聊天同题评测作为独立收尾项保留：
 
 ```text
 [已完成] 增加受确认和共享总费用门保护的完整 Suite 命令
@@ -807,7 +807,11 @@ M7-A 至 M7-E 已完成。当前唯一主线是 M8-A 求职演示包；M6-A3b �
 → [已完成] Coach Orchestrator Harness：最小交接、权限、预算、Trace 与确认中断
 → [已完成] 训练闭环与 Coach 接入聊天产品：反馈、运行、恢复审核与 stale 防护
 → [已完成] Coach 多 Agent 版本化评测：18场景、Suite Hash、事实/血缘/确认/stale 指标
-→ [下一步] M8-A 架构图、训练闭环时序图与无私人数据演示脚本
+→ [已完成] M8-A 架构图、训练闭环时序图与无私人数据演示脚本
+→ [已完成] M9 可审计 Memory Manager：候选、正式偏好、周记忆、职责 Context、Evaluation 与控制面
+→ [已完成] M10-A Tool Manifest、统一前后置 Guardrail 与 Review/Coach Trace 接入
+→ [下一步] M10-B 持久化统一 Runtime Run/Span 与父子时间线
+→ [待补] 用户本机最终产品目视验收
 → [待补] 在新 Key 可用后完成显式付费真实 DeepSeek 8轮验收
 ```
 
@@ -980,13 +984,23 @@ M9-F 解决的是“工程上已经有完整 Memory，但用户仍不知道系�
 
 M9-A 至 M9-F 至此闭合。详细决策见 [ADR-0026](adr/0026-lazy-memory-control-plane.md)，完整交接见 [M9-F 阶段记录](progress/2026-08-20-m9f-memory-control-plane.md)。
 
+### M10-A：版本化 Tool Manifest 与统一 Runtime Guardrail
+
+M10-A 解决的是两套 Harness 已经各自安全、但安全规则分散的问题。项目没有新增审核 Agent，而是给 `review_running_training`、`compare_training_execution`、`assess_running_recovery` 和 `adjust_running_plan` 四个真实工具建立 `tool-manifest/1.0`，明确责任角色、访问级别、副作用、风险、输入输出 Schema、确认、持久化/审批能力、幂等性和运行上限。
+
+Policy 提出动作后，统一 Guardrail 先检查工具注册、责任角色、访问与能力上限、人工确认、实际参数 Hash 与 Harness 可信参数 Hash，以及超时/重试是否越界。工具返回后再核对 Manifest 声明的输出模型并运行 Pydantic 校验。Review 与 Coach 仍负责原状态机、预算、重试、超时和业务终态；计划重放、revision、Recovery→Plan 血缘和正式写入继续留在领域 Harness/Service。
+
+Trace 只新增 Manifest Hash、参数是否匹配、规则 ID/结果与允许公开的运行上限，不保存参数正文、身体反馈或 Token。实施中先后发现 `services` 聚合入口导致循环依赖，以及 Coach 输出 Guardrail 变量跨函数作用域引用错误；分别通过 Review 延迟构造导入和显式返回 `(typed_output, guardrail_result)` 修复，并写入回归。
+
+8项治理专项覆盖重复/未知工具、角色/访问/能力越权、参数篡改、确认、超限和非法输出；与 Review/Coach/DeepSeek Policy 联合专项38项及全量189项通过。本阶段不宣称已有持久化跨运行追踪；M10-B 才会建立统一 Run/Span。详细决策见 [ADR-0027](adr/0027-versioned-tool-runtime-governance.md)，完整交接见 [M10-A 阶段记录](progress/2026-08-20-m10a-runtime-tool-governance.md)。
+
 ## M8-A2：无私人数据求职演示包
 
 这一阶段没有再增加 Agent，而是解决“代码已经很多，但面试现场怎样稳定证明”的问题。新增 `runcrew demo-seed --reset`，在 `data/private/demo/` 创建与个人数据库隔离的合成训练状态：8条活动、目标、激活计划、执行确认、恢复偏低的 Check-in 和经过确认的周日长跑偏好。它不会读取真实数据库、COROS/FIT、DeepSeek Key 或网络服务。
 
 演示种子只写入业务事实，不预置对话、Coach Run 或 Agent 结论。这样现场看到的 Execution、Recovery、Plan 路由、Trace 和待审核草案都来自当前代码真实运行。种子还会按启动日动态安排已完成与待执行训练，避免周末演示时找不到下一节课；同一锚点下使用 UUIDv5 保持 ID 稳定。
 
-材料层同时形成系统架构图、训练闭环时序图、五分钟演示脚本和证据边界清单。该阶段完成时是146项自动化测试；M9-B 完成后为153项，M9-C 完成后为158项，M9-D 完成后为173项，M9-E 完成后为178项，M9-F 控制面完成后当前为181项。可以声明本地链路、权限、重放和 Schema 已验证；不能把合成场景描述成真实用户效果、医疗诊断、真实 LLM 多 Agent 稳定性或生产级并发验证。
+材料层同时形成系统架构图、训练闭环时序图、五分钟演示脚本和证据边界清单。该阶段完成时是146项自动化测试；M9-F 控制面完成后为181项，M10-A Runtime Governance 完成后当前为189项。可以声明本地链路、权限、重放、Manifest 和 Schema 已验证；不能把合成场景描述成真实用户效果、医疗诊断、真实 LLM 多 Agent 稳定性或生产级并发验证。
 
 实施时遇到一个 Windows 特有问题：第一次写完 SQLite 后，连接池仍持有文件句柄，下一次 `--reset` 删除数据库会触发 `PermissionError`。通过在种子流程结束时显式 `engine.dispose()` 释放句柄，并用连续重置测试固定该行为。
 
@@ -996,6 +1010,6 @@ M9-A 至 M9-F 至此闭合。详细决策见 [ADR-0026](adr/0026-lazy-memory-con
 
 这一阶段把项目压缩成三条简历主线：外部运动数据可靠性、受约束多 Agent 训练闭环、版本化评测与人工确认。材料不再机械罗列模块，而是为每个结论绑定测试、评测报告、ADR、代码或演示命令。
 
-最关键的表达修正是把四组数字彻底分开：当前181代表全量自动化回归；12/12代表单 Agent 确定性 Policy 与真实 DeepSeek 在同 Suite Hash 下的对照；18/18代表确定性 Coach Policy 的多 Agent Harness 基线；16/16代表确定性 Memory Manager 的合成场景基线。后三者不能合并成“真实多 Agent 大模型准确率”或真实用户效果。
+最关键的表达修正是把四组数字彻底分开：当前189代表全量自动化回归；12/12代表单 Agent 确定性 Policy 与真实 DeepSeek 在同 Suite Hash 下的对照；18/18代表确定性 Coach Policy 的多 Agent Harness 基线；16/16代表确定性 Memory Manager 的合成场景基线。后三者不能合并成“真实多 Agent 大模型准确率”或真实用户效果。
 
 同时形成五个核心难点的“问题—约束—方案—验证—边界”讲述框架和14个面试追问，主动记录真实多轮聊天、真实 LLM Coach、生产并发和用户训练效果尚未验证。完整材料见 [求职材料包](job/README.md) 与 [证据映射](job/evidence-map.md)。

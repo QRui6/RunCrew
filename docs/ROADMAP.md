@@ -172,3 +172,18 @@
 - [x] M9-E：Suite Hash、Suite/Report Schema、私有报告与意外正式写入计数；
 - [x] 当前结构化职责检索16/16满足期望，没有证据引入向量数据库；
 - [x] M9-F：Memory 控制面，集中查看候选/正式/周记忆的来源、状态、职责可见性与用户可用操作。
+
+## M10：Agent Runtime Governance
+
+状态：**进行中（M10-A 已完成，下一步 M10-B）**
+
+目标不是再增加业务 Agent，而是把分散在 Review 与 Coach Harness 中的工具能力、权限、确认、完整性、Schema 和 Trace 统一为可验证的 Runtime 治理契约。
+
+- [x] M10-A：为四个真实 Agent 工具建立版本化 Tool Manifest 与默认 Registry；
+- [x] M10-A：统一职责、访问级别、持久化/审批能力、人工确认、参数 Hash 和运行上限的前置 Guardrail；
+- [x] M10-A：统一输出 Schema Guardrail，并将脱敏治理决策接入 Review/Coach Trace；
+- [x] M10-A：导出 JSON Schema，覆盖未知工具、越权、篡改、确认绕过、超限与非法输出测试；
+- [ ] M10-B：持久化跨 Harness 的 Runtime Run / Span 与父子时间线；
+- [ ] M10-C：跨运行指标、版本化治理评测和只读工程观测视图。
+
+详细范围与非目标见 [M10 实施方案](plans/2026-08-20-m10-agent-runtime-governance.md)。

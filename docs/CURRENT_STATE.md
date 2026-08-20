@@ -5,7 +5,7 @@
 
 ## 当前里程碑
 
-**M5 与 M6-A1/A2/A3a 已完成；真实 DeepSeek 聊天同题验收仍待补。M7-A 至 M7-E 和 M8-B 已完成训练产品闭环；M9-A 至 M9-F 已闭合类型化偏好、版本化周记忆、按职责 Context、聊天待确认 Candidate、16场景 Evaluation 与用户可审计控制面；M8-A2/A3 已形成可重复演示与求职证据包。全量181项测试通过，Memory 阶段完成。**
+**M5 与 M6-A1/A2/A3a 已完成；真实 DeepSeek 聊天同题验收仍待补。M7 训练产品闭环、M9 可审计 Memory Manager 与 M8 求职证据包已完成；M10-A 已为四个 Agent 工具建立版本化 Manifest、统一前后置 Guardrail，并接入 Review/Coach Trace。全量189项测试通过；下一入口为 M10-B 持久化 Runtime Run/Span。**
 
 M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
@@ -46,17 +46,20 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 生命周期与篡改场景使用隔离 SQLite 运行真实 Repository/Service，职责召回运行正式 Context Builder；这些数字只覆盖2个合成正样本、4个合成负样本和列出的工程场景，不代表真实用户语言总体准确率；
 - 无关、过期、归档、未来、失效或错误目标记忆不会改变实际 Context Hash，但会改变 Audit Hash并留下排除原因；当前没有评测证据支持引入向量数据库；
 - M9-F 已增加按需加载的“记忆档案”：集中查看待确认 Candidate、正式偏好、周训练记忆、来源摘要、时效、生命周期和三职责选中/排除原因；
+- M10-A 已注册 `review_running_training`、`compare_training_execution`、`assess_running_recovery`、`adjust_running_plan` 四个 Tool Manifest，明确责任角色、访问、副作用、风险、Schema、确认和运行上限；
+- 统一 Runtime Guardrail 会在执行前检查注册、角色、访问级别、持久化/审批能力、确认、参数 Hash 和超时/重试上限，在执行后核对 Manifest 输出 Schema；
+- Review/Coach Trace 保留原事件与失败码，并增加 Manifest Hash、参数一致性、规则 ID/结果等同构脱敏元数据；参数正文、身体反馈和 Token 不进入治理 Trace；
 - Candidate 决定、偏好停用和周记忆失效继续复用既有服务与确认边界；控制面不拥有新写权限，不硬删除历史，也不向浏览器返回 Provider 外部 ID、原始载荷、坐标或 Token；
 - 周计划与执行写入分别受 `input_hash` 重放和 `revision` 保护，候选活动只有在用户确认后才计入周完成率；
 - Coach 运行开始和完成时，Execution、Recovery、Plan 三个职责节点会同步显示运行中、已完成、无需调用或生成草案状态；
-- 新界面保持 `textContent` DOM 安全边界和响应式布局，JavaScript 语法、专项静态资源测试及 181 项全量测试通过；
+- 新界面保持 `textContent` DOM 安全边界和响应式布局，JavaScript 语法、专项静态资源测试及 189 项全量测试通过；
 - `runcrew demo-seed --reset` 可以在 `data/private/demo/` 创建与个人数据库隔离的完整合成训练状态；种子不调用 COROS/DeepSeek，也不预置对话或 Coach 结论；
 - 求职演示包已包含系统架构图、训练闭环时序图、五分钟演示脚本和明确的可声明/不可声明证据边界；
-- 求职材料包已区分181项回归、真实 DeepSeek 单 Agent 12/12、确定性多 Agent 18/18和 Memory Manager 16/16，并为简历条目、核心难点和14个面试追问建立证据索引；
+- 求职材料包已区分189项回归、真实 DeepSeek 单 Agent 12/12、确定性多 Agent 18/18和 Memory Manager 16/16，并为简历条目、核心难点和14个面试追问建立证据索引；
 - 2026-08-20 应用内浏览器仍无可用实例，因此收敛版视觉和记忆档案点击验收仍需本机人工复核，没有冒充完成截图验收；
 
 - Python 3.13 本地环境可运行；
-- 自动化测试：181 passed；
+- 自动化测试：189 passed；
 - fixture 首次同步插入 2 条；
 - fixture 第二次同步插入 0 条、更新 2 条；
 - 真实 COROS OAuth + PKCE 成功；
@@ -234,9 +237,9 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 ## 下一项唯一任务
 
-**M8-A1.4：用户本机最终产品目视验收。**
+**M10-B：持久化统一 Runtime Run / Span。**
 
-使用隔离合成演示数据库检查桌面首屏、长回答、回答依据、训练闭环与记忆档案抽屉，并补一轮窄屏交互；只修复验收发现的具体问题，不再扩展 Memory 类型、向量库或 Agent 角色。M6-A3b 真实 DeepSeek 连续聊天同题评测保留为可选模型验收。
+先把 Review 与 Coach 现有 Trace 映射为同一套 Run/Span 契约和父子时间线，再增加只读查询 API；观测写入失败不得改变业务终态，默认只保存 Hash、计数、错误类型和脱敏元数据。M8-A1.4 本机产品目视验收与 M6-A3b 真实 DeepSeek 连续聊天同题评测仍保留为独立收尾项，不阻塞 M10-B。
 
 完整模型结论见 [M5-B3 DeepSeek 最终评测报告](M5-B3-DeepSeek最终评测报告.md)。
 

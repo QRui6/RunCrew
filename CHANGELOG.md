@@ -6,6 +6,10 @@
 
 ### Added
 
+- 增加 M10-A Agent Runtime Governance：为四个真实 Agent 工具建立版本化 Manifest 与只读 Registry，统一声明职责、访问、副作用、风险、Schema、确认和运行上限；
+- 增加前置 `RuntimeGuardrailEngine`，在工具执行前统一拒绝未知工具、角色/访问/能力越权、参数篡改、缺少确认和超限调用；增加后置输出 Schema Guardrail；
+- Review/Coach Trace 增加 Manifest Hash、参数一致性与规则级结果，继续不记录参数正文、身体反馈、Provider 原始载荷或 Token；
+- 增加4份 Runtime Governance Schema/Registry 快照、ADR-0027、总体方案、阶段记录和7项专项测试；
 - 增加 M9-F 按需加载的“记忆档案”，集中展示 Candidate 原话摘要、正式偏好、周训练记忆、来源、有效期、生命周期和三职责可见性；
 - 增加 Memory Control 领域契约、聚合 Service、统一 API、两份 Schema、ADR-0026、阶段交接文档和3项专项测试；
 - Candidate 确认/拒绝、偏好停用和周记忆失效继续复用原有服务；职责审计直接展示正式 Context Builder 的预算与逐条排除原因；
@@ -33,6 +37,8 @@
 
 ### Fixed
 
+- 修复 Runtime 治理模块初版模块级导入造成的 `services → chat → harness` 循环依赖，Review Harness 改为安全的延迟构造导入；
+- 修复 Coach 输出 Guardrail 结果只存在于节点调用内部、外层 Trace 引用时触发 `NameError` 的作用域问题；
 - Memory Evaluation 的磁盘临时 SQLite 在 Windows 清理时曾被 SQLAlchemy Engine 文件句柄阻塞；改为每场景独立内存 SQLite并显式释放 Engine；
 - 确认 Memory Candidate 时服务端同时重算 Candidate Hash 并重读原始用户消息，阻止被篡改的候选值或来源进入正式偏好；
 - 将周记忆 Context 拆为 Recovery/Plan 判别联合类型，确保 Plan JSON 与 Schema 中不出现恢复和疼痛敏感字段，而不是仅输出 `null`；
@@ -40,6 +46,7 @@
 
 ### Verified
 
+- Runtime Governance 与 Review/Coach/DeepSeek Policy 联合专项38项、全量189项测试、Schema 漂移与 Python 编译通过；本阶段没有读取真实活动或调用外部服务；
 - Memory 控制面与训练运营联合专项13项、全量181项测试、Schema 漂移、Python 编译和 JavaScript 语法检查通过；控制面响应不包含 Provider 外部 ID 或 raw payload hash；
 - 当前会话没有可用浏览器实例，因此最终目视验收仍保留为用户本机收尾项，没有冒充完成截图验收；
 - 偏好记忆9项、周训练记忆7项、Memory Context 5项、Memory Candidate 15项、Memory Evaluation 5项专项测试和全量178项测试通过；Schema 导出、Python 编译和 JavaScript 语法检查通过；本阶段没有访问真实活动、COROS 或 DeepSeek。

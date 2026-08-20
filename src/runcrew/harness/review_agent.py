@@ -4,9 +4,7 @@ import asyncio
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Protocol
-
-from pydantic import ValidationError
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Protocol
 
 from runcrew.domain.agent import (
     AGENT_ACTION_ADAPTER,
@@ -23,6 +21,9 @@ from runcrew.domain.agent import (
     ToolPermission,
 )
 from runcrew.domain.training_review import TrainingReviewRequest, TrainingReviewResult
+
+if TYPE_CHECKING:
+    from runcrew.services.runtime_governance import RuntimeGuardrailEngine
 
 
 class ReviewAgentPolicy(Protocol):
@@ -103,6 +104,7 @@ class ReviewAgentHarness:
         *,
         policy: ReviewAgentPolicy | None = None,
         permission: ToolPermission | None = None,
+        guardrails: RuntimeGuardrailEngine | None = None,
         run_id_factory: Callable[[], str] | None = None,
     ) -> None:
         self.policy = policy or DeterministicReviewPolicy()
@@ -111,6 +113,12 @@ class ReviewAgentHarness:
             access="read",
             confirmation_required=False,
         )
+        if guardrails is None:
+            # 延迟导入避免 services 聚合入口反向加载 Harness 形成循环依赖。
+            from runcrew.services.runtime_governance import RuntimeGuardrailEngine
+
+            guardrails = RuntimeGuardrailEngine()
+        self.guardrails = guardrails
         self.run_id_factory = run_id_factory or (lambda: uuid.uuid4().hex)
 
     async def run(
@@ -236,15 +244,6 @@ class ReviewAgentHarness:
                     recorder=recorder,
                     usage=usage,
                 )
-            if action.arguments != request.review_request:
-                return self._failure_result(
-                    run_id=run_id,
-                    code="permission_denied",
-                    message="Agent 尝试修改用户已经确认的复盘参数，调用已拒绝。",
-                    retryable=False,
-                    recorder=recorder,
-                    usage=usage,
-                )
             if usage.tool_calls >= request.tool_call_budget:
                 return self._failure_result(
                     run_id=run_id,
@@ -280,25 +279,47 @@ class ReviewAgentHarness:
         request: ReviewAgentRunRequest,
         recorder: _TraceRecorder,
     ) -> tuple[str, str] | None:
-        allowed = action.tool_name == self.permission.name == REVIEW_TOOL_NAME
+        from runcrew.services.runtime_governance import guardrail_trace_details
+
+        governance = self.guardrails.evaluate_invocation(
+            tool_name=action.tool_name,
+            owner_role="review_agent",
+            granted_access=self.permission.access,
+            actual_arguments=action.arguments,
+            expected_arguments=request.review_request,
+            timeout_seconds=request.tool_timeout_seconds,
+            max_retries=request.max_retries,
+            confirmation_required=self.permission.confirmation_required,
+            confirmed=action.tool_name in request.confirmed_tools,
+        )
         recorder.add(
             state="planning",
             event="tool_permission_checked",
             tool_name=action.tool_name,
             details={
-                "allowed": allowed,
+                **guardrail_trace_details(governance),
                 "access": self.permission.access,
                 "confirmation_required": self.permission.confirmation_required,
             },
         )
-        if not allowed:
+        if governance.allowed:
+            return None
+        if any(
+            item.rule_id == "tool.argument-integrity/1.0"
+            and item.outcome == "deny"
+            for item in governance.decisions
+        ):
+            return "permission_denied", "Agent 尝试修改用户已经确认的复盘参数，调用已拒绝。"
+        if any(item.outcome == "deny" for item in governance.decisions):
             return "permission_denied", "Agent 请求了白名单以外的工具，调用已拒绝。"
-        if (
-            self.permission.confirmation_required
-            and action.tool_name not in request.confirmed_tools
+        if any(
+            item.outcome == "require_confirmation"
+            for item in governance.decisions
         ):
             return "confirmation_required", "该工具需要用户确认，本次运行未获得确认。"
-        return None
+        if not governance.allowed:
+            return "permission_denied", "Agent 请求了白名单以外的工具，调用已拒绝。"
+        raise AssertionError("unreachable guardrail outcome")
 
     async def _execute_tool(
         self,
@@ -373,9 +394,12 @@ class ReviewAgentHarness:
                     retryable=False,
                 ) from error
 
-            try:
-                result = TrainingReviewResult.model_validate(raw_result)
-            except ValidationError as error:
+            result, output_guardrail = self.guardrails.validate_output(
+                tool_name=action.tool_name,
+                raw_output=raw_result,
+                output_model=TrainingReviewResult,
+            )
+            if result is None:
                 recorder.add(
                     state="validating",
                     event="tool_call_failed",
@@ -383,14 +407,16 @@ class ReviewAgentHarness:
                     tool_name=action.tool_name,
                     details={
                         "error_code": "invalid_tool_output",
-                        "validation_error_count": error.error_count(),
+                        "guardrail_rule_id": output_guardrail.decision.rule_id,
+                        "guardrail_outcome": output_guardrail.decision.outcome,
+                        **output_guardrail.decision.details,
                     },
                 )
                 raise _ToolExecutionFailure(
                     "invalid_tool_output",
                     "训练复盘工具输出未通过 Schema 校验，Agent 已拒绝使用。",
                     retryable=False,
-                ) from error
+                )
             if result.target_activity_id != request.review_request.target_activity_id:
                 recorder.add(
                     state="validating",
@@ -412,6 +438,8 @@ class ReviewAgentHarness:
                 details={
                     "input_hash": result.input_hash,
                     "ruleset_version": result.ruleset_version,
+                    "guardrail_rule_id": output_guardrail.decision.rule_id,
+                    "guardrail_outcome": output_guardrail.decision.outcome,
                 },
             )
             return result

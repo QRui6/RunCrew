@@ -129,6 +129,19 @@ def test_agent_loop_calls_one_allowlisted_skill_and_validates_output() -> None:
         "output_validated",
         "run_completed",
     ]
+    permission_trace = next(
+        item for item in result.trace if item.event == "tool_permission_checked"
+    )
+    assert permission_trace.details["guardrail_schema_version"] == (
+        "runtime-guardrail-result/1.0"
+    )
+    assert permission_trace.details["input_hash_match"] is True
+    assert permission_trace.details["manifest_hash"]
+    tool_success = next(
+        item for item in result.trace if item.event == "tool_call_succeeded"
+    )
+    assert tool_success.details["guardrail_rule_id"] == "tool.output-schema/1.0"
+    assert tool_success.details["guardrail_outcome"] == "allow"
 
 
 def test_transient_tool_failure_is_retried_with_trace() -> None:

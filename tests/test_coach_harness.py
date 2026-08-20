@@ -195,6 +195,17 @@ def test_low_risk_routes_two_nodes_and_finishes_without_plan_change() -> None:
     ]
     assert result.budget.node_calls_used == 2
     assert all(len(item.request_hash) == 64 for item in result.handoffs)
+    permission_events = [
+        item for item in result.trace if item.event == "node_permission_checked"
+    ]
+    assert permission_events
+    assert all(item.details["input_hash_match"] is True for item in permission_events)
+    assert all(item.details["manifest_hash"] for item in permission_events)
+    assert all(
+        item.details["guardrail_rule_id"] == "tool.output-schema/1.0"
+        for item in result.trace
+        if item.event == "node_output_validated"
+    )
 
 
 def test_reduce_routes_plan_and_stops_at_user_confirmation() -> None:

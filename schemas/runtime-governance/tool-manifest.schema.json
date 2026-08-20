@@ -1,0 +1,125 @@
+{
+  "additionalProperties": false,
+  "description": "Agent 工具的静态能力声明，不包含凭据或真实业务数据。",
+  "properties": {
+    "schema_version": {
+      "const": "tool-manifest/1.0",
+      "default": "tool-manifest/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "tool_name": {
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Tool Name",
+      "type": "string"
+    },
+    "owner_role": {
+      "enum": [
+        "review_agent",
+        "execution_agent",
+        "recovery_agent",
+        "plan_agent"
+      ],
+      "title": "Owner Role",
+      "type": "string"
+    },
+    "description": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "input_schema": {
+      "minLength": 1,
+      "title": "Input Schema",
+      "type": "string"
+    },
+    "output_schema": {
+      "minLength": 1,
+      "title": "Output Schema",
+      "type": "string"
+    },
+    "access_level": {
+      "enum": [
+        "read",
+        "prepare_change",
+        "commit_change"
+      ],
+      "title": "Access Level",
+      "type": "string"
+    },
+    "side_effect": {
+      "enum": [
+        "none",
+        "state_proposal",
+        "state_mutation"
+      ],
+      "title": "Side Effect",
+      "type": "string"
+    },
+    "risk_level": {
+      "enum": [
+        "low",
+        "sensitive",
+        "critical"
+      ],
+      "title": "Risk Level",
+      "type": "string"
+    },
+    "confirmation_required": {
+      "default": false,
+      "title": "Confirmation Required",
+      "type": "boolean"
+    },
+    "can_persist": {
+      "default": false,
+      "title": "Can Persist",
+      "type": "boolean"
+    },
+    "can_approve": {
+      "default": false,
+      "title": "Can Approve",
+      "type": "boolean"
+    },
+    "idempotent": {
+      "title": "Idempotent",
+      "type": "boolean"
+    },
+    "maximum_timeout_seconds": {
+      "exclusiveMinimum": 0,
+      "maximum": 120,
+      "title": "Maximum Timeout Seconds",
+      "type": "number"
+    },
+    "maximum_retries": {
+      "maximum": 5,
+      "minimum": 0,
+      "title": "Maximum Retries",
+      "type": "integer"
+    },
+    "sensitive_fields": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 30,
+      "title": "Sensitive Fields",
+      "type": "array"
+    }
+  },
+  "required": [
+    "tool_name",
+    "owner_role",
+    "description",
+    "input_schema",
+    "output_schema",
+    "access_level",
+    "side_effect",
+    "risk_level",
+    "idempotent",
+    "maximum_timeout_seconds",
+    "maximum_retries"
+  ],
+  "title": "Agent Tool Manifest",
+  "type": "object"
+}
