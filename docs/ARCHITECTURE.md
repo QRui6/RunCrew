@@ -173,7 +173,21 @@ Policy Action
 
 治理层不直接执行工具，不访问 Provider/数据库，也不保存参数正文。Trace 只记录 Manifest Hash、参数 Hash 是否匹配、规则 ID/结果和允许公开的运行上限。`adjust_running_plan` 只声明 `prepare_change + state_proposal`，不能持久化或审批；正式计划写入仍由用户确认、服务端重放、Hash 和 revision 共同保护。
 
-当前 `AgentTraceEvent` 与 `CoachTraceEvent` 仍是两种运行结果契约。M10-B 才会把它们映射并持久化为统一 Runtime Run/Span；M10-A 不宣称已经具备跨运行追踪平台。
+M10-B 已在不修改原结果契约的前提下，把 `AgentTraceEvent` 与 `CoachTraceEvent` 映射为统一 `RuntimeRun / RuntimeSpan`：
+
+```text
+Chat Review / Training Operations Coach
+  → Harness 返回原业务结果
+  → Runtime Mapper（纯函数、白名单 attributes）
+  → RuntimeTraceService（独立 best-effort 短事务）
+  → agent_runtime_runs
+  → agent_runtime_spans
+  → GET /api/runtime/runs[/run_id]
+```
+
+每次 Capture 只有一个根 Run Span，内部 Span 通过 `parent_span_id` 表达 Policy→Guardrail→Handoff/Tool→Validation；工具开始事件会计算到对应成功/失败事件的持续时间。相同 Run/Trace 幂等，相同 run_id 的不同 Trace 拒绝覆盖。业务 scope 只保存 SHA-256，Prompt、响应、参数、用户消息和身体反馈不会进入 Runtime 表。
+
+Runtime 默认保留30天，并在下一次写入时删除过期 Run/Span。写入错误只形成脱敏 `RuntimePersistenceOutcome`，不覆盖 Review/Coach 终态。离线 Evaluation 默认不持久化，当前数据只代表两条产品路径，不代表所有 Harness 执行。M10-C 才增加跨运行指标与观测视图。
 
 ### Evaluation
 

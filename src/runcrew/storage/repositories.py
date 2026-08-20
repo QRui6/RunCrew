@@ -6,7 +6,7 @@ import uuid
 from datetime import date, datetime, timezone
 from typing import Any, Mapping
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import delete, desc, func, select
 from sqlalchemy.orm import Session
 
 from runcrew.domain.activity import ActivityDetail, ActivitySummary
@@ -26,8 +26,11 @@ from runcrew.domain.training_cycle import (
 )
 from runcrew.domain.training_execution import TrainingExecutionConfirmation
 from runcrew.domain.training_operations import CoachRunAudit, CoachRunSummary
+from runcrew.domain.runtime_observability import RuntimeRun, RuntimeRunCapture, RuntimeSpan
 from runcrew.storage.models import (
     ActivityRecord,
+    AgentRuntimeRunRecord,
+    AgentRuntimeSpanRecord,
     AthletePreferenceRecord,
     CoachRunRecord,
     ChatConversationRecord,
@@ -980,3 +983,107 @@ class CoachRunRepository:
             created_at=record.created_at,
             decided_at=record.decided_at,
         )
+
+
+class RuntimeRunRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def save(self, capture: RuntimeRunCapture) -> bool:
+        existing = self.session.get(AgentRuntimeRunRecord, capture.run.run_id)
+        if existing is not None:
+            if existing.trace_hash != capture.run.trace_hash:
+                raise ValueError("相同 Runtime run_id 的 Trace Hash 不一致")
+            return False
+        run = capture.run
+        self.session.add(
+            AgentRuntimeRunRecord(
+                id=run.run_id,
+                workflow=run.workflow,
+                workflow_version=run.workflow_version,
+                status=run.status,
+                termination_reason=run.termination_reason,
+                duration_ms=run.duration_ms,
+                span_count=run.span_count,
+                tool_call_count=run.tool_call_count,
+                retry_count=run.retry_count,
+                trace_hash=run.trace_hash,
+                scope_ref_hash=run.scope_ref_hash,
+                canonical_json=run.model_dump_json(),
+                recorded_at=run.recorded_at,
+                expires_at=run.expires_at,
+            )
+        )
+        for span in capture.spans:
+            self.session.add(
+                AgentRuntimeSpanRecord(
+                    id=span.span_id,
+                    run_id=span.run_id,
+                    sequence=span.sequence,
+                    parent_span_id=span.parent_span_id,
+                    kind=span.kind,
+                    status=span.status,
+                    tool_name=span.tool_name,
+                    node=span.node,
+                    start_offset_ms=span.start_offset_ms,
+                    duration_ms=span.duration_ms,
+                    canonical_json=span.model_dump_json(),
+                )
+            )
+        self.session.flush()
+        return True
+
+    def get(self, run_id: str, *, now: datetime | None = None) -> RuntimeRunCapture | None:
+        record = self.session.get(AgentRuntimeRunRecord, run_id)
+        if record is None:
+            return None
+        run = RuntimeRun.model_validate_json(record.canonical_json)
+        if now is not None and run.expires_at <= now:
+            return None
+        spans = self.session.scalars(
+            select(AgentRuntimeSpanRecord)
+            .where(AgentRuntimeSpanRecord.run_id == run_id)
+            .order_by(AgentRuntimeSpanRecord.sequence)
+        ).all()
+        return RuntimeRunCapture(
+            run=run,
+            spans=[
+                RuntimeSpan.model_validate_json(item.canonical_json) for item in spans
+            ],
+        )
+
+    def recent(
+        self,
+        *,
+        limit: int = 20,
+        workflow: str | None = None,
+        now: datetime | None = None,
+    ) -> list[RuntimeRun]:
+        statement = select(AgentRuntimeRunRecord)
+        if workflow is not None:
+            statement = statement.where(AgentRuntimeRunRecord.workflow == workflow)
+        if now is not None:
+            statement = statement.where(AgentRuntimeRunRecord.expires_at > now)
+        records = self.session.scalars(
+            statement.order_by(desc(AgentRuntimeRunRecord.recorded_at)).limit(limit)
+        ).all()
+        return [RuntimeRun.model_validate_json(item.canonical_json) for item in records]
+
+    def delete_expired(self, *, now: datetime) -> int:
+        run_ids = self.session.scalars(
+            select(AgentRuntimeRunRecord.id).where(
+                AgentRuntimeRunRecord.expires_at <= now
+            )
+        ).all()
+        if not run_ids:
+            return 0
+        self.session.execute(
+            delete(AgentRuntimeSpanRecord).where(
+                AgentRuntimeSpanRecord.run_id.in_(run_ids)
+            )
+        )
+        self.session.execute(
+            delete(AgentRuntimeRunRecord).where(AgentRuntimeRunRecord.id.in_(run_ids))
+        )
+        self.session.flush()
+        return len(run_ids)

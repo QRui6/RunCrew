@@ -10,7 +10,7 @@
 4. [ROADMAP.md](ROADMAP.md)：后续阶段和验收条件；
 5. [adr/README.md](adr/README.md)：关键架构选择及其原因。
 
-当前一句话状态：M7 多智能体训练运营闭环、M9 可审计 Memory Manager 和 M8 求职证据包已完成；M10-A 已把四个 Agent 工具接入版本化 Manifest 与统一 Guardrail，全量189项测试通过。下一步是 M10-B 持久化 Runtime Run/Span；本机视觉验收和真实 DeepSeek 聊天评测仍是独立收尾项。
+当前一句话状态：M7 训练闭环、M9 Memory Manager 和 M8 求职证据包已完成；M10-A/B 已完成四工具 Manifest/Guardrail 与 Review/Coach 持久化 Runtime Run/Span，全量195项测试通过。下一步是 M10-C 跨运行指标与治理评测；本机视觉验收和真实 DeepSeek 聊天评测仍是独立收尾项。
 
 常用验收命令：
 

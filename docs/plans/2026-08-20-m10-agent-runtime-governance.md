@@ -1,6 +1,6 @@
 # M10 Agent Runtime Governance 实施方案
 
-> 状态：M10-A 已完成，M10-B 待开始  
+> 状态：M10-A/M10-B 已完成，M10-C 待开始
 > 创建日期：2026-08-20  
 > 范围负责人：RunCrew 本地 Agent Runtime
 
@@ -84,6 +84,16 @@ Deterministic Domain Service
 - 默认仅保存 Hash、错误类型、计数和脱敏元数据；
 - 单次运行详情与父子 Span 时间线 API。
 
+已冻结的实现边界：
+
+- `RuntimeRun` 统一 Review 与 Coach 的工作流、终态、退出原因、预算、持续时间、调用/重试计数、Trace Hash、记录时间和30天保留期；
+- `RuntimeSpan` 使用根 Span 加原 Trace 事件映射，保存父 Span、事件偏移/持续时间、职责节点、工具、尝试次数和白名单 attributes；
+- 原始 Prompt、模型响应、工具参数、活动/目标/计划 ID、用户消息、身体反馈与 Provider 数据不落 Runtime 表；业务关联只保存不可逆 `scope_ref_hash`；
+- Mapper 是确定性纯函数；Repository 对相同 `run_id + trace_hash` 幂等，对相同 run_id 的不同 Trace 拒绝覆盖；
+- `RuntimeTraceService` 使用独立短事务 best-effort 写入，任何建表缺失、锁冲突或序列化错误只返回脱敏失败类型，不得改变 Review/Coach 结果；
+- M10-B 首先接入聊天首轮 Review 与训练运营 Coach 两条真实产品路径；离线 Evaluation 不写产品 Runtime 表，避免回归运行污染观测数据；
+- `/api/runtime/runs` 与 `/api/runtime/runs/{run_id}` 只允许 GET，默认过滤到期记录，不在 M10-B 增加指标大盘。
+
 验收标准：
 
 - Review 与 Coach 生成相同顶层 Run 契约；
@@ -129,4 +139,4 @@ Deterministic Domain Service
 
 ## 6. 当前执行入口
 
-M10-A 已通过专项与189项全量验证。下一入口为 M10-B；当前不得把尚未实现的 Run/Span 持久化与跨运行指标写成已完成功能。
+M10-A/B 已通过专项与195项全量验证。下一入口为 M10-C；当前不得把尚未实现的跨运行指标、治理评测与观测视图写成已完成功能。

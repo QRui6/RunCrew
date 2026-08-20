@@ -66,7 +66,7 @@ cd D:\AgentProjets\RunCrew
 
 讲解：
 
-> Agent 只能生成草案。用户批准时，服务端会重放原请求并比较完整结果、Hash 和 revision；状态变化就标记 stale。聊天里的长期偏好也只会先形成待确认 Candidate，服务端核对原消息与 Hash 后才能写入正式 Memory。四个 Agent 工具还必须通过统一 Manifest/Guardrail 的角色、访问、参数 Hash 与输出 Schema 校验。项目当前189项测试，单 Agent 12场景、多 Agent 18场景、Memory Manager 16场景都有版本化基线，但我不会把合成评测描述成生产效果。
+> Agent 只能生成草案。用户批准时服务端重放并比较 Hash/revision；状态变化就标记 stale。长期偏好先形成待确认 Candidate，核对原消息与 Hash 后才能写入正式 Memory。四个工具通过统一 Manifest/Guardrail，Review/Coach 运行再映射为脱敏持久化 Run/Span。项目当前195项测试，单 Agent 12场景、多 Agent 18场景、Memory 16场景都有版本化基线，但不会把合成评测描述成生产效果。
 
 ## 常见现场故障与降级
 

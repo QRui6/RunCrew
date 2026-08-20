@@ -24,6 +24,7 @@ from runcrew.policies.chat import (
 )
 from runcrew.policies.deepseek import DeepSeekPolicyConfig
 from runcrew.services.training_review import execute_training_review
+from runcrew.services.runtime_observability import RuntimeTraceService
 from runcrew.services.memory_candidates import (
     MemoryCandidateError,
     decide_memory_candidate,
@@ -85,6 +86,7 @@ class ChatService:
         self.offline_policy = offline_policy or OfflineGroundedChatPolicy()
         self.deepseek_policy_factory = deepseek_policy_factory
         self.clock = clock or (lambda: datetime.now(timezone.utc))
+        self.runtime_traces = RuntimeTraceService(self.database, clock=self.clock)
 
     def bootstrap(self) -> ChatBootstrap:
         with self.database.session() as session:
@@ -263,6 +265,7 @@ class ChatService:
             ReviewAgentRunRequest(review_request=request),
             tool=tool,
         )
+        self.runtime_traces.record_review(run_result, scope_ref=conversation_id)
         if run_result.output is None:
             message = run_result.error.message if run_result.error else "训练复盘失败。"
             raise ChatServiceError(message)

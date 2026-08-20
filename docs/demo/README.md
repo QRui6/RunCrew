@@ -42,7 +42,7 @@ cd D:\AgentProjets\RunCrew
 - 三个职责的记忆上下文按字段和预算裁剪，网页可查看选中数量、预算和排除审计；
 - 聊天只提出带来源和有效期的长期偏好候选，用户确认后才进入正式 Memory；
 - 计划和长期偏好写入需要用户确认；
-- 当前全量189项自动化测试通过；Memory Manager 16场景版本化基线16/16、意外正式写入0，Runtime Governance 已覆盖四个 Agent 工具的 Manifest、越权/篡改/超限拒绝和输出校验。
+- 当前全量195项自动化测试通过；Memory Manager 16场景基线16/16、意外正式写入0；Runtime 已覆盖四工具 Manifest/Guardrail 与 Review/Coach 持久化 Run/Span。
 
 演示时不能声明：
 

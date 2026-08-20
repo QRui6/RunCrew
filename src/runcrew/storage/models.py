@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -280,3 +280,50 @@ class CoachRunRecord(Base):
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AgentRuntimeRunRecord(Base):
+    __tablename__ = "agent_runtime_runs"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    workflow: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    workflow_version: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    termination_reason: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    duration_ms: Mapped[float] = mapped_column(Float, nullable=False)
+    span_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    tool_call_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    retry_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    trace_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    scope_ref_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    canonical_json: Mapped[str] = mapped_column(Text, nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+
+
+class AgentRuntimeSpanRecord(Base):
+    __tablename__ = "agent_runtime_spans"
+    __table_args__ = (
+        UniqueConstraint("run_id", "sequence", name="uq_runtime_span_run_sequence"),
+    )
+
+    id: Mapped[str] = mapped_column(String(140), primary_key=True)
+    run_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("agent_runtime_runs.id"), nullable=False, index=True
+    )
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    parent_span_id: Mapped[str | None] = mapped_column(String(140), index=True)
+    kind: Mapped[str] = mapped_column(String(24), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    tool_name: Mapped[str | None] = mapped_column(String(80), index=True)
+    node: Mapped[str | None] = mapped_column(String(64), index=True)
+    start_offset_ms: Mapped[float] = mapped_column(Float, nullable=False)
+    duration_ms: Mapped[float] = mapped_column(Float, nullable=False)
+    canonical_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )

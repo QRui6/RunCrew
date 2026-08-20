@@ -1,0 +1,146 @@
+{
+  "$defs": {
+    "RuntimeBudgetSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "steps_used": {
+          "minimum": 0,
+          "title": "Steps Used",
+          "type": "integer"
+        },
+        "calls_used": {
+          "minimum": 0,
+          "title": "Calls Used",
+          "type": "integer"
+        },
+        "attempts_used": {
+          "minimum": 0,
+          "title": "Attempts Used",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "steps_used",
+        "calls_used",
+        "attempts_used"
+      ],
+      "title": "RuntimeBudgetSnapshot",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "runtime-run/1.0",
+      "default": "runtime-run/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "run_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "workflow": {
+      "enum": [
+        "review_agent",
+        "coach_orchestrator"
+      ],
+      "title": "Workflow",
+      "type": "string"
+    },
+    "workflow_version": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Workflow Version",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "succeeded",
+        "awaiting_confirmation",
+        "blocked",
+        "failed",
+        "timed_out",
+        "budget_exhausted"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "termination_reason": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Termination Reason",
+      "type": "string"
+    },
+    "duration_ms": {
+      "minimum": 0,
+      "title": "Duration Ms",
+      "type": "number"
+    },
+    "budget": {
+      "$ref": "#/$defs/RuntimeBudgetSnapshot"
+    },
+    "span_count": {
+      "minimum": 1,
+      "title": "Span Count",
+      "type": "integer"
+    },
+    "tool_call_count": {
+      "minimum": 0,
+      "title": "Tool Call Count",
+      "type": "integer"
+    },
+    "retry_count": {
+      "minimum": 0,
+      "title": "Retry Count",
+      "type": "integer"
+    },
+    "trace_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Trace Hash",
+      "type": "string"
+    },
+    "scope_ref_hash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Scope Ref Hash"
+    },
+    "recorded_at": {
+      "format": "date-time",
+      "title": "Recorded At",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "run_id",
+    "workflow",
+    "workflow_version",
+    "status",
+    "termination_reason",
+    "duration_ms",
+    "budget",
+    "span_count",
+    "tool_call_count",
+    "retry_count",
+    "trace_hash",
+    "recorded_at",
+    "expires_at"
+  ],
+  "title": "Agent Runtime Run",
+  "type": "object"
+}

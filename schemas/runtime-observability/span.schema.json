@@ -1,0 +1,150 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "runtime-span/1.0",
+      "default": "runtime-span/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "span_id": {
+      "maxLength": 140,
+      "minLength": 1,
+      "title": "Span Id",
+      "type": "string"
+    },
+    "run_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "sequence": {
+      "minimum": 0,
+      "title": "Sequence",
+      "type": "integer"
+    },
+    "source_sequence": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Sequence"
+    },
+    "parent_span_id": {
+      "anyOf": [
+        {
+          "maxLength": 140,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Span Id"
+    },
+    "name": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "run",
+        "policy",
+        "guardrail",
+        "handoff",
+        "tool",
+        "retry",
+        "validation",
+        "approval",
+        "lifecycle"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "blocked",
+        "error"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "start_offset_ms": {
+      "minimum": 0,
+      "title": "Start Offset Ms",
+      "type": "number"
+    },
+    "duration_ms": {
+      "minimum": 0,
+      "title": "Duration Ms",
+      "type": "number"
+    },
+    "node": {
+      "anyOf": [
+        {
+          "maxLength": 64,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Node"
+    },
+    "tool_name": {
+      "anyOf": [
+        {
+          "maxLength": 80,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tool Name"
+    },
+    "attempt": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Attempt"
+    },
+    "attributes": {
+      "additionalProperties": true,
+      "title": "Attributes",
+      "type": "object"
+    }
+  },
+  "required": [
+    "span_id",
+    "run_id",
+    "sequence",
+    "name",
+    "kind",
+    "status",
+    "start_offset_ms",
+    "duration_ms"
+  ],
+  "title": "Agent Runtime Span",
+  "type": "object"
+}

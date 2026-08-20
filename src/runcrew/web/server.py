@@ -37,6 +37,11 @@ from runcrew.domain.training_operations import (
     WeeklyTrainingMemoryBuildSubmission,
 )
 from runcrew.services.memory_control import MemoryControlError, MemoryControlService
+from runcrew.services.runtime_observability import (
+    RuntimeObservabilityError,
+    RuntimeRunNotFoundError,
+    RuntimeTraceService,
+)
 from runcrew.web.dashboard import DemoDashboardService
 
 
@@ -55,6 +60,7 @@ class DemoApplication:
         chat_service: ChatService | None = None,
         training_service: TrainingOperationsService | None = None,
         memory_service: MemoryControlService | None = None,
+        runtime_service: RuntimeTraceService | None = None,
     ) -> None:
         self.service = service
         self.chat_service = chat_service or ChatService(
@@ -66,6 +72,7 @@ class DemoApplication:
         self.memory_service = memory_service or MemoryControlService(
             database_path=service.database_path
         )
+        self.runtime_service = runtime_service or self.chat_service.runtime_traces
         static_root = resources.files("runcrew.web").joinpath("static")
         self._static = {
             "/": ("text/html; charset=utf-8", static_root.joinpath("chat.html")),
@@ -123,6 +130,37 @@ class DemoApplication:
             return self._json_response(
                 HTTPStatus.METHOD_NOT_ALLOWED,
                 {"error": "工程观测接口只允许只读 GET 请求。"},
+            )
+        if method == "GET" and parsed.path == "/api/runtime/runs":
+            try:
+                query = parse_qs(parsed.query)
+                workflow = _single(query, "workflow") or None
+                if workflow not in {None, "review_agent", "coach_orchestrator"}:
+                    raise ValueError("workflow 只允许 review_agent 或 coach_orchestrator")
+                result = self.runtime_service.recent(
+                    limit=_bounded_int(
+                        query, "limit", default=20, minimum=1, maximum=100
+                    ),
+                    workflow=workflow,
+                )
+            except (RuntimeObservabilityError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(HTTPStatus.OK, result.model_dump(mode="json"))
+        runtime_run_id = _runtime_run_route(parsed.path)
+        if method == "GET" and runtime_run_id:
+            try:
+                result = self.runtime_service.get(runtime_run_id)
+            except RuntimeRunNotFoundError as error:
+                return self._json_response(HTTPStatus.NOT_FOUND, {"error": str(error)})
+            except RuntimeObservabilityError as error:
+                return self._json_response(
+                    HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(error)}
+                )
+            return self._json_response(HTTPStatus.OK, result.model_dump(mode="json"))
+        if parsed.path == "/api/runtime/runs" or runtime_run_id:
+            return self._json_response(
+                HTTPStatus.METHOD_NOT_ALLOWED,
+                {"error": "Runtime 观测接口只允许只读 GET 请求。"},
             )
         if method == "GET" and parsed.path == "/api/chat/bootstrap":
             return self._json_response(
@@ -520,6 +558,16 @@ def serve_demo(
         pass
     finally:
         server.server_close()
+
+
+def _runtime_run_route(path: str) -> str | None:
+    prefix = "/api/runtime/runs/"
+    if not path.startswith(prefix):
+        return None
+    run_id = path.removeprefix(prefix)
+    if not run_id or "/" in run_id or len(run_id) > 64:
+        return None
+    return run_id
 
 
 def _parse_dashboard_query(query: dict[str, list[str]]) -> dict[str, object]:

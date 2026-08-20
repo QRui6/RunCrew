@@ -12,7 +12,7 @@
 
 > RunCrew 已经完成从真实跑步数据到可审计连续对话的基础，并建立“目标—计划—执行—反馈—风险评估—提案—用户确认”的训练闭环。M7-C 用受控 Harness 连接三个职责节点，M7-D 将防篡改/防过期审核接入聊天产品，M7-E 又用18个版本化场景建立了可回放的确定性多 Agent 基线。
 
-当前里程碑是 **M7 多职责训练闭环、M8 产品与求职演示包、M9 可审计 Memory 链路均已完成；M10-A 已统一四个 Agent 工具的 Manifest、前后置 Guardrail 与脱敏 Trace。下一步进入 M10-B 持久化 Runtime Run/Span；本机目视验收与 M6-A3b 真实 DeepSeek 聊天同题评测仍是独立收尾项**。
+当前里程碑是 **M7 多职责训练闭环、M8 产品与求职演示包、M9 可审计 Memory 链路均已完成；M10-A/B 已统一四工具 Manifest/Guardrail，并持久化 Review/Coach Runtime Run/Span。下一步进入 M10-C 跨运行指标与治理评测；本机目视验收与真实 DeepSeek 聊天同题评测仍是独立收尾项**。
 
 | 能力 | 当前状态 | 说明 |
 |---|---|---|
@@ -789,7 +789,7 @@ Review Agent 已完成真实 DeepSeek 同题评测，聊天也有 DeepSeek 契�
 
 ## 11. 当前下一步
 
-M7、M9 与 M10-A 已完成。当前唯一工程主线是 M10-B；M8-A1.4 本机目视验收与 M6-A3b 真实 DeepSeek 聊天同题评测作为独立收尾项保留：
+M7、M9 与 M10-A/B 已完成。当前唯一工程主线是 M10-C；本机目视验收与真实 DeepSeek 聊天同题评测作为独立收尾项保留：
 
 ```text
 [已完成] 增加受确认和共享总费用门保护的完整 Suite 命令
@@ -810,7 +810,8 @@ M7、M9 与 M10-A 已完成。当前唯一工程主线是 M10-B；M8-A1.4 本机
 → [已完成] M8-A 架构图、训练闭环时序图与无私人数据演示脚本
 → [已完成] M9 可审计 Memory Manager：候选、正式偏好、周记忆、职责 Context、Evaluation 与控制面
 → [已完成] M10-A Tool Manifest、统一前后置 Guardrail 与 Review/Coach Trace 接入
-→ [下一步] M10-B 持久化统一 Runtime Run/Span 与父子时间线
+→ [已完成] M10-B 持久化统一 Runtime Run/Span 与父子时间线
+→ [下一步] M10-C 跨运行指标、治理评测与只读观测视图
 → [待补] 用户本机最终产品目视验收
 → [待补] 在新 Key 可用后完成显式付费真实 DeepSeek 8轮验收
 ```
@@ -994,13 +995,21 @@ Trace 只新增 Manifest Hash、参数是否匹配、规则 ID/结果与允许�
 
 8项治理专项覆盖重复/未知工具、角色/访问/能力越权、参数篡改、确认、超限和非法输出；与 Review/Coach/DeepSeek Policy 联合专项38项及全量189项通过。本阶段不宣称已有持久化跨运行追踪；M10-B 才会建立统一 Run/Span。详细决策见 [ADR-0027](adr/0027-versioned-tool-runtime-governance.md)，完整交接见 [M10-A 阶段记录](progress/2026-08-20-m10a-runtime-tool-governance.md)。
 
+### M10-B：best-effort 持久化 Runtime Run/Span
+
+M10-B 没有改写 Review/Coach 原 Trace，而是增加确定性 Mapper：每次运行生成一个根 Run Span，并把 Policy、Guardrail、Handoff、工具尝试、重试、输出校验和确认中断映射为带父子关系的内部 Span。Run 统一保存工作流、终态、预算、耗时、调用/重试计数和 Trace Hash。
+
+Runtime 表不复制 Prompt、响应、工具参数、用户消息、身体反馈或活动/目标/计划 ID；产品业务关联只保存不可逆 `scope_ref_hash`。相同 Run/Trace 幂等，相同 run_id 的不同 Trace 拒绝覆盖。聊天首轮 Review 与训练运营 Coach 在业务结果返回后使用独立短事务 best-effort 写入，任何观测错误只返回错误类型，不改变 Agent 终态；离线 Evaluation 不写产品表。
+
+记录默认保留30天，提供只读最近运行和单次父子时间线 API。实施时发现 SQLite 时区列读回可能为 naive datetime，改用规范 JSON 恢复 aware 时间做单条过期判断。6项专项及产品联合24项、全量195项通过。当前尚无跨运行指标或时间线 UI，详细决策见 [ADR-0028](adr/0028-best-effort-persistent-runtime-spans.md)，交接见 [M10-B 阶段记录](progress/2026-08-20-m10b-persistent-runtime-spans.md)。
+
 ## M8-A2：无私人数据求职演示包
 
 这一阶段没有再增加 Agent，而是解决“代码已经很多，但面试现场怎样稳定证明”的问题。新增 `runcrew demo-seed --reset`，在 `data/private/demo/` 创建与个人数据库隔离的合成训练状态：8条活动、目标、激活计划、执行确认、恢复偏低的 Check-in 和经过确认的周日长跑偏好。它不会读取真实数据库、COROS/FIT、DeepSeek Key 或网络服务。
 
 演示种子只写入业务事实，不预置对话、Coach Run 或 Agent 结论。这样现场看到的 Execution、Recovery、Plan 路由、Trace 和待审核草案都来自当前代码真实运行。种子还会按启动日动态安排已完成与待执行训练，避免周末演示时找不到下一节课；同一锚点下使用 UUIDv5 保持 ID 稳定。
 
-材料层同时形成系统架构图、训练闭环时序图、五分钟演示脚本和证据边界清单。该阶段完成时是146项自动化测试；M9-F 控制面完成后为181项，M10-A Runtime Governance 完成后当前为189项。可以声明本地链路、权限、重放、Manifest 和 Schema 已验证；不能把合成场景描述成真实用户效果、医疗诊断、真实 LLM 多 Agent 稳定性或生产级并发验证。
+材料层同时形成系统架构图、训练闭环时序图、五分钟演示脚本和证据边界清单。该阶段完成时是146项自动化测试；M9-F 后为181项，M10-A 后为189项，M10-B 后当前为195项。可以声明本地链路、权限、重放、Manifest、Run/Span 和 Schema 已验证；不能外推为真实用户效果或生产级并发。
 
 实施时遇到一个 Windows 特有问题：第一次写完 SQLite 后，连接池仍持有文件句柄，下一次 `--reset` 删除数据库会触发 `PermissionError`。通过在种子流程结束时显式 `engine.dispose()` 释放句柄，并用连续重置测试固定该行为。
 
@@ -1010,6 +1019,6 @@ Trace 只新增 Manifest Hash、参数是否匹配、规则 ID/结果与允许�
 
 这一阶段把项目压缩成三条简历主线：外部运动数据可靠性、受约束多 Agent 训练闭环、版本化评测与人工确认。材料不再机械罗列模块，而是为每个结论绑定测试、评测报告、ADR、代码或演示命令。
 
-最关键的表达修正是把四组数字彻底分开：当前189代表全量自动化回归；12/12代表单 Agent 确定性 Policy 与真实 DeepSeek 在同 Suite Hash 下的对照；18/18代表确定性 Coach Policy 的多 Agent Harness 基线；16/16代表确定性 Memory Manager 的合成场景基线。后三者不能合并成“真实多 Agent 大模型准确率”或真实用户效果。
+最关键的表达修正是把四组数字彻底分开：当前195代表全量自动化回归；12/12代表单 Agent 确定性 Policy 与真实 DeepSeek 同题对照；18/18代表确定性 Coach 基线；16/16代表确定性 Memory 基线。后三者不能合并成“真实多 Agent 大模型准确率”或真实用户效果。
 
 同时形成五个核心难点的“问题—约束—方案—验证—边界”讲述框架和14个面试追问，主动记录真实多轮聊天、真实 LLM Coach、生产并发和用户训练效果尚未验证。完整材料见 [求职材料包](job/README.md) 与 [证据映射](job/evidence-map.md)。

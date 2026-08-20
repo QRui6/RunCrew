@@ -6,6 +6,10 @@
 
 ### Added
 
+- 增加 M10-B 持久化 Runtime Observability：统一 `RuntimeRun / RuntimeSpan` 契约、`agent_runtime_runs / agent_runtime_spans`、30天保留和父子时间线；
+- 聊天首轮 Review 与训练运营 Coach 在 Harness 返回后使用独立 best-effort 短事务写入；离线 Evaluation 不污染产品观测表；
+- 增加只读 `GET /api/runtime/runs` 与 `GET /api/runtime/runs/{run_id}`、四份 Schema、ADR-0028、阶段记录和6项专项测试；
+- Runtime 只保存白名单 Hash、规则、计数、错误类型、工具/节点和时间，业务关联使用不可逆 scope Hash；
 - 增加 M10-A Agent Runtime Governance：为四个真实 Agent 工具建立版本化 Manifest 与只读 Registry，统一声明职责、访问、副作用、风险、Schema、确认和运行上限；
 - 增加前置 `RuntimeGuardrailEngine`，在工具执行前统一拒绝未知工具、角色/访问/能力越权、参数篡改、缺少确认和超限调用；增加后置输出 Schema Guardrail；
 - Review/Coach Trace 增加 Manifest Hash、参数一致性与规则级结果，继续不记录参数正文、身体反馈、Provider 原始载荷或 Token；
@@ -37,6 +41,7 @@
 
 ### Fixed
 
+- 修复 SQLite `DateTime(timezone=True)` 读回为 naive datetime、与 aware UTC 比较导致 Runtime 详情接口500的问题；单条过期判断改为使用规范 JSON 恢复的时区时间；
 - 修复 Runtime 治理模块初版模块级导入造成的 `services → chat → harness` 循环依赖，Review Harness 改为安全的延迟构造导入；
 - 修复 Coach 输出 Guardrail 结果只存在于节点调用内部、外层 Trace 引用时触发 `NameError` 的作用域问题；
 - Memory Evaluation 的磁盘临时 SQLite 在 Windows 清理时曾被 SQLAlchemy Engine 文件句柄阻塞；改为每场景独立内存 SQLite并显式释放 Engine；
@@ -46,6 +51,7 @@
 
 ### Verified
 
+- Runtime Observability 与 Chat/Training Operations/Demo Web 联合专项24项、全量195项测试和四份 Schema 漂移检查通过；观测故障测试不泄露异常正文；
 - Runtime Governance 与 Review/Coach/DeepSeek Policy 联合专项38项、全量189项测试、Schema 漂移与 Python 编译通过；本阶段没有读取真实活动或调用外部服务；
 - Memory 控制面与训练运营联合专项13项、全量181项测试、Schema 漂移、Python 编译和 JavaScript 语法检查通过；控制面响应不包含 Provider 外部 ID 或 raw payload hash；
 - 当前会话没有可用浏览器实例，因此最终目视验收仍保留为用户本机收尾项，没有冒充完成截图验收；

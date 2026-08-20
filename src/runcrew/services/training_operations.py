@@ -41,6 +41,7 @@ from runcrew.services.athlete_memory import (
     preferences_for_display,
 )
 from runcrew.services.recovery_assessment import execute_recovery_assessment
+from runcrew.services.runtime_observability import RuntimeTraceService
 from runcrew.services.training_cycle import TrainingCycleError, TrainingCycleService
 from runcrew.services.training_execution import (
     TrainingExecutionError,
@@ -89,6 +90,7 @@ class TrainingOperationsService:
         self._clock = clock or (lambda: datetime.now(timezone.utc))
         self.database = Database(f"sqlite:///{database_path.resolve().as_posix()}")
         self.database.create_schema()
+        self.runtime_traces = RuntimeTraceService(self.database, clock=self._clock)
 
     def _now(self) -> datetime:
         current = self._clock()
@@ -560,7 +562,7 @@ class TrainingOperationsService:
             async def plan_tool(node_request):
                 return execute_plan_adjustment(node_request, goals=goals, plans=plans)
 
-            return await CoachOrchestratorHarness().run(
+            result = await CoachOrchestratorHarness().run(
                 request,
                 tools=CoachNodeTools(
                     execution=execution_tool,
@@ -568,6 +570,11 @@ class TrainingOperationsService:
                     planning=plan_tool,
                 ),
             )
+        self.runtime_traces.record_coach(
+            result,
+            scope_ref=f"{request.goal_id}:{request.plan_id}",
+        )
+        return result
 
     @staticmethod
     def _cycle_service(session) -> TrainingCycleService:

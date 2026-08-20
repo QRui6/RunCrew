@@ -40,6 +40,7 @@ from runcrew.storage.repositories import (
     ActivityRepository,
     CheckInRepository,
     CoachRunRepository,
+    RuntimeRunRepository,
     PlanChangeRepository,
     TrainingGoalRepository,
     TrainingPlanRepository,
@@ -154,6 +155,9 @@ def test_coach_run_persists_audit_but_not_plan_proposal(tmp_path: Path) -> None:
     with database.session() as session:
         assert PlanChangeRepository(session).pending_for_goal("goal-1") == []
         assert TrainingPlanRepository(session).get("plan-1").revision == 1
+        runtime = RuntimeRunRepository(session).get(view.audit.run_id)
+        assert runtime is not None
+        assert runtime.run.workflow == "coach_orchestrator"
 
 
 def test_user_approval_replays_then_applies_revisioned_change(tmp_path: Path) -> None:

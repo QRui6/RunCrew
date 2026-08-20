@@ -23,6 +23,7 @@ from runcrew.services.chat import ChatService
 from runcrew.storage.database import Database
 from runcrew.storage.models import ChatConversationRecord
 from runcrew.storage.repositories import ActivityRepository
+from runcrew.storage.repositories import RuntimeRunRepository
 from runcrew.web import DemoApplication, DemoDashboardService
 
 
@@ -115,6 +116,9 @@ def test_chat_service_persists_continuous_grounded_conversation(tmp_path: Path) 
         assert record is not None
         assert record.review_snapshot_json is not None
         assert record.review_input_hash == first.conversation.review_input_hash
+        runtime_runs = RuntimeRunRepository(session).recent()
+        assert len(runtime_runs) == 1
+        assert runtime_runs[0].workflow == "review_agent"
 
 
 class _CapturingPolicy:
