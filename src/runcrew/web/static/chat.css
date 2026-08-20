@@ -649,6 +649,14 @@ input:focus-visible {
 .plan-card.empty { color: var(--muted); font-size: 9px; }
 .plan-card h4 { margin: 0; font-size: 10px; font-weight: 600; }
 .plan-card p { margin: 6px 0; color: var(--muted); font-size: 9px; }
+.preference-list { display: grid; margin-top: 10px; border-top: 1px solid var(--line); }
+.preference-list .empty { padding: 10px 0 0; color: var(--muted); font-size: 9px; }
+.preference-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.preference-row strong,
+.preference-row small { display: block; font-size: 9px; }
+.preference-row small { margin-top: 3px; color: var(--muted); }
+.preference-row button { padding: 5px 9px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--muted); background: transparent; font-size: 8px; cursor: pointer; }
+.preference-row button:hover { color: var(--ink); border-color: var(--ink); }
 .session-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .session-chips span { padding: 4px 7px; color: var(--green); background: var(--green-soft); border-radius: 999px; font-size: 8px; }
 .plan-draft-form { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 9px; margin-top: 12px; }

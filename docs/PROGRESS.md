@@ -32,6 +32,9 @@
 | 2026-08-16 | M8-A1.3a 顶部导航视口稳定性修复 | 完成 | [M8-A1.3a 顶栏修复](progress/2026-08-16-m8a1-topbar-viewport-fix.md) |
 | 2026-08-16 | M8-A1.3b 底部工作区边界修复 | 完成 | [M8-A1.3b 底部边界修复](progress/2026-08-16-m8a1-bottom-boundary-fix.md) |
 | 2026-08-16 | M8-B 网页训练产品闭环 | 完成 | [M8-B 训练产品闭环](progress/2026-08-16-m8b-training-product-loop.md) |
+| 2026-08-19 | M9-A 类型化运动员偏好记忆 | 完成 | [M9-A 偏好记忆](progress/2026-08-19-m9a-athlete-preference-memory.md) |
+| 2026-08-19 | M8-A2 无私人数据求职演示包 | 完成 | [M8-A2 求职演示包](progress/2026-08-19-m8a2-job-demo-package.md) |
+| 2026-08-19 | M8-A3 求职叙事与证据映射 | 完成 | [M8-A3 求职证据包](progress/2026-08-19-m8a3-job-narrative-evidence.md) |
 
 ## 新阶段记录模板
 

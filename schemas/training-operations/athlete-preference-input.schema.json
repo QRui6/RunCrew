@@ -1,0 +1,49 @@
+{
+  "additionalProperties": false,
+  "description": "产品写入契约；确认字段不允许由服务端或 Agent 隐式补齐。",
+  "properties": {
+    "key": {
+      "const": "preferred_long_run_weekday",
+      "title": "Key",
+      "type": "string"
+    },
+    "value": {
+      "enum": [
+        "mon",
+        "tue",
+        "wed",
+        "thu",
+        "fri",
+        "sat",
+        "sun"
+      ],
+      "title": "Value",
+      "type": "string"
+    },
+    "confirmed": {
+      "const": true,
+      "title": "Confirmed",
+      "type": "boolean"
+    },
+    "valid_until": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Valid Until"
+    }
+  },
+  "required": [
+    "key",
+    "value",
+    "confirmed"
+  ],
+  "title": "运动员长期偏好确认输入",
+  "type": "object"
+}

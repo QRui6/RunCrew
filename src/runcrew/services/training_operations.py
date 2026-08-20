@@ -2,8 +2,14 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Callable
 
 from runcrew.domain.coach import CoachAgentRunRequest, CoachAgentRunResult
+from runcrew.domain.memory import (
+    AthletePreference,
+    AthletePreferenceArchiveSubmission,
+    AthletePreferenceSubmission,
+)
 from runcrew.domain.training_cycle import DailyCheckIn, TrainingGoal, TrainingPlan
 from runcrew.domain.training_execution import ExecutionConfirmationResult, TrainingExecutionRequest
 from runcrew.domain.training_operations import (
@@ -24,6 +30,12 @@ from runcrew.domain.training_operations import (
     WeekProgressSummary,
 )
 from runcrew.harness import CoachNodeTools, CoachOrchestratorHarness
+from runcrew.services.athlete_memory import (
+    AthleteMemoryError,
+    archive_athlete_preference,
+    confirm_athlete_preference,
+    preferences_for_display,
+)
 from runcrew.services.recovery_assessment import execute_recovery_assessment
 from runcrew.services.training_cycle import TrainingCycleError, TrainingCycleService
 from runcrew.services.training_execution import (
@@ -39,6 +51,7 @@ from runcrew.services.training_planning import (
 from runcrew.storage.database import Database
 from runcrew.storage.repositories import (
     ActivityRepository,
+    AthletePreferenceRepository,
     CheckInRepository,
     CoachRunRepository,
     PlanChangeRepository,
@@ -55,10 +68,22 @@ class TrainingOperationsError(RuntimeError):
 class TrainingOperationsService:
     """把训练闭环暴露给本地产品，同时把 Coach 草案与正式写入隔开。"""
 
-    def __init__(self, *, database_path: Path = Path("data/runcrew.db")) -> None:
+    def __init__(
+        self,
+        *,
+        database_path: Path = Path("data/runcrew.db"),
+        clock: Callable[[], datetime] | None = None,
+    ) -> None:
         self.database_path = database_path
+        self._clock = clock or (lambda: datetime.now(timezone.utc))
         self.database = Database(f"sqlite:///{database_path.resolve().as_posix()}")
         self.database.create_schema()
+
+    def _now(self) -> datetime:
+        current = self._clock()
+        if current.tzinfo is None or current.utcoffset() is None:
+            raise TrainingOperationsError("clock 必须返回包含时区的时间。")
+        return current
 
     def bootstrap(self) -> TrainingOperationsBootstrap:
         with self.database.session() as session:
@@ -66,7 +91,8 @@ class TrainingOperationsService:
             plans = TrainingPlanRepository(session)
             check_ins = CheckInRepository(session).recent(limit=1)
             changes = PlanChangeRepository(session)
-            current_week = datetime.now().astimezone().date()
+            now = self._now()
+            current_week = now.astimezone().date()
             current_week -= timedelta(days=current_week.weekday())
             def visible_plan(goal_id: str):
                 current = plans.for_goal_week(goal_id, current_week)
@@ -89,16 +115,55 @@ class TrainingOperationsService:
                 {item.source_ref.provider for item in ActivityRepository(session).list(limit=100)},
                 key=lambda item: item.value,
             )
+            athlete_preferences = preferences_for_display(
+                AthletePreferenceRepository(session)
+            )
         return TrainingOperationsBootstrap(
-            generated_at=datetime.now(timezone.utc),
+            generated_at=now,
             goals=views,
             providers=providers,
             recent_coach_runs=recent_runs,
+            athlete_preferences=athlete_preferences,
         )
+
+    def confirm_preference(
+        self, submission: AthletePreferenceSubmission
+    ) -> AthletePreference:
+        with self.database.session() as session:
+            try:
+                preference = confirm_athlete_preference(
+                    submission,
+                    preferences=AthletePreferenceRepository(session),
+                    source_ref="web:training-preferences",
+                    now=self._now(),
+                )
+            except AthleteMemoryError as error:
+                raise TrainingOperationsError(str(error)) from error
+            session.commit()
+        return preference
+
+    def archive_preference(
+        self,
+        *,
+        preference_id: str,
+        submission: AthletePreferenceArchiveSubmission,
+    ) -> AthletePreference:
+        del submission
+        with self.database.session() as session:
+            try:
+                preference = archive_athlete_preference(
+                    preference_id,
+                    preferences=AthletePreferenceRepository(session),
+                    now=self._now(),
+                )
+            except AthleteMemoryError as error:
+                raise TrainingOperationsError(str(error)) from error
+            session.commit()
+        return preference
 
     def create_goal(self, submission: TrainingGoalSubmission) -> TrainingGoal:
         goal = submission.to_domain()
-        if goal.target_date <= datetime.now().astimezone().date():
+        if goal.target_date <= self._now().astimezone().date():
             raise TrainingOperationsError("目标日期必须晚于今天。")
         with self.database.session() as session:
             self._cycle_service(session).create_goal(goal)
@@ -116,6 +181,7 @@ class TrainingOperationsService:
                     activities=ActivityRepository(session),
                     goals=TrainingGoalRepository(session),
                     plans=TrainingPlanRepository(session),
+                    preferences=AthletePreferenceRepository(session),
                 )
             except TrainingPlanningError as error:
                 raise TrainingOperationsError(str(error)) from error
@@ -132,6 +198,7 @@ class TrainingOperationsService:
                 activities=activities,
                 goals=goals,
                 plans=plans,
+                preferences=AthletePreferenceRepository(session),
             )
             if replayed.input_hash != request.expected_input_hash:
                 raise TrainingOperationsError(
@@ -210,7 +277,7 @@ class TrainingOperationsService:
         )
         progress = self._week_progress(plan, execution, check_in_days) if plan and execution else None
         return TrainingWeekView(
-            generated_at=datetime.now(timezone.utc),
+            generated_at=self._now(),
             goal=goal,
             plan=plan,
             execution=execution,
@@ -266,7 +333,7 @@ class TrainingOperationsService:
             planning_output_hash=(
                 result.planning.input_hash if result.planning is not None else None
             ),
-            created_at=datetime.now(timezone.utc),
+            created_at=self._now(),
         )
         with self.database.session() as session:
             CoachRunRepository(session).save(audit)
@@ -303,7 +370,7 @@ class TrainingOperationsService:
         if draft is None:
             raise TrainingOperationsError("该 Coach 运行没有可审核的计划调整草案。")
 
-        now = datetime.now(timezone.utc)
+        now = self._now()
         if request.decision == "reject":
             audit.status = "rejected"
             audit.decided_at = now

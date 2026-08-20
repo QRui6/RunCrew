@@ -952,6 +952,7 @@
           "enum": [
             "goal",
             "availability",
+            "athlete_preference",
             "training_history",
             "current_plan",
             "recovery_action",
@@ -975,6 +976,7 @@
         "rule_source": {
           "enum": [
             "user_goal",
+            "confirmed_athlete_preference",
             "normalized_activity",
             "active_plan",
             "recovery_assessment",

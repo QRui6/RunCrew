@@ -1,6 +1,6 @@
 # RunCrew 实施状态导航
 
-> 本文件不再维护重复的阶段快照，避免多份“当前状态”相互冲突。最后调整：2026-08-16。
+> 本文件不再维护重复的阶段快照，避免多份“当前状态”相互冲突。最后调整：2026-08-19。
 
 请按以下顺序阅读：
 
@@ -10,7 +10,7 @@
 4. [ROADMAP.md](ROADMAP.md)：后续阶段和验收条件；
 5. [adr/README.md](adr/README.md)：关键架构选择及其原因。
 
-当前一句话状态：M7 多智能体训练运营闭环和 M8-B 网页用户闭环均已完成，`coach-agent-eval/1.0` 以18/18建立确定性编排基线，目标—计划—执行确认—反馈—调整—周总结已可由用户在网页完成；下一步 M8-A2 制作架构图、时序图和无私人数据演示脚本，真实 DeepSeek 聊天评测仍待补。
+当前一句话状态：M7 多智能体训练运营闭环、M8-B 网页用户闭环、M9-A 类型化偏好记忆及 M8-A2/A3 求职演示与证据包均已完成；全量146项测试通过。下一步是 M9-B 从正式训练事实生成版本化 Weekly Training Memory，真实 DeepSeek 聊天评测仍待补。
 
 常用验收命令：
 
@@ -27,4 +27,5 @@
 .\.venv\Scripts\runcrew.exe planning --help
 .\.venv\Scripts\runcrew.exe execution --help
 .\.venv\Scripts\runcrew.exe coach --help
+.\.venv\Scripts\runcrew.exe memory --help
 ```

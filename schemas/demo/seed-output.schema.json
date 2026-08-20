@@ -1,0 +1,75 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "seed_version": {
+      "const": "runcrew-demo/1.0",
+      "default": "runcrew-demo/1.0",
+      "title": "Seed Version",
+      "type": "string"
+    },
+    "synthetic_data": {
+      "const": true,
+      "default": true,
+      "title": "Synthetic Data",
+      "type": "boolean"
+    },
+    "database_path": {
+      "minLength": 1,
+      "title": "Database Path",
+      "type": "string"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "anchor_day": {
+      "format": "date",
+      "title": "Anchor Day",
+      "type": "string"
+    },
+    "activity_count": {
+      "minimum": 1,
+      "title": "Activity Count",
+      "type": "integer"
+    },
+    "goal_id": {
+      "minLength": 1,
+      "title": "Goal Id",
+      "type": "string"
+    },
+    "plan_id": {
+      "minLength": 1,
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "preference_id": {
+      "minLength": 1,
+      "title": "Preference Id",
+      "type": "string"
+    },
+    "latest_activity_id": {
+      "minLength": 1,
+      "title": "Latest Activity Id",
+      "type": "string"
+    },
+    "launch_command": {
+      "minLength": 1,
+      "title": "Launch Command",
+      "type": "string"
+    }
+  },
+  "required": [
+    "database_path",
+    "generated_at",
+    "anchor_day",
+    "activity_count",
+    "goal_id",
+    "plan_id",
+    "preference_id",
+    "latest_activity_id",
+    "launch_command"
+  ],
+  "title": "DemoSeedSummary",
+  "type": "object"
+}

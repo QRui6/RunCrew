@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from runcrew.domain.activity import SourceProvider
 from runcrew.domain.coach import CoachAgentRunRequest, CoachAgentRunResult
+from runcrew.domain.memory import AthletePreference
 from runcrew.domain.training_cycle import (
     AcuteSymptom,
     DailyCheckIn,
@@ -55,6 +56,7 @@ class TrainingOperationsBootstrap(BaseModel):
     goals: list[TrainingOperationsGoalView]
     providers: list[SourceProvider] = Field(default_factory=list)
     recent_coach_runs: list[CoachRunSummary] = Field(default_factory=list)
+    athlete_preferences: list[AthletePreference] = Field(default_factory=list)
 
 
 class TrainingGoalSubmission(BaseModel):

@@ -1,5 +1,114 @@
 {
   "$defs": {
+    "AthletePreference": {
+      "additionalProperties": false,
+      "description": "经过用户明确确认、可追溯且有时效边界的长期训练偏好。",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "key": {
+          "const": "preferred_long_run_weekday",
+          "title": "Key",
+          "type": "string"
+        },
+        "value": {
+          "enum": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ],
+          "title": "Value",
+          "type": "string"
+        },
+        "status": {
+          "default": "active",
+          "enum": [
+            "active",
+            "superseded",
+            "expired",
+            "archived"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "source_type": {
+          "const": "explicit_user_setting",
+          "default": "explicit_user_setting",
+          "title": "Source Type",
+          "type": "string"
+        },
+        "source_ref": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Source Ref",
+          "type": "string"
+        },
+        "confirmed_at": {
+          "format": "date-time",
+          "title": "Confirmed At",
+          "type": "string"
+        },
+        "valid_from": {
+          "format": "date-time",
+          "title": "Valid From",
+          "type": "string"
+        },
+        "valid_until": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Until"
+        },
+        "supersedes_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Supersedes Id"
+        },
+        "schema_version": {
+          "const": "athlete-preference/1.0",
+          "default": "athlete-preference/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value",
+        "source_ref"
+      ],
+      "title": "AthletePreference",
+      "type": "object"
+    },
     "CoachRunSummary": {
       "additionalProperties": false,
       "properties": {
@@ -746,6 +855,13 @@
         "$ref": "#/$defs/CoachRunSummary"
       },
       "title": "Recent Coach Runs",
+      "type": "array"
+    },
+    "athlete_preferences": {
+      "items": {
+        "$ref": "#/$defs/AthletePreference"
+      },
+      "title": "Athlete Preferences",
       "type": "array"
     }
   },

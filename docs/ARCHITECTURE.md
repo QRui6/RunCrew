@@ -313,3 +313,40 @@ versioned synthetic case
   → aggregate metrics + suite_hash
   → private evaluation report
 ```
+
+## M9-A 类型化长期偏好记忆
+
+```text
+网页 / CLI 显式确认
+  → AthletePreferenceSubmission（confirmed 必须为 true）
+  → Athlete Memory Service
+       ├── 相同值：幂等返回当前版本
+       ├── 新值：旧版本 superseded + 新版本 supersedes_id
+       └── 停用：archived，不硬删除
+  → athlete_preferences / SQLite
+  → Planning Preference Store（按 as_of、status、有效期检索）
+  → Weekly Plan Draft
+       ├── 当前目标 available_weekdays 优先
+       ├── 偏好可用时安排 long_run
+       └── preference id/source/schema/applied → evidence + input_hash
+  → 用户激活前服务端重放；偏好变化则拒绝旧草案
+```
+
+当前 Memory 分层为：
+
+| 层 | 当前实现 | 作用范围 |
+|---|---|---|
+| 对话上下文 | 最近8条消息 | 当前会话短期连续追问 |
+| Evidence Snapshot | 不可变复盘结果与 Hash | 当前活动事实锚点 |
+| 训练业务状态 | 目标、计划、执行、Check-in、Coach Run | 跨会话确定性状态 |
+| Agent Working State | Coach 单次运行状态与 Handoff | 单次编排 |
+| 长期偏好 | 已确认长跑星期、来源、时效、替代链 | 跨会话/跨目标默认偏好 |
+
+M9-A 不使用向量数据库，也不允许普通聊天或 LLM 直接写入。未来 Memory Candidate 必须先通过类型校验与用户确认，才能进入长期记忆。
+
+## 可讲解的系统视图
+
+用于求职演示的两份精简图不替代本文，而是把实现压缩为面试时可以快速讲清的视图：
+
+- [系统架构图](demo/system-architecture.md)：Provider、Domain、Memory、Skill、Harness、Trace 与 Evaluation 的分层关系；
+- [训练闭环时序图](demo/training-loop-sequence.md)：活动确认、三职责 Agent 协作、用户审核、服务端重放和 stale 防护的完整顺序。

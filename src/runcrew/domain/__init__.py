@@ -20,6 +20,12 @@ from runcrew.domain.chat_evaluation import (
     ChatEvaluationReport,
     ChatEvaluationSuite,
 )
+from runcrew.domain.memory import (
+    AthletePreference,
+    AthletePreferenceArchiveSubmission,
+    AthletePreferenceSubmission,
+)
+from runcrew.domain.demo import DemoSeedSummary
 from runcrew.domain.training_cycle import (
     DailyCheckIn,
     PlanChangeProposal,
@@ -40,6 +46,9 @@ __all__ = [
     "ActivityDetail",
     "ActivityReview",
     "ActivitySummary",
+    "AthletePreference",
+    "AthletePreferenceArchiveSubmission",
+    "AthletePreferenceSubmission",
     "ChatAnswer",
     "ChatClaim",
     "ChatConversation",
@@ -49,6 +58,7 @@ __all__ = [
     "ChatTurnResult",
     "ChatTurnUsage",
     "DataQuality",
+    "DemoSeedSummary",
     "DailyCheckIn",
     "Lap",
     "MetricPoint",

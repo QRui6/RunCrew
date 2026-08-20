@@ -8,6 +8,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Protocol
 
 from runcrew.domain.activity import ActivityDetail, ActivitySummary, SportType
+from runcrew.domain.memory import AthletePreference
 from runcrew.domain.recovery_assessment import RecoveryAssessmentResult
 from runcrew.domain.training_cycle import PlanSession, PlanSessionPatch, TrainingGoal, TrainingPlan
 from runcrew.domain.training_planning import (
@@ -61,6 +62,10 @@ class PlanningPlanStore(Protocol):
     ) -> list[TrainingPlan]: ...
 
 
+class PlanningPreferenceStore(Protocol):
+    def active_at(self, at: datetime) -> list[AthletePreference]: ...
+
+
 class TrainingPlanningError(ValueError):
     pass
 
@@ -71,6 +76,7 @@ def execute_weekly_plan_draft(
     activities: PlanningActivityStore,
     goals: PlanningGoalStore,
     plans: PlanningPlanStore,
+    preferences: PlanningPreferenceStore | None = None,
 ) -> TrainingPlanningResult:
     goal = _require_active_goal(goals, request.goal_id)
     cutoff = min(
@@ -83,11 +89,13 @@ def execute_weekly_plan_draft(
         provider=request.provider.value if request.provider is not None else None,
     )
     existing = plans.for_goal_week(goal.id, request.week_start)
+    active_preferences = preferences.active_at(request.as_of) if preferences else []
     return build_weekly_plan_draft(
         request,
         goal=goal,
         activities=history,
         existing_plan=existing,
+        athlete_preferences=active_preferences,
     )
 
 
@@ -97,7 +105,21 @@ def build_weekly_plan_draft(
     goal: TrainingGoal,
     activities: list[Activity],
     existing_plan: TrainingPlan | None,
+    athlete_preferences: list[AthletePreference] | None = None,
 ) -> TrainingPlanningResult:
+    active_preferences = [
+        item
+        for item in (athlete_preferences or [])
+        if item.is_effective_at(request.as_of)
+    ]
+    long_run_preference = next(
+        (
+            item
+            for item in active_preferences
+            if item.key == "preferred_long_run_weekday"
+        ),
+        None,
+    )
     cutoff = min(
         request.as_of,
         datetime.combine(request.week_start, time.min, tzinfo=request.as_of.tzinfo),
@@ -120,6 +142,9 @@ def build_weekly_plan_draft(
             "existing_plan": (
                 existing_plan.model_dump(mode="json") if existing_plan else None
             ),
+            "athlete_preferences": [
+                _preference_features(item) for item in active_preferences
+            ],
         }
     )
     evidence = _draft_evidence(request, goal, relevant)
@@ -175,7 +200,42 @@ def build_weekly_plan_draft(
             "no_available_training_day",
         )
 
-    selected_dates = _select_spaced_dates(available_dates, limit=3)
+    preferred_long_run_date = (
+        request.week_start + timedelta(days=WEEKDAY_INDEX[long_run_preference.value])
+        if long_run_preference is not None
+        else None
+    )
+    preference_applied = (
+        preferred_long_run_date in available_dates
+        and len(available_dates) >= 2
+        if preferred_long_run_date is not None
+        else False
+    )
+    selected_dates = _select_spaced_dates(
+        available_dates,
+        limit=3,
+        required_date=preferred_long_run_date if preference_applied else None,
+    )
+    if long_run_preference is not None:
+        evidence.append(
+            PlanningEvidence(
+                id=f"preference:{long_run_preference.id}",
+                type="athlete_preference",
+                message=(
+                    "已确认的长跑日偏好已用于安排本周长距离训练。"
+                    if preference_applied
+                    else "长跑日偏好与当前目标可训练日或课次数量冲突，本次按目标设置优先。"
+                ),
+                values={
+                    "key": long_run_preference.key,
+                    "value": long_run_preference.value,
+                    "applied": preference_applied,
+                    "source_ref": long_run_preference.source_ref,
+                    "schema_version": long_run_preference.schema_version,
+                },
+                rule_source="confirmed_athlete_preference",
+            )
+        )
     baseline_seconds = sum(item.duration_seconds for item in relevant) / (
         request.lookback_days / 7
     )
@@ -195,6 +255,8 @@ def build_weekly_plan_draft(
             "不安排间歇或节奏训练。"
         )
         warnings.append("近期规范化活动不足，草案置信度较低；确认前请补充当前周跑量。")
+    if preference_applied:
+        rationale += " 长距离训练优先安排在用户已确认的偏好日期。"
     allocations = _allocate_minutes(total_seconds, len(selected_dates))
     sessions = _build_sessions(
         input_hash=input_hash,
@@ -205,6 +267,9 @@ def build_weekly_plan_draft(
             and len(relevant) >= 8
             and len(selected_dates) >= 3
             and (goal.target_date - request.week_start).days >= 28
+        ),
+        preferred_long_run_date=(
+            preferred_long_run_date if preference_applied else None
         ),
     )
     total_duration = sum(item.duration_seconds or 0 for item in sessions)
@@ -518,11 +583,15 @@ def _draft_evidence(
     ]
 
 
-def _select_spaced_dates(candidates: list[date], *, limit: int) -> list[date]:
+def _select_spaced_dates(
+    candidates: list[date], *, limit: int, required_date: date | None = None
+) -> list[date]:
     count = min(limit, len(candidates))
     if count <= 1:
         return candidates[:count]
     combinations = list(itertools.combinations(candidates, count))
+    if required_date is not None:
+        combinations = [items for items in combinations if required_date in items]
 
     def score(items: tuple[date, ...]) -> tuple[int, int, tuple[int, ...]]:
         gaps = [(right - left).days for left, right in zip(items, items[1:])]
@@ -553,14 +622,36 @@ def _build_sessions(
     selected_dates: list[date],
     durations: list[int],
     allow_quality: bool,
+    preferred_long_run_date: date | None = None,
 ) -> list[PlanSession]:
     result: list[PlanSession] = []
-    for index, (scheduled_for, duration) in enumerate(zip(selected_dates, durations)):
-        if index == len(selected_dates) - 1 and len(selected_dates) >= 2:
+    long_run_index = (
+        selected_dates.index(preferred_long_run_date)
+        if preferred_long_run_date in selected_dates and len(selected_dates) >= 2
+        else len(selected_dates) - 1
+    )
+    assigned_durations = list(durations)
+    if len(selected_dates) >= 2 and long_run_index != len(selected_dates) - 1:
+        assigned_durations[long_run_index], assigned_durations[-1] = (
+            assigned_durations[-1],
+            assigned_durations[long_run_index],
+        )
+    quality_index = next(
+        (
+            index
+            for index in range(1, len(selected_dates))
+            if index != long_run_index
+        ),
+        None,
+    )
+    for index, (scheduled_for, duration) in enumerate(
+        zip(selected_dates, assigned_durations)
+    ):
+        if index == long_run_index and len(selected_dates) >= 2:
             session_type = "long_run"
             intensity = "低强度耐力，保持可完整交谈"
             purpose = "建立有氧耐力；按轻松体感完成，不追求目标配速。"
-        elif allow_quality and index == 1:
+        elif allow_quality and index == quality_index:
             session_type = "tempo"
             intensity = "中等偏高但可控；不做冲刺，状态异常立即降级"
             purpose = "在已有连续训练基础上加入一次受控节奏刺激。"
@@ -634,4 +725,19 @@ def _activity_features(activity: Activity) -> dict:
         "duration_seconds": activity.duration_seconds,
         "distance_meters": activity.distance_meters,
         "training_load": activity.training_load,
+    }
+
+
+def _preference_features(preference: AthletePreference) -> dict:
+    return {
+        "id": preference.id,
+        "key": preference.key,
+        "value": preference.value,
+        "source_ref": preference.source_ref,
+        "confirmed_at": preference.confirmed_at.isoformat(),
+        "valid_from": preference.valid_from.isoformat(),
+        "valid_until": (
+            preference.valid_until.isoformat() if preference.valid_until else None
+        ),
+        "schema_version": preference.schema_version,
     }

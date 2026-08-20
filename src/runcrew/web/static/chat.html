@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="RunCrew：围绕个人跑步数据持续提供有依据的训练分析与建议。">
   <title>RunCrew · 个人跑步办公室</title>
-  <link rel="stylesheet" href="/assets/chat.css?v=20260816-7">
+  <link rel="stylesheet" href="/assets/chat.css?v=20260819-1">
 </head>
 <body>
   <header class="topbar">
@@ -201,6 +201,20 @@
           <button class="secondary-action" type="submit">保存训练目标</button>
         </form>
       </details>
+      <details class="setup-panel memory-panel">
+        <summary>长期训练偏好</summary>
+        <form id="preference-form" class="compact-form">
+          <p class="operations-copy">当前只记录会被周计划真正使用的长跑日偏好。保存与停用都需要你确认，系统不会从普通聊天中自动写入。</p>
+          <div class="select-grid">
+            <label>偏好的长跑日
+              <select id="preference-long-run-day"><option value="mon">星期一</option><option value="tue">星期二</option><option value="wed">星期三</option><option value="thu">星期四</option><option value="fri">星期五</option><option value="sat">星期六</option><option value="sun" selected>星期日</option></select>
+            </label>
+            <label>有效期至（可选）<input id="preference-valid-until" type="date"></label>
+          </div>
+          <button class="secondary-action" type="submit">确认并记住偏好</button>
+        </form>
+        <div id="preference-list" class="preference-list"></div>
+      </details>
       <div id="training-plan" class="plan-card empty">创建目标后，可以直接在这里生成下一周计划。</div>
       <form id="plan-draft-form" class="plan-draft-form">
         <label>计划周（周一）<input id="plan-week-start" type="date" required></label>
@@ -259,6 +273,6 @@
   </aside>
 
   <div id="toast" class="toast" role="status" hidden></div>
-  <script src="/assets/chat.js?v=20260816-7" defer></script>
+  <script src="/assets/chat.js?v=20260819-1" defer></script>
 </body>
 </html>

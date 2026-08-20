@@ -14,6 +14,10 @@ from urllib.parse import parse_qs, urlparse
 
 from pydantic import ValidationError
 
+from runcrew.domain.memory import (
+    AthletePreferenceArchiveSubmission,
+    AthletePreferenceSubmission,
+)
 from runcrew.policies.deepseek import DeepSeekPolicyError
 from runcrew.services.chat import ChatService, ChatServiceError
 from runcrew.services.training_operations import (
@@ -129,6 +133,32 @@ class DemoApplication:
             except (TrainingOperationsError, ValidationError, ValueError) as error:
                 return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
             return self._json_response(HTTPStatus.CREATED, goal.model_dump(mode="json"))
+        if method == "POST" and parsed.path == "/api/training/preferences":
+            try:
+                submission = AthletePreferenceSubmission.model_validate(
+                    self._decode_json(body)
+                )
+                preference = self.training_service.confirm_preference(submission)
+            except (TrainingOperationsError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(
+                HTTPStatus.CREATED, preference.model_dump(mode="json")
+            )
+        preference_id = _training_preference_archive_route(parsed.path)
+        if method == "POST" and preference_id:
+            try:
+                submission = AthletePreferenceArchiveSubmission.model_validate(
+                    self._decode_json(body)
+                )
+                preference = self.training_service.archive_preference(
+                    preference_id=preference_id,
+                    submission=submission,
+                )
+            except (TrainingOperationsError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(
+                HTTPStatus.OK, preference.model_dump(mode="json")
+            )
         training_goal_id, training_goal_action = _training_goal_route(parsed.path)
         if method == "POST" and training_goal_id and training_goal_action == "plan-drafts":
             try:
@@ -428,6 +458,17 @@ def _chat_conversation_route(path: str) -> tuple[str | None, bool]:
 def _training_check_in_route(path: str) -> str | None:
     parts = [part for part in path.split("/") if part]
     if len(parts) == 5 and parts[:3] == ["api", "training", "goals"] and parts[4] == "check-ins":
+        return parts[3]
+    return None
+
+
+def _training_preference_archive_route(path: str) -> str | None:
+    parts = [part for part in path.split("/") if part]
+    if (
+        len(parts) == 5
+        and parts[:3] == ["api", "training", "preferences"]
+        and parts[4] == "archive"
+    ):
         return parts[3]
     return None
 

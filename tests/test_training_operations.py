@@ -6,6 +6,10 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 from runcrew.domain.activity import ActivitySummary, SourceProvider, SourceRef, SportType
+from runcrew.domain.memory import (
+    AthletePreferenceArchiveSubmission,
+    AthletePreferenceSubmission,
+)
 from runcrew.domain.training_cycle import (
     PlanSession,
     PlanSessionPatch,
@@ -424,13 +428,15 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     )
     html = application.handle("GET", "/").body.decode("utf-8")
     script = application.handle("GET", "/assets/chat.js").body.decode("utf-8")
-    style = application.handle("GET", "/assets/chat.css?v=20260816-7").body.decode("utf-8")
+    style = application.handle("GET", "/assets/chat.css?v=20260819-1").body.decode("utf-8")
     assert "训练闭环" in html
     assert "今日训练与执行" in html
     assert "新建训练目标" in html
     assert "预览保守周计划" in html
     assert "跑后反馈" in html
     assert "运行跨职责评估" in html
+    assert "长期训练偏好" in html
+    assert "/api/training/preferences" in script
     assert "/api/training/coach-runs" in script
     assert "window.confirm" in script
     assert "innerHTML" not in script
@@ -446,7 +452,7 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     assert "renderRunHeader" in script
     assert "toggleContext" in script
     assert 'id="context-panel" class="context-panel" aria-label="回答依据" hidden' in html
-    assert "/assets/chat.css?v=20260816-7" in html
+    assert "/assets/chat.css?v=20260819-1" in html
     assert "grid-template-rows: 68px minmax(0, 1fr)" in style
     assert "position: sticky" in style
     assert ".workspace {" in style and "overflow: hidden" in style
@@ -458,6 +464,8 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     references = Path("schemas/training-operations")
     expected = {
         "bootstrap.schema.json": TrainingOperationsBootstrap,
+        "athlete-preference-input.schema.json": AthletePreferenceSubmission,
+        "athlete-preference-archive-input.schema.json": AthletePreferenceArchiveSubmission,
         "check-in-input.schema.json": CheckInSubmission,
         "coach-run-input.schema.json": CoachRunSubmission,
         "coach-run-output.schema.json": CoachRunView,

@@ -84,6 +84,7 @@ class PlanningEvidence(BaseModel):
     type: Literal[
         "goal",
         "availability",
+        "athlete_preference",
         "training_history",
         "current_plan",
         "recovery_action",
@@ -94,6 +95,7 @@ class PlanningEvidence(BaseModel):
     values: dict[str, Any] = Field(default_factory=dict)
     rule_source: Literal[
         "user_goal",
+        "confirmed_athlete_preference",
         "normalized_activity",
         "active_plan",
         "recovery_assessment",

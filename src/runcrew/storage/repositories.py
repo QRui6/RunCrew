@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from runcrew.domain.activity import ActivityDetail, ActivitySummary
 from runcrew.domain.chat import ChatAnswer, ChatConversation, ChatMessage, ChatTurnUsage
+from runcrew.domain.memory import AthletePreference, PreferenceKey
 from runcrew.domain.training_cycle import (
     DailyCheckIn,
     PlanChangeProposal,
@@ -22,6 +23,7 @@ from runcrew.domain.training_execution import TrainingExecutionConfirmation
 from runcrew.domain.training_operations import CoachRunAudit, CoachRunSummary
 from runcrew.storage.models import (
     ActivityRecord,
+    AthletePreferenceRecord,
     CoachRunRecord,
     ChatConversationRecord,
     ChatMessageRecord,
@@ -403,6 +405,75 @@ class TrainingGoalRepository:
             .limit(limit)
         ).all()
         return [TrainingGoal.model_validate_json(record.canonical_json) for record in records]
+
+
+class AthletePreferenceRepository:
+    """单用户本地偏好仓库；同一 key 只允许一个可用的当前版本。"""
+
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def save(self, preference: AthletePreference) -> None:
+        record = self.session.get(AthletePreferenceRecord, preference.id)
+        if record is None:
+            record = AthletePreferenceRecord(id=preference.id)
+            self.session.add(record)
+        record.key = preference.key
+        record.status = preference.status
+        record.valid_from = preference.valid_from
+        record.valid_until = preference.valid_until
+        record.supersedes_id = preference.supersedes_id
+        record.canonical_json = preference.model_dump_json()
+        record.created_at = preference.created_at
+        record.updated_at = preference.updated_at
+        self.session.flush()
+
+    def get(self, preference_id: str) -> AthletePreference | None:
+        record = self.session.get(AthletePreferenceRecord, preference_id)
+        return (
+            AthletePreference.model_validate_json(record.canonical_json)
+            if record
+            else None
+        )
+
+    def current_for_key(self, key: PreferenceKey) -> AthletePreference | None:
+        record = self.session.scalar(
+            select(AthletePreferenceRecord)
+            .where(
+                AthletePreferenceRecord.key == key,
+                AthletePreferenceRecord.status == "active",
+            )
+            .order_by(desc(AthletePreferenceRecord.updated_at))
+            .limit(1)
+        )
+        return (
+            AthletePreference.model_validate_json(record.canonical_json)
+            if record
+            else None
+        )
+
+    def active_at(self, at: datetime) -> list[AthletePreference]:
+        records = self.session.scalars(
+            select(AthletePreferenceRecord)
+            .where(AthletePreferenceRecord.status == "active")
+            .order_by(AthletePreferenceRecord.key, desc(AthletePreferenceRecord.updated_at))
+        ).all()
+        preferences = [
+            AthletePreference.model_validate_json(record.canonical_json)
+            for record in records
+        ]
+        return [item for item in preferences if item.is_effective_at(at)]
+
+    def list(self, *, limit: int = 50) -> list[AthletePreference]:
+        records = self.session.scalars(
+            select(AthletePreferenceRecord)
+            .order_by(desc(AthletePreferenceRecord.updated_at))
+            .limit(limit)
+        ).all()
+        return [
+            AthletePreference.model_validate_json(record.canonical_json)
+            for record in records
+        ]
 
 
 class TrainingPlanRepository:

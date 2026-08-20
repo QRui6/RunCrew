@@ -33,7 +33,7 @@ flowchart LR
 
 | 维度 | 当前结果 |
 |---|---:|
-| 自动化测试 | 132 passed |
+| 自动化测试 | 146 passed |
 | 多 Agent 确定性评测 | 18 / 18 |
 | DeepSeek 单 Agent 同题评测 | 12 / 12 |
 | 连续对话上下文窗口 | 最近 8 条消息 + 不可变 evidence 快照 |
@@ -86,6 +86,7 @@ skills/      中文 Skill 说明、边界和输入输出契约
 - Coach 通过最小 Context、类型化 Handoff、节点权限、预算和 Trace 编排 Execution、Recovery 与 Plan；
 - 计划调整只能生成草案，用户批准前服务端重放并用 revision/stale 防止旧建议覆盖新计划；
 - 用18个版本化多 Agent 场景评测任务、韧性、护栏、证据血缘、确认边界与批准前状态漂移。
+- 管理经过用户显式确认的长期长跑日偏好，保留来源、有效期、替代链和停用状态；Planning Agent 使用偏好时将其写入 `input_hash` 与 evidence，偏好变化会使旧计划草案失效。
 
 ## 文档导航
 
@@ -96,6 +97,8 @@ skills/      中文 Skill 说明、边界和输入输出契约
 | 目前做到哪里、下一步是什么 | [当前状态](docs/CURRENT_STATE.md) |
 | 为什么下一阶段推荐 DeepSeek、如何接入 | [M5-B DeepSeek 模型选型与接入方案](docs/M5-B-DeepSeek模型选型与接入方案.md) |
 | 模块如何协作 | [系统架构](docs/ARCHITECTURE.md) |
+| 如何准备五分钟可重复演示 | [求职演示包](docs/demo/README.md) |
+| 简历怎么写、面试怎么讲 | [求职材料与证据包](docs/job/README.md) |
 | 后续阶段 | [开发路线图](docs/ROADMAP.md) |
 | 每阶段做了什么 | [进展索引](docs/PROGRESS.md) |
 | 为什么做这些技术选择 | [ADR 索引](docs/adr/README.md) |
@@ -248,6 +251,24 @@ Coach 会依次委派训练执行和恢复评估；只有需要降级时才调�
 ```
 
 页面可以创建目标、预览并激活周计划、核对活动匹配、记录身体反馈、运行 Coach、恢复历史运行并批准或拒绝建议。浏览器不能提交计划 patch；计划激活和 Coach 批准都会先在服务端重放，只有依据未变化才通过 hash/revision 状态机应用，否则拒绝旧操作。
+
+长期训练偏好也可以通过 CLI 管理：
+
+```powershell
+.\.venv\Scripts\runcrew.exe memory remember-long-run-day --weekday sun --confirm
+.\.venv\Scripts\runcrew.exe memory list
+```
+
+如果只想查看完整产品闭环，不使用个人跑步数据，可以准备隔离的合成演示数据库：
+
+```powershell
+.\.venv\Scripts\runcrew.exe demo-seed --reset
+.\.venv\Scripts\runcrew.exe demo --db data\private\demo\runcrew-demo.db
+```
+
+架构图、训练闭环时序图和五分钟演示顺序见 [求职演示包](docs/demo/README.md)。
+
+当前 v1 只支持会被周计划真实消费的长跑星期偏好；普通聊天不会自动写入长期记忆。
 
 ## 运行 Coach 多 Agent 离线评测
 

@@ -16,6 +16,7 @@ from runcrew.providers.fixture import FixtureActivityProvider
 from runcrew.providers.coros import CorosActivityProvider
 from runcrew.domain.agent import ReviewAgentRunRequest
 from runcrew.domain.coach import CoachAgentRunRequest
+from runcrew.domain.memory import AthletePreferenceSubmission
 from runcrew.domain.training_review import PlannedSession, TrainingReviewRequest
 from runcrew.domain.training_cycle import (
     DailyCheckIn,
@@ -46,6 +47,13 @@ from runcrew.policies import (
     DeepSeekReviewPolicy,
 )
 from runcrew.services.activity_review import build_activity_review
+from runcrew.services.athlete_memory import (
+    AthleteMemoryError,
+    archive_athlete_preference,
+    confirm_athlete_preference,
+    preferences_for_display,
+)
+from runcrew.services.demo_seed import DemoSeedError, prepare_demo_database
 from runcrew.services.sync import sync_activities
 from runcrew.services.training_review import execute_training_review
 from runcrew.services.training_cycle import TrainingCycleError, TrainingCycleService
@@ -68,6 +76,7 @@ from runcrew.storage.database import Database
 from runcrew.storage.models import ActivityRecord, RawProviderEvent, SyncRunRecord
 from runcrew.storage.repositories import (
     ActivityRepository,
+    AthletePreferenceRepository,
     CheckInRepository,
     PlanChangeRepository,
     TrainingGoalRepository,
@@ -91,6 +100,7 @@ recovery_app = typer.Typer(help="运行确定性的恢复与训练风险评估�
 planning_app = typer.Typer(help="生成可回放的训练周草案与待确认调整提案。")
 execution_app = typer.Typer(help="对照训练计划与实际跑步，并管理用户确认。")
 coach_app = typer.Typer(help="编排训练执行、恢复评估和计划调整职责节点。")
+memory_app = typer.Typer(help="管理经过用户明确确认的长期训练偏好。")
 app.add_typer(activities_app, name="activities")
 app.add_typer(training_app, name="training")
 app.add_typer(agent_app, name="agent")
@@ -100,6 +110,7 @@ app.add_typer(recovery_app, name="recovery")
 app.add_typer(planning_app, name="planning")
 app.add_typer(execution_app, name="execution")
 app.add_typer(coach_app, name="coach")
+app.add_typer(memory_app, name="memory")
 
 
 def database_url(database_path: Path) -> str:
@@ -123,6 +134,89 @@ def training_cycle_service(session: Session) -> TrainingCycleService:
 
 def echo_domain(value: BaseModel) -> None:
     typer.echo(value.model_dump_json(indent=2))
+
+
+@memory_app.command("remember-long-run-day")
+def remember_long_run_day(
+    weekday: Annotated[
+        str,
+        typer.Option(help="偏好的长跑星期：mon/tue/wed/thu/fri/sat/sun。"),
+    ],
+    confirm: Annotated[
+        bool,
+        typer.Option("--confirm", help="明确确认把该设置保存为长期偏好。"),
+    ] = False,
+    valid_until: Annotated[
+        str | None,
+        typer.Option(help="可选失效时间，ISO 8601 且必须包含时区。"),
+    ] = None,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    """保存长期偏好；重复值幂等，新值会替代旧版本。"""
+    if not confirm:
+        raise typer.BadParameter("必须传入 --confirm 才会写入长期偏好")
+    database = open_database(database_path)
+    try:
+        submission = AthletePreferenceSubmission(
+            key="preferred_long_run_weekday",
+            value=weekday,
+            confirmed=True,
+            valid_until=(
+                parse_iso_datetime(valid_until, option_name="--valid-until")
+                if valid_until
+                else None
+            ),
+        )
+        with database.session() as session:
+            preference = confirm_athlete_preference(
+                submission,
+                preferences=AthletePreferenceRepository(session),
+                source_ref="cli:remember-long-run-day",
+            )
+            session.commit()
+    except (ValueError, AthleteMemoryError) as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(preference)
+
+
+@memory_app.command("list")
+def list_memories(
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    database = open_database(database_path)
+    with database.session() as session:
+        memories = preferences_for_display(AthletePreferenceRepository(session))
+    typer.echo(
+        json.dumps(
+            [item.model_dump(mode="json") for item in memories],
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+
+
+@memory_app.command("archive")
+def archive_memory(
+    preference_id: Annotated[str, typer.Option(help="待停用偏好 ID。")],
+    confirm: Annotated[
+        bool,
+        typer.Option("--confirm", help="明确确认停用该长期偏好。"),
+    ] = False,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    if not confirm:
+        raise typer.BadParameter("必须传入 --confirm 才会停用长期偏好")
+    database = open_database(database_path)
+    try:
+        with database.session() as session:
+            preference = archive_athlete_preference(
+                preference_id,
+                preferences=AthletePreferenceRepository(session),
+            )
+            session.commit()
+    except AthleteMemoryError as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(preference)
 
 
 def parse_iso_date(value: str, *, option_name: str) -> date:
@@ -541,6 +635,7 @@ def planning_draft(
                 activities=ActivityRepository(session),
                 goals=TrainingGoalRepository(session),
                 plans=TrainingPlanRepository(session),
+                preferences=AthletePreferenceRepository(session),
             )
     except (ValueError, TrainingPlanningError) as error:
         raise typer.BadParameter(str(error)) from error
@@ -768,6 +863,41 @@ def coach_run(
             )
         )
     echo_domain(result)
+
+
+@app.command("demo-seed")
+def demo_seed_command(
+    database_path: Annotated[
+        Path,
+        typer.Option("--db", help="仅允许写入 data/private/demo 下的合成演示数据库。"),
+    ] = Path("data/private/demo/runcrew-demo.db"),
+    reset: Annotated[
+        bool,
+        typer.Option("--reset", help="明确重建已有演示数据库。"),
+    ] = False,
+    as_of: Annotated[
+        str | None,
+        typer.Option(help="可选演示锚点时间；默认使用当前本地时间。"),
+    ] = None,
+) -> None:
+    """准备不含真实活动、账号或模型调用的本地求职演示数据库。"""
+    private_demo_root = Path("data/private/demo").resolve()
+    resolved = database_path.resolve()
+    if not resolved.is_relative_to(private_demo_root):
+        raise typer.BadParameter("演示数据库必须位于 data/private/demo 目录内")
+    try:
+        summary = prepare_demo_database(
+            resolved,
+            reset=reset,
+            as_of=(
+                parse_iso_datetime(as_of, option_name="--as-of")
+                if as_of
+                else None
+            ),
+        )
+    except (DemoSeedError, ValueError) as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(summary)
 
 
 @app.command("demo")

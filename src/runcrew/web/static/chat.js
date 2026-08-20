@@ -1,4 +1,4 @@
-const state = { activities: [], conversations: [], selectedActivityId: null, activeConversationId: null, sending: false, training: { goals: [], recent_coach_runs: [] }, trainingWeek: null, planDraft: null, planDraftSubmission: null, selectedGoalId: null, activeCoachRunId: null, coachRunning: false };
+const state = { activities: [], conversations: [], selectedActivityId: null, activeConversationId: null, sending: false, training: { goals: [], recent_coach_runs: [], athlete_preferences: [] }, trainingWeek: null, planDraft: null, planDraftSubmission: null, selectedGoalId: null, activeCoachRunId: null, coachRunning: false };
 const responseModeLabels = { data_analysis: "个人数据分析", mixed_coaching: "数据＋训练思路", general_knowledge: "通用跑步知识", clarification: "需要补充信息", safety_redirect: "安全边界" };
 const claimKindLabels = { observed_fact: "数据事实", data_inference: "基于数据的推断", general_knowledge: "通用知识", coaching_suggestion: "可选建议" };
 const $ = (selector) => document.querySelector(selector);
@@ -18,6 +18,7 @@ const trainingElements = {
   fatigue: $("#check-in-fatigue"), soreness: $("#check-in-soreness"), sleep: $("#check-in-sleep"), readiness: $("#check-in-readiness"), pain: $("#check-in-pain"),
   painArea: $("#check-in-pain-area"), note: $("#check-in-note"), run: $("#coach-run"), result: $("#coach-result"), runs: $("#coach-runs"),
   goalForm: $("#goal-form"), goalName: $("#goal-name"), goalEvent: $("#goal-event"), goalDate: $("#goal-date"), goalTime: $("#goal-time"),
+  preferenceForm: $("#preference-form"), preferenceDay: $("#preference-long-run-day"), preferenceValidUntil: $("#preference-valid-until"), preferenceList: $("#preference-list"),
   planForm: $("#plan-draft-form"), planWeekStart: $("#plan-week-start"), planDraft: $("#plan-draft"), weekProgress: $("#week-progress"), today: $("#today-session"), executions: $("#execution-list"), weekSummary: $("#week-summary")
 };
 
@@ -252,7 +253,41 @@ function renderTraining() {
   trainingElements.provider.replaceChildren(); const all = document.createElement("option"); all.value = ""; all.textContent = "全部来源（确认无重复时使用）"; trainingElements.provider.append(all);
   (state.training.providers || []).forEach((provider) => { const option = document.createElement("option"); option.value = provider; option.textContent = provider.toUpperCase(); trainingElements.provider.append(option); });
   trainingElements.provider.value = (state.training.providers || []).includes(selectedProvider) ? selectedProvider : ((state.training.providers || []).length === 1 ? state.training.providers[0] : "");
-  renderPlan(selectedGoalView()); renderCoachRuns();
+  renderPlan(selectedGoalView()); renderPreferences(); renderCoachRuns();
+}
+
+function weekdayLabel(value) { return ({ mon: "星期一", tue: "星期二", wed: "星期三", thu: "星期四", fri: "星期五", sat: "星期六", sun: "星期日" })[value] || value; }
+
+function renderPreferences() {
+  trainingElements.preferenceList.replaceChildren();
+  const preferences = state.training.athlete_preferences || [];
+  if (!preferences.length) return trainingElements.preferenceList.append(empty("尚未保存长期训练偏好。"));
+  preferences.slice(0, 5).forEach((preference) => {
+    const row = document.createElement("div"); row.className = "preference-row";
+    const copy = document.createElement("div"); const title = document.createElement("strong"); title.textContent = `长跑优先安排在${weekdayLabel(preference.value)}`;
+    const meta = document.createElement("small"); const expiry = preference.valid_until ? ` · 有效至 ${dateLabel(preference.valid_until)}` : ""; meta.textContent = `${preference.status === "active" ? "当前生效" : preference.status === "superseded" ? "已被替代" : preference.status === "expired" ? "已过期" : "已停用"}${expiry}`; copy.append(title, meta); row.append(copy);
+    if (preference.status === "active") { const archive = document.createElement("button"); archive.type = "button"; archive.textContent = "停用"; archive.addEventListener("click", () => archivePreference(preference.id)); row.append(archive); }
+    trainingElements.preferenceList.append(row);
+  });
+}
+
+async function savePreference(event) {
+  event.preventDefault();
+  if (!window.confirm(`确认把“长跑优先安排在${weekdayLabel(trainingElements.preferenceDay.value)}”保存为长期偏好？`)) return;
+  const button = trainingElements.preferenceForm.querySelector("button"); button.disabled = true;
+  const validUntil = trainingElements.preferenceValidUntil.value ? new Date(`${trainingElements.preferenceValidUntil.value}T23:59:59`).toISOString() : null;
+  try {
+    await api("/api/training/preferences", { method: "POST", body: JSON.stringify({ key: "preferred_long_run_weekday", value: trainingElements.preferenceDay.value, confirmed: true, valid_until: validUntil }) });
+    state.planDraft = null; state.planDraftSubmission = null; renderPlanDraft(); await refreshTraining(); showToast("长期训练偏好已确认并保存到本机。");
+  } catch (error) { showToast(error.message); } finally { button.disabled = false; }
+}
+
+async function archivePreference(preferenceId) {
+  if (!window.confirm("确认停用这条长期训练偏好？已有计划不会被自动修改。")) return;
+  try {
+    await api(`/api/training/preferences/${encodeURIComponent(preferenceId)}/archive`, { method: "POST", body: JSON.stringify({ confirmed: true }) });
+    state.planDraft = null; state.planDraftSubmission = null; renderPlanDraft(); await refreshTraining(); showToast("长期训练偏好已停用。");
+  } catch (error) { showToast(error.message); }
 }
 
 function renderPlan(view) {
@@ -456,6 +491,7 @@ trainingElements.backdrop.addEventListener("click", () => toggleTraining(false))
 trainingElements.goal.addEventListener("change", () => { state.selectedGoalId = trainingElements.goal.value || null; state.planDraft = null; renderPlan(selectedGoalView()); renderPlanDraft(); refreshWeek().catch((error) => showToast(error.message)); });
 trainingElements.provider.addEventListener("change", () => refreshWeek().catch((error) => showToast(error.message)));
 trainingElements.goalForm.addEventListener("submit", createGoal);
+trainingElements.preferenceForm.addEventListener("submit", savePreference);
 trainingElements.planForm.addEventListener("submit", draftPlan);
 trainingElements.checkIn.addEventListener("submit", saveCheckIn);
 trainingElements.run.addEventListener("click", runCoach);

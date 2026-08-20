@@ -3,6 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from runcrew.domain.memory import (
+    AthletePreferenceArchiveSubmission,
+    AthletePreferenceSubmission,
+)
 from runcrew.domain.training_operations import (
     CheckInSubmission,
     CoachRunDecisionRequest,
@@ -24,6 +28,8 @@ def main() -> None:
     target.mkdir(parents=True, exist_ok=True)
     schemas = {
         "bootstrap.schema.json": TrainingOperationsBootstrap.model_json_schema(),
+        "athlete-preference-input.schema.json": AthletePreferenceSubmission.model_json_schema(),
+        "athlete-preference-archive-input.schema.json": AthletePreferenceArchiveSubmission.model_json_schema(),
         "check-in-input.schema.json": CheckInSubmission.model_json_schema(),
         "coach-run-input.schema.json": CoachRunSubmission.model_json_schema(),
         "coach-run-output.schema.json": CoachRunView.model_json_schema(),
