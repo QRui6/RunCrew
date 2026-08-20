@@ -15,9 +15,12 @@ sequenceDiagram
     participant Plan as Plan Agent
     participant DB as SQLite
 
-    User->>Web: 明确确认“周日优先长跑”
-    Web->>Memory: confirmed=true
-    Memory->>DB: 保存来源、时效和版本替代链
+    User->>Web: 对话中表达“以后周日优先长跑”
+    Web->>Memory: 保存原消息引用与待确认Candidate
+    Memory->>DB: pending，不写正式偏好
+    User->>Web: 确认候选
+    Web->>Memory: decision + expected_candidate_hash
+    Memory->>DB: 重读原消息并校验Hash，保存来源、时效和版本替代链
 
     User->>Web: 预览下一周计划
     Web->>Ops: goal + week + as_of
@@ -80,4 +83,4 @@ sequenceDiagram
     end
 ```
 
-这张图的核心不是三个 Agent 名称，而是事实确认、读取最小权限和写入权限边界：长期偏好写入、计划激活、执行匹配、计划调整批准都由用户确认；周训练记忆只能从这些正式事实结算。不同职责只收到允许字段和固定预算，任何一步的事实或 Hash 变化都会拒绝旧操作或产生新记忆版本。
+这张图的核心不是三个 Agent 名称，而是事实确认、读取最小权限和写入权限边界：聊天只能提出 Candidate，长期偏好写入、计划激活、执行匹配、计划调整批准都由用户确认；周训练记忆只能从这些正式事实结算。不同职责只收到允许字段和固定预算，任何一步的事实或 Hash 变化都会拒绝旧操作或产生新记忆版本。

@@ -1,0 +1,154 @@
+{
+  "additionalProperties": false,
+  "description": "从用户消息中提出、尚未成为正式记忆的类型化候选。",
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "conversation_id": {
+      "minLength": 1,
+      "title": "Conversation Id",
+      "type": "string"
+    },
+    "source_message_id": {
+      "exclusiveMinimum": 0,
+      "title": "Source Message Id",
+      "type": "integer"
+    },
+    "source_text_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Source Text Hash",
+      "type": "string"
+    },
+    "memory_type": {
+      "const": "athlete_preference",
+      "default": "athlete_preference",
+      "title": "Memory Type",
+      "type": "string"
+    },
+    "key": {
+      "const": "preferred_long_run_weekday",
+      "title": "Key",
+      "type": "string"
+    },
+    "proposed_value": {
+      "enum": [
+        "mon",
+        "tue",
+        "wed",
+        "thu",
+        "fri",
+        "sat",
+        "sun"
+      ],
+      "title": "Proposed Value",
+      "type": "string"
+    },
+    "confidence": {
+      "enum": [
+        "high",
+        "medium"
+      ],
+      "title": "Confidence",
+      "type": "string"
+    },
+    "confidence_basis": {
+      "enum": [
+        "explicit_stable_preference",
+        "stable_preference_language"
+      ],
+      "title": "Confidence Basis",
+      "type": "string"
+    },
+    "extraction_rule_version": {
+      "const": "memory-candidate-rules/1.0",
+      "default": "memory-candidate-rules/1.0",
+      "title": "Extraction Rule Version",
+      "type": "string"
+    },
+    "candidate_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Candidate Hash",
+      "type": "string"
+    },
+    "status": {
+      "default": "pending",
+      "enum": [
+        "pending",
+        "confirmed",
+        "rejected",
+        "superseded",
+        "expired"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "requires_user_confirmation": {
+      "const": true,
+      "default": true,
+      "title": "Requires User Confirmation",
+      "type": "boolean"
+    },
+    "supersedes_candidate_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Supersedes Candidate Id"
+    },
+    "preference_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Preference Id"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "decided_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Decided At"
+    }
+  },
+  "required": [
+    "conversation_id",
+    "source_message_id",
+    "source_text_hash",
+    "key",
+    "proposed_value",
+    "confidence",
+    "confidence_basis",
+    "candidate_hash",
+    "expires_at"
+  ],
+  "title": "待确认记忆候选",
+  "type": "object"
+}

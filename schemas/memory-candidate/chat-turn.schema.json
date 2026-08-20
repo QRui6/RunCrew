@@ -1,0 +1,557 @@
+{
+  "$defs": {
+    "ChatAnswer": {
+      "additionalProperties": false,
+      "description": "模型或离线策略必须返回的、可验证的回答契约。",
+      "properties": {
+        "answer": {
+          "maxLength": 5000,
+          "minLength": 1,
+          "title": "Answer",
+          "type": "string"
+        },
+        "response_mode": {
+          "default": "data_analysis",
+          "enum": [
+            "data_analysis",
+            "mixed_coaching",
+            "general_knowledge",
+            "clarification",
+            "safety_redirect"
+          ],
+          "title": "Response Mode",
+          "type": "string"
+        },
+        "grounded_claims": {
+          "items": {
+            "$ref": "#/$defs/ChatClaim"
+          },
+          "maxItems": 8,
+          "title": "Grounded Claims",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "missing_data": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Missing Data",
+          "type": "array"
+        },
+        "follow_up_suggestions": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "title": "Follow Up Suggestions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "confidence"
+      ],
+      "title": "跑步 Agent 回答",
+      "type": "object"
+    },
+    "ChatClaim": {
+      "additionalProperties": false,
+      "description": "回答中的依据说明；正文保持自然，这里只承载可审计的事实边界。",
+      "properties": {
+        "statement": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "observed_fact",
+            "data_inference",
+            "general_knowledge",
+            "coaching_suggestion"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "title": "Evidence Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "statement",
+        "kind"
+      ],
+      "title": "跑步对话论断",
+      "type": "object"
+    },
+    "ChatConversation": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "target_activity_id": {
+          "title": "Target Activity Id",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "review_input_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Review Input Hash"
+        },
+        "message_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Message Count",
+          "type": "integer"
+        },
+        "messages": {
+          "items": {
+            "$ref": "#/$defs/ChatMessage"
+          },
+          "title": "Messages",
+          "type": "array"
+        },
+        "memory_candidates": {
+          "items": {
+            "$ref": "#/$defs/MemoryCandidate"
+          },
+          "title": "Memory Candidates",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "target_activity_id",
+        "title",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "跑步数据对话",
+      "type": "object"
+    },
+    "ChatMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "integer"
+        },
+        "role": {
+          "enum": [
+            "user",
+            "assistant"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "content": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Content",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "enum": [
+                "high",
+                "medium",
+                "low"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "missing_data": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Data",
+          "type": "array"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "response_mode": {
+          "anyOf": [
+            {
+              "enum": [
+                "data_analysis",
+                "mixed_coaching",
+                "general_knowledge",
+                "clarification",
+                "safety_redirect"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Response Mode"
+        },
+        "grounded_claims": {
+          "items": {
+            "$ref": "#/$defs/ChatClaim"
+          },
+          "title": "Grounded Claims",
+          "type": "array"
+        },
+        "follow_up_suggestions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Follow Up Suggestions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "role",
+        "content",
+        "created_at"
+      ],
+      "title": "跑步对话消息",
+      "type": "object"
+    },
+    "ChatTurnUsage": {
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "enum": [
+            "offline",
+            "deepseek"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "prompt_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Prompt Tokens",
+          "type": "integer"
+        },
+        "completion_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Completion Tokens",
+          "type": "integer"
+        },
+        "total_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Total Tokens",
+          "type": "integer"
+        },
+        "latency_ms": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Latency Ms",
+          "type": "number"
+        },
+        "estimated_cost_usd": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Estimated Cost Usd",
+          "type": "number"
+        }
+      },
+      "required": [
+        "provider",
+        "model"
+      ],
+      "title": "对话轮次用量",
+      "type": "object"
+    },
+    "MemoryCandidate": {
+      "additionalProperties": false,
+      "description": "从用户消息中提出、尚未成为正式记忆的类型化候选。",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "conversation_id": {
+          "minLength": 1,
+          "title": "Conversation Id",
+          "type": "string"
+        },
+        "source_message_id": {
+          "exclusiveMinimum": 0,
+          "title": "Source Message Id",
+          "type": "integer"
+        },
+        "source_text_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Text Hash",
+          "type": "string"
+        },
+        "memory_type": {
+          "const": "athlete_preference",
+          "default": "athlete_preference",
+          "title": "Memory Type",
+          "type": "string"
+        },
+        "key": {
+          "const": "preferred_long_run_weekday",
+          "title": "Key",
+          "type": "string"
+        },
+        "proposed_value": {
+          "enum": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ],
+          "title": "Proposed Value",
+          "type": "string"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "confidence_basis": {
+          "enum": [
+            "explicit_stable_preference",
+            "stable_preference_language"
+          ],
+          "title": "Confidence Basis",
+          "type": "string"
+        },
+        "extraction_rule_version": {
+          "const": "memory-candidate-rules/1.0",
+          "default": "memory-candidate-rules/1.0",
+          "title": "Extraction Rule Version",
+          "type": "string"
+        },
+        "candidate_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Candidate Hash",
+          "type": "string"
+        },
+        "status": {
+          "default": "pending",
+          "enum": [
+            "pending",
+            "confirmed",
+            "rejected",
+            "superseded",
+            "expired"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "requires_user_confirmation": {
+          "const": true,
+          "default": true,
+          "title": "Requires User Confirmation",
+          "type": "boolean"
+        },
+        "supersedes_candidate_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Supersedes Candidate Id"
+        },
+        "preference_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Preference Id"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "decided_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decided At"
+        }
+      },
+      "required": [
+        "conversation_id",
+        "source_message_id",
+        "source_text_hash",
+        "key",
+        "proposed_value",
+        "confidence",
+        "confidence_basis",
+        "candidate_hash",
+        "expires_at"
+      ],
+      "title": "待确认记忆候选",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "conversation": {
+      "$ref": "#/$defs/ChatConversation"
+    },
+    "answer": {
+      "$ref": "#/$defs/ChatAnswer"
+    },
+    "usage": {
+      "$ref": "#/$defs/ChatTurnUsage"
+    },
+    "review_trace": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Review Trace",
+      "type": "array"
+    },
+    "context_message_count": {
+      "minimum": 0,
+      "title": "Context Message Count",
+      "type": "integer"
+    },
+    "context_truncated": {
+      "default": false,
+      "title": "Context Truncated",
+      "type": "boolean"
+    },
+    "new_memory_candidates": {
+      "items": {
+        "$ref": "#/$defs/MemoryCandidate"
+      },
+      "title": "New Memory Candidates",
+      "type": "array"
+    }
+  },
+  "required": [
+    "conversation",
+    "answer",
+    "usage",
+    "context_message_count"
+  ],
+  "title": "对话轮次结果",
+  "type": "object"
+}

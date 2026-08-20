@@ -104,6 +104,32 @@ class ChatMessageRecord(Base):
     )
 
 
+class MemoryCandidateRecord(Base):
+    __tablename__ = "memory_candidates"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_message_id", "key", name="uq_memory_candidate_message_key"
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("chat_conversations.id"), nullable=False, index=True
+    )
+    source_message_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("chat_messages.id"), nullable=False, index=True
+    )
+    key: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    candidate_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    canonical_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class TrainingGoalRecord(Base):
     __tablename__ = "training_goals"
 

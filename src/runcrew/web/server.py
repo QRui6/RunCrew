@@ -17,6 +17,7 @@ from pydantic import ValidationError
 from runcrew.domain.memory import (
     AthletePreferenceArchiveSubmission,
     AthletePreferenceSubmission,
+    MemoryCandidateDecisionRequest,
 )
 from runcrew.policies.deepseek import DeepSeekPolicyError
 from runcrew.services.chat import ChatService, ChatServiceError
@@ -337,6 +338,18 @@ class DemoApplication:
                 HTTPStatus.OK,
                 result.model_dump(mode="json"),
             )
+        memory_candidate_id = _chat_memory_candidate_route(parsed.path)
+        if method == "POST" and memory_candidate_id:
+            try:
+                request = MemoryCandidateDecisionRequest.model_validate(
+                    self._decode_json(body)
+                )
+                result = self.chat_service.decide_memory_candidate(
+                    memory_candidate_id, request
+                )
+            except (ChatServiceError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(HTTPStatus.OK, result.model_dump(mode="json"))
         if method not in {"GET", "POST"}:
             return self._json_response(
                 HTTPStatus.METHOD_NOT_ALLOWED,
@@ -493,6 +506,17 @@ def _chat_conversation_route(path: str) -> tuple[str | None, bool]:
     ):
         return parts[3], True
     return None, False
+
+
+def _chat_memory_candidate_route(path: str) -> str | None:
+    parts = [part for part in path.split("/") if part]
+    if (
+        len(parts) == 5
+        and parts[:3] == ["api", "chat", "memory-candidates"]
+        and parts[4] == "decision"
+    ):
+        return parts[3]
+    return None
 
 
 def _training_check_in_route(path: str) -> str | None:

@@ -11,6 +11,10 @@ from runcrew.domain.training_cycle import Weekday, new_id
 PreferenceKey = Literal["preferred_long_run_weekday"]
 PreferenceStatus = Literal["active", "superseded", "expired", "archived"]
 PreferenceSource = Literal["explicit_user_setting"]
+MemoryCandidateStatus = Literal[
+    "pending", "confirmed", "rejected", "superseded", "expired"
+]
+MemoryCandidateDecision = Literal["confirm", "reject"]
 
 
 def utc_now() -> datetime:
@@ -85,6 +89,83 @@ class AthletePreferenceArchiveSubmission(BaseModel):
     model_config = ConfigDict(extra="forbid", title="运动员长期偏好停用输入")
 
     confirmed: Literal[True]
+
+
+class MemoryCandidate(BaseModel):
+    """从用户消息中提出、尚未成为正式记忆的类型化候选。"""
+
+    model_config = ConfigDict(extra="forbid", title="待确认记忆候选")
+
+    id: str = Field(default_factory=new_id)
+    conversation_id: str = Field(min_length=1)
+    source_message_id: int = Field(gt=0)
+    source_text_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    memory_type: Literal["athlete_preference"] = "athlete_preference"
+    key: PreferenceKey
+    proposed_value: Weekday
+    confidence: Literal["high", "medium"]
+    confidence_basis: Literal[
+        "explicit_stable_preference", "stable_preference_language"
+    ]
+    extraction_rule_version: Literal["memory-candidate-rules/1.0"] = (
+        "memory-candidate-rules/1.0"
+    )
+    candidate_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    status: MemoryCandidateStatus = "pending"
+    requires_user_confirmation: Literal[True] = True
+    supersedes_candidate_id: str | None = None
+    preference_id: str | None = None
+    created_at: datetime = Field(default_factory=utc_now)
+    expires_at: datetime
+    decided_at: datetime | None = None
+
+    @field_validator("created_at", "expires_at", "decided_at")
+    @classmethod
+    def require_candidate_timezone(cls, value: datetime | None) -> datetime | None:
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+            raise ValueError("记忆候选时间必须包含时区。")
+        return value
+
+    @model_validator(mode="after")
+    def validate_candidate_lifecycle(self) -> MemoryCandidate:
+        if self.expires_at <= self.created_at:
+            raise ValueError("记忆候选失效时间必须晚于创建时间。")
+        if self.status == "pending" and (
+            self.decided_at is not None or self.preference_id is not None
+        ):
+            raise ValueError("待确认候选不能已有决定或正式偏好。")
+        if self.status == "confirmed" and (
+            self.decided_at is None or self.preference_id is None
+        ):
+            raise ValueError("已确认候选必须关联决定时间和正式偏好。")
+        if self.status in {"rejected", "superseded", "expired"} and (
+            self.decided_at is None or self.preference_id is not None
+        ):
+            raise ValueError("未写入候选必须记录结束时间且不能关联正式偏好。")
+        return self
+
+
+class MemoryCandidateDecisionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", title="记忆候选确认输入")
+
+    decision: MemoryCandidateDecision
+    expected_candidate_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class MemoryCandidateDecisionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", title="记忆候选确认结果")
+
+    outcome: Literal["confirmed", "rejected", "already_decided"]
+    candidate: MemoryCandidate
+    preference: AthletePreference | None = None
+
+    @model_validator(mode="after")
+    def validate_candidate_decision_result(self) -> MemoryCandidateDecisionResult:
+        if self.candidate.status == "confirmed" and self.preference is None:
+            raise ValueError("已确认候选必须返回正式偏好。")
+        if self.candidate.status != "confirmed" and self.preference is not None:
+            raise ValueError("未确认候选不能返回正式偏好。")
+        return self
 
 
 WeeklyMemoryStatus = Literal["active", "superseded", "invalidated"]

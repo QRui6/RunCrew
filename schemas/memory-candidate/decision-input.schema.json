@@ -1,0 +1,24 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "decision": {
+      "enum": [
+        "confirm",
+        "reject"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "expected_candidate_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Expected Candidate Hash",
+      "type": "string"
+    }
+  },
+  "required": [
+    "decision",
+    "expected_candidate_hash"
+  ],
+  "title": "记忆候选确认输入",
+  "type": "object"
+}

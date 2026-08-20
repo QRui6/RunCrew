@@ -350,6 +350,7 @@ versioned synthetic case
 | Evidence Snapshot | 不可变复盘结果与 Hash | 当前活动事实锚点 |
 | 训练业务状态 | 目标、计划、执行、Check-in、Coach Run | 跨会话确定性状态 |
 | Agent Working State | Coach 单次运行状态与 Handoff | 单次编排 |
+| 待确认候选 | 原消息引用/Hash、类型化值、置信边界、有效期和决定状态 | 聊天到正式偏好的人工确认缓冲区 |
 | 长期偏好 | 已确认长跑星期、来源、时效、替代链 | 跨会话/跨目标默认偏好 |
 | 周训练记忆 | 正式计划、已确认执行、反馈、版本与来源 | 跨周复盘和下一周 Planning 基线 |
 
@@ -384,7 +385,20 @@ versioned synthetic case
 
 `context_hash` 只覆盖真正进入 Agent 的职责投影，因此新增一条无关或失效候选不会制造业务 Hash 漂移；`audit_hash` 覆盖所有选中/排除决定与预算使用量，因此审计仍能发现候选集合变化。
 
-M9 不使用向量数据库，也不允许普通聊天或 LLM 直接写入正式记忆。M9-C 已完成按职责 Context Builder、字段投影、选中/排除理由、上下文预算与双 Hash 审计。下一步 Memory Candidate 仍必须先通过类型校验与用户确认，才能进入长期偏好。
+聊天 Memory Candidate 写入链路为：
+
+```text
+用户消息
+  → 高精度规则识别受支持的长期偏好
+  → pending Candidate（message_id + source_text_hash + candidate_hash + 7天有效期）
+  → 用户确认 / 拒绝 / 新候选替代 / 自动过期
+  → 确认时服务端重算 Candidate Hash 并重读原消息
+  → 从 Candidate 重建 confirmed=true 的正式提交
+  → Athlete Preference Service 幂等写入或版本替代
+  → 下一次 Plan Memory Context 才能读取
+```
+
+浏览器只提交决定和预期 Candidate Hash，不提交候选值；候选表不复制用户消息正文。M9 不使用向量数据库，也不允许普通聊天或 LLM 直接写入正式记忆。M9-D 已完成类型化候选、七天生命周期、来源完整性重放与网页确认；下一步以版本化 Memory Evaluation 衡量提取、拒绝、冲突、过期和召回。
 
 ## 可讲解的系统视图
 

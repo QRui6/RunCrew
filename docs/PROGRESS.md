@@ -37,6 +37,7 @@
 | 2026-08-19 | M8-A3 求职叙事与证据映射 | 完成 | [M8-A3 求职证据包](progress/2026-08-19-m8a3-job-narrative-evidence.md) |
 | 2026-08-20 | M9-B 版本化周训练记忆 | 完成 | [M9-B 周训练记忆](progress/2026-08-20-m9b-weekly-training-memory.md) |
 | 2026-08-20 | M9-C 按职责记忆上下文 | 完成 | [M9-C Memory Context](progress/2026-08-20-m9c-role-scoped-memory-context.md) |
+| 2026-08-20 | M9-D 聊天待确认记忆候选 | 完成 | [M9-D Memory Candidate](progress/2026-08-20-m9d-chat-memory-candidate.md) |
 
 ## 新阶段记录模板
 

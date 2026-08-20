@@ -46,7 +46,7 @@
 
 ## 12. 如果再给两周，你会做什么？
 
-M9-C 按职责 Memory Context 已经完成；下一步做 M9-D，让普通聊天只能提出类型化、可解释、待用户确认的 Memory Candidate，不能直接写入正式记忆。随后建立独立 Memory Eval Suite，并补 M6-A3b 真实 DeepSeek 多轮聊天同题验收。不会先增加营养或伤病 Agent；新增职责必须由用户闭环缺口和评测证据驱动。
+M9-D 聊天待确认 Memory Candidate 已经完成；下一步做 M9-E 版本化 Memory Eval Suite，量化提取、拒绝、冲突、过期、来源完整性和职责召回。随后补 M6-A3b 真实 DeepSeek 多轮聊天同题验收。不会先增加营养或伤病 Agent；新增职责必须由用户闭环缺口和评测证据驱动。
 
 ## 13. 这个项目当前最大的不足是什么？
 

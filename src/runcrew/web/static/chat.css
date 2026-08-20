@@ -473,6 +473,19 @@ input:focus-visible {
 .message-followups { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 .message-followups button { padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink-soft); font-size: 10px; cursor: pointer; }
 .message-followups button:hover { border-color: var(--ink); color: var(--ink); }
+.memory-candidate { max-width: 520px; display: grid; gap: 6px; margin-top: 16px; padding: 14px 0 2px; border-top: 1px solid var(--line-strong); }
+.memory-candidate > span { color: var(--green); font-size: 8px; font-weight: 600; letter-spacing: .08em; }
+.memory-candidate > strong { font-family: var(--serif); font-size: 15px; font-weight: 600; }
+.memory-candidate > small { color: var(--muted); font-size: 9px; }
+.memory-candidate.confirmed > span { color: var(--green); }
+.memory-candidate.rejected,
+.memory-candidate.superseded,
+.memory-candidate.expired { opacity: .62; }
+.memory-candidate-actions { display: flex; gap: 8px; margin-top: 5px; }
+.memory-candidate-actions button { min-width: 88px; padding: 7px 12px; border-radius: 999px; font-size: 9px; cursor: pointer; }
+.memory-candidate-actions .reject { border: 1px solid var(--line-strong); color: var(--muted); background: transparent; }
+.memory-candidate-actions .confirm { border: 1px solid var(--ink); color: var(--ivory); background: var(--ink); }
+.memory-candidate-actions button:hover { transform: translateY(-1px); }
 .typing .bubble { display: flex; align-items: center; gap: 5px; min-height: 20px; }
 .typing .bubble i { width: 5px; height: 5px; border-radius: 50%; background: var(--green); animation: typing 1s infinite ease-in-out; }
 .typing .bubble i:nth-child(2) { animation-delay: .15s; }

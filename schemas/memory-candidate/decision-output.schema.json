@@ -1,0 +1,299 @@
+{
+  "$defs": {
+    "AthletePreference": {
+      "additionalProperties": false,
+      "description": "经过用户明确确认、可追溯且有时效边界的长期训练偏好。",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "key": {
+          "const": "preferred_long_run_weekday",
+          "title": "Key",
+          "type": "string"
+        },
+        "value": {
+          "enum": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ],
+          "title": "Value",
+          "type": "string"
+        },
+        "status": {
+          "default": "active",
+          "enum": [
+            "active",
+            "superseded",
+            "expired",
+            "archived"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "source_type": {
+          "const": "explicit_user_setting",
+          "default": "explicit_user_setting",
+          "title": "Source Type",
+          "type": "string"
+        },
+        "source_ref": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Source Ref",
+          "type": "string"
+        },
+        "confirmed_at": {
+          "format": "date-time",
+          "title": "Confirmed At",
+          "type": "string"
+        },
+        "valid_from": {
+          "format": "date-time",
+          "title": "Valid From",
+          "type": "string"
+        },
+        "valid_until": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Until"
+        },
+        "supersedes_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Supersedes Id"
+        },
+        "schema_version": {
+          "const": "athlete-preference/1.0",
+          "default": "athlete-preference/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value",
+        "source_ref"
+      ],
+      "title": "AthletePreference",
+      "type": "object"
+    },
+    "MemoryCandidate": {
+      "additionalProperties": false,
+      "description": "从用户消息中提出、尚未成为正式记忆的类型化候选。",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "conversation_id": {
+          "minLength": 1,
+          "title": "Conversation Id",
+          "type": "string"
+        },
+        "source_message_id": {
+          "exclusiveMinimum": 0,
+          "title": "Source Message Id",
+          "type": "integer"
+        },
+        "source_text_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Text Hash",
+          "type": "string"
+        },
+        "memory_type": {
+          "const": "athlete_preference",
+          "default": "athlete_preference",
+          "title": "Memory Type",
+          "type": "string"
+        },
+        "key": {
+          "const": "preferred_long_run_weekday",
+          "title": "Key",
+          "type": "string"
+        },
+        "proposed_value": {
+          "enum": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ],
+          "title": "Proposed Value",
+          "type": "string"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "confidence_basis": {
+          "enum": [
+            "explicit_stable_preference",
+            "stable_preference_language"
+          ],
+          "title": "Confidence Basis",
+          "type": "string"
+        },
+        "extraction_rule_version": {
+          "const": "memory-candidate-rules/1.0",
+          "default": "memory-candidate-rules/1.0",
+          "title": "Extraction Rule Version",
+          "type": "string"
+        },
+        "candidate_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Candidate Hash",
+          "type": "string"
+        },
+        "status": {
+          "default": "pending",
+          "enum": [
+            "pending",
+            "confirmed",
+            "rejected",
+            "superseded",
+            "expired"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "requires_user_confirmation": {
+          "const": true,
+          "default": true,
+          "title": "Requires User Confirmation",
+          "type": "boolean"
+        },
+        "supersedes_candidate_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Supersedes Candidate Id"
+        },
+        "preference_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Preference Id"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "decided_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decided At"
+        }
+      },
+      "required": [
+        "conversation_id",
+        "source_message_id",
+        "source_text_hash",
+        "key",
+        "proposed_value",
+        "confidence",
+        "confidence_basis",
+        "candidate_hash",
+        "expires_at"
+      ],
+      "title": "待确认记忆候选",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "outcome": {
+      "enum": [
+        "confirmed",
+        "rejected",
+        "already_decided"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "candidate": {
+      "$ref": "#/$defs/MemoryCandidate"
+    },
+    "preference": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AthletePreference"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "outcome",
+    "candidate"
+  ],
+  "title": "记忆候选确认结果",
+  "type": "object"
+}

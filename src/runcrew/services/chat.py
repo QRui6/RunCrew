@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
@@ -11,6 +11,10 @@ from pydantic import BaseModel, ConfigDict
 from runcrew.domain.activity import ActivityDetail, ActivitySummary
 from runcrew.domain.agent import ReviewAgentRunRequest
 from runcrew.domain.chat import ChatConversation, ChatTurnResult
+from runcrew.domain.memory import (
+    MemoryCandidateDecisionRequest,
+    MemoryCandidateDecisionResult,
+)
 from runcrew.domain.training_review import TrainingReviewRequest, TrainingReviewResult
 from runcrew.harness import ReviewAgentHarness
 from runcrew.policies.chat import (
@@ -20,8 +24,19 @@ from runcrew.policies.chat import (
 )
 from runcrew.policies.deepseek import DeepSeekPolicyConfig
 from runcrew.services.training_review import execute_training_review
+from runcrew.services.memory_candidates import (
+    MemoryCandidateError,
+    decide_memory_candidate,
+    expire_pending_memory_candidates,
+    propose_chat_memory_candidate,
+)
 from runcrew.storage.database import Database
-from runcrew.storage.repositories import ActivityRepository, ChatRepository
+from runcrew.storage.repositories import (
+    ActivityRepository,
+    AthletePreferenceRepository,
+    ChatRepository,
+    MemoryCandidateRepository,
+)
 
 
 class ChatActivityView(BaseModel):
@@ -60,6 +75,7 @@ class ChatService:
         database_path: Path = Path("data/runcrew.db"),
         offline_policy: GroundedChatPolicy | None = None,
         deepseek_policy_factory: Callable[[], GroundedChatPolicy] | None = None,
+        clock: Callable[[], datetime] | None = None,
     ) -> None:
         self.database_path = database_path
         self.database = Database(
@@ -68,11 +84,16 @@ class ChatService:
         self.database.create_schema()
         self.offline_policy = offline_policy or OfflineGroundedChatPolicy()
         self.deepseek_policy_factory = deepseek_policy_factory
+        self.clock = clock or (lambda: datetime.now(timezone.utc))
 
     def bootstrap(self) -> ChatBootstrap:
         with self.database.session() as session:
+            expire_pending_memory_candidates(
+                candidates=MemoryCandidateRepository(session), now=self.clock()
+            )
             activities = ActivityRepository(session).list(limit=30)
             conversations = ChatRepository(session).list(limit=30)
+            session.commit()
         return ChatBootstrap(
             activities=[self._activity_view(item) for item in activities],
             conversations=conversations,
@@ -105,7 +126,13 @@ class ChatService:
 
     def get_conversation(self, conversation_id: str) -> ChatConversation:
         with self.database.session() as session:
+            expire_pending_memory_candidates(
+                candidates=MemoryCandidateRepository(session),
+                now=self.clock(),
+                conversation_id=conversation_id,
+            )
             conversation = ChatRepository(session).get(conversation_id)
+            session.commit()
         if conversation is None:
             raise ChatServiceError("对话不存在。")
         return conversation
@@ -128,7 +155,14 @@ class ChatService:
             record = repository.get_record(conversation_id)
             if record is None:
                 raise ChatServiceError("对话不存在。")
-            repository.add_user_message(conversation_id, question)
+            user_message = repository.add_user_message(conversation_id, question)
+            candidate = propose_chat_memory_candidate(
+                question,
+                conversation_id=conversation_id,
+                source_message_id=user_message.id,
+                candidates=MemoryCandidateRepository(session),
+                now=self.clock(),
+            )
             session.commit()
 
         review, review_trace, trace_id = await self._ensure_review(conversation_id)
@@ -170,7 +204,34 @@ class ChatService:
             review_trace=review_trace,
             context_message_count=min(len(history[:-1]), 8),
             context_truncated=context_truncated,
+            new_memory_candidates=[candidate] if candidate is not None else [],
         )
+
+    def decide_memory_candidate(
+        self,
+        candidate_id: str,
+        request: MemoryCandidateDecisionRequest,
+    ) -> MemoryCandidateDecisionResult:
+        decided_at = self.clock()
+        try:
+            with self.database.session() as session:
+                expire_pending_memory_candidates(
+                    candidates=MemoryCandidateRepository(session), now=decided_at
+                )
+                session.commit()
+            with self.database.session() as session:
+                result = decide_memory_candidate(
+                    candidate_id,
+                    request,
+                    candidates=MemoryCandidateRepository(session),
+                    preferences=AthletePreferenceRepository(session),
+                    chats=ChatRepository(session),
+                    now=decided_at,
+                )
+                session.commit()
+            return result
+        except MemoryCandidateError as error:
+            raise ChatServiceError(str(error)) from error
 
     async def _ensure_review(
         self,

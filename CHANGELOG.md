@@ -6,6 +6,9 @@
 
 ### Added
 
+- 增加 M9-D 聊天 Memory Candidate：只从受支持的明确长期表达生成待确认候选，保存原消息引用/Hash、类型化值、置信边界、Candidate Hash、七天有效期与完整生命周期；
+- 增加 `memory_candidates` 表、确认/拒绝 API、原消息下候选卡片、5份 Candidate/Chat Schema、ADR-0024 和15项专项测试；
+- 候选确认后复用正式长期偏好服务；未确认、拒绝、替代、过期和来源完整性失败的候选不会进入 Agent Context；
 - 增加 M9-C 按职责 Memory Context：Execution 为0条/0字符，Recovery 最多2条/1400字符，Plan 最多5条/1800字符；
 - 增加职责专属字段投影、选中顺序、生命周期/时点/权限/预算排除原因，以及分离的 `context_hash + audit_hash`；
 - Execution、Recovery、Planning 输出和网页周视图携带 Context 审计；增加 `runcrew memory context`、两份 Schema、ADR-0023 和5项专项测试；
@@ -16,17 +19,19 @@
 
 ### Changed
 
-- 静态资源版本升级为 `20260820-2`；
+- 静态资源版本升级为 `20260820-3`；
+- 长期偏好文案明确为“聊天可提出候选，但不会自动写入”；会话列表不加载候选，只在打开具体会话时读取完整审核状态；
 - 修复 `planning draft` CLI 未传入周记忆 Repository、与网页 Planning Context 不一致的问题；
 
 ### Fixed
 
+- 确认 Memory Candidate 时服务端同时重算 Candidate Hash 并重读原始用户消息，阻止被篡改的候选值或来源进入正式偏好；
 - 将周记忆 Context 拆为 Recovery/Plan 判别联合类型，确保 Plan JSON 与 Schema 中不出现恢复和疼痛敏感字段，而不是仅输出 `null`；
 - 为训练运营 Service 增加可注入时钟，修复偏好记忆网页测试依赖系统日期和当天零点、跨日后错误排除刚确认偏好的问题；历史回放仍保持不读取未来记忆。
 
 ### Verified
 
-- 偏好记忆9项、周训练记忆7项、Memory Context 5项专项测试和全量158项测试通过；Schema 导出、Python 编译和 JavaScript 语法检查通过；本阶段没有访问真实活动、COROS 或 DeepSeek。
+- 偏好记忆9项、周训练记忆7项、Memory Context 5项、Memory Candidate 15项专项测试和全量173项测试通过；Schema 导出、Python 编译和 JavaScript 语法检查通过；本阶段没有访问真实活动、COROS 或 DeepSeek。
 
 ## 2026-08-19
 

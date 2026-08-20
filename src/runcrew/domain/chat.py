@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from runcrew.domain.memory import MemoryCandidate
+
 
 ChatRole = Literal["user", "assistant"]
 ChatConfidence = Literal["high", "medium", "low"]
@@ -67,6 +69,7 @@ class ChatConversation(BaseModel):
     review_input_hash: str | None = None
     message_count: int = Field(default=0, ge=0)
     messages: list[ChatMessage] = Field(default_factory=list)
+    memory_candidates: list[MemoryCandidate] = Field(default_factory=list)
 
 
 class ChatAnswer(BaseModel):
@@ -146,3 +149,4 @@ class ChatTurnResult(BaseModel):
     review_trace: list[dict[str, object]] = Field(default_factory=list)
     context_message_count: int = Field(ge=0)
     context_truncated: bool = False
+    new_memory_candidates: list[MemoryCandidate] = Field(default_factory=list)

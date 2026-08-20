@@ -25,5 +25,6 @@
 | [ADR-0021](0021-isolated-synthetic-demo-database.md) | 接受 | 求职演示使用隔离、显式重置且不预置 Agent 结论的合成数据库 |
 | [ADR-0022](0022-versioned-weekly-training-memory.md) | 接受 | 周训练记忆只由已确认事实确定性生成，并以版本、来源和生命周期支持规划回放 |
 | [ADR-0023](0023-role-scoped-memory-context.md) | 接受 | 按职责裁剪记忆并分离 Context Hash 与完整选择审计 Hash |
+| [ADR-0024](0024-confirmed-chat-memory-candidate.md) | 接受 | 聊天只提出带来源、有效期和完整性校验的类型化候选，确认后才能写入正式记忆 |
 
 新 ADR 使用四位编号，必须记录背景、决策、原因、后果和替代方案。

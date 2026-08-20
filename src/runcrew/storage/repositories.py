@@ -11,7 +11,12 @@ from sqlalchemy.orm import Session
 
 from runcrew.domain.activity import ActivityDetail, ActivitySummary
 from runcrew.domain.chat import ChatAnswer, ChatConversation, ChatMessage, ChatTurnUsage
-from runcrew.domain.memory import AthletePreference, PreferenceKey, WeeklyTrainingMemory
+from runcrew.domain.memory import (
+    AthletePreference,
+    MemoryCandidate,
+    PreferenceKey,
+    WeeklyTrainingMemory,
+)
 from runcrew.domain.training_cycle import (
     DailyCheckIn,
     PlanChangeProposal,
@@ -29,6 +34,7 @@ from runcrew.storage.models import (
     ChatMessageRecord,
     DailyCheckInRecord,
     PlanChangeProposalRecord,
+    MemoryCandidateRecord,
     RawProviderEvent,
     SyncRunRecord,
     TrainingGoalRecord,
@@ -227,6 +233,9 @@ class ChatRepository:
     def get_record(self, conversation_id: str) -> ChatConversationRecord | None:
         return self.session.get(ChatConversationRecord, conversation_id)
 
+    def get_message_record(self, message_id: int) -> ChatMessageRecord | None:
+        return self.session.get(ChatMessageRecord, message_id)
+
     def list(self, limit: int = 20) -> list[ChatConversation]:
         records = self.session.scalars(
             select(ChatConversationRecord)
@@ -343,7 +352,21 @@ class ChatRepository:
             review_input_hash=record.review_input_hash,
             message_count=message_count,
             messages=messages,
+            memory_candidates=(
+                self._memory_candidates(record.id) if include_messages else []
+            ),
         )
+
+    def _memory_candidates(self, conversation_id: str) -> list[MemoryCandidate]:
+        records = self.session.scalars(
+            select(MemoryCandidateRecord)
+            .where(MemoryCandidateRecord.conversation_id == conversation_id)
+            .order_by(MemoryCandidateRecord.created_at, MemoryCandidateRecord.id)
+        ).all()
+        return [
+            MemoryCandidate.model_validate_json(record.canonical_json)
+            for record in records
+        ]
 
     @staticmethod
     def _message_to_domain(record: ChatMessageRecord) -> ChatMessage:
@@ -406,6 +429,88 @@ class TrainingGoalRepository:
             .limit(limit)
         ).all()
         return [TrainingGoal.model_validate_json(record.canonical_json) for record in records]
+
+
+class MemoryCandidateRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def save(self, candidate: MemoryCandidate) -> None:
+        record = self.session.get(MemoryCandidateRecord, candidate.id)
+        if record is None:
+            record = MemoryCandidateRecord(id=candidate.id)
+            self.session.add(record)
+        record.conversation_id = candidate.conversation_id
+        record.source_message_id = candidate.source_message_id
+        record.key = candidate.key
+        record.status = candidate.status
+        record.candidate_hash = candidate.candidate_hash
+        record.expires_at = candidate.expires_at
+        record.canonical_json = candidate.model_dump_json()
+        record.created_at = candidate.created_at
+        record.decided_at = candidate.decided_at
+        self.session.flush()
+
+    def get(self, candidate_id: str) -> MemoryCandidate | None:
+        record = self.session.get(MemoryCandidateRecord, candidate_id)
+        return (
+            MemoryCandidate.model_validate_json(record.canonical_json)
+            if record is not None
+            else None
+        )
+
+    def for_source_message(
+        self, source_message_id: int, key: PreferenceKey
+    ) -> MemoryCandidate | None:
+        record = self.session.scalar(
+            select(MemoryCandidateRecord)
+            .where(
+                MemoryCandidateRecord.source_message_id == source_message_id,
+                MemoryCandidateRecord.key == key,
+            )
+            .limit(1)
+        )
+        return (
+            MemoryCandidate.model_validate_json(record.canonical_json)
+            if record is not None
+            else None
+        )
+
+    def pending_for_key(self, key: PreferenceKey) -> list[MemoryCandidate]:
+        records = self.session.scalars(
+            select(MemoryCandidateRecord)
+            .where(
+                MemoryCandidateRecord.key == key,
+                MemoryCandidateRecord.status == "pending",
+            )
+            .order_by(desc(MemoryCandidateRecord.created_at))
+        ).all()
+        return [
+            MemoryCandidate.model_validate_json(record.canonical_json)
+            for record in records
+        ]
+
+    def list(
+        self,
+        *,
+        conversation_id: str | None = None,
+        include_resolved: bool = True,
+        limit: int = 50,
+    ) -> list[MemoryCandidate]:
+        statement = select(MemoryCandidateRecord)
+        if conversation_id is not None:
+            statement = statement.where(
+                MemoryCandidateRecord.conversation_id == conversation_id
+            )
+        if not include_resolved:
+            statement = statement.where(MemoryCandidateRecord.status == "pending")
+        records = self.session.scalars(
+            statement.order_by(desc(MemoryCandidateRecord.created_at)).limit(limit)
+        ).all()
+        return [
+            MemoryCandidate.model_validate_json(record.canonical_json)
+            for record in records
+        ]
 
 
 class AthletePreferenceRepository:

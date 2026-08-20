@@ -162,14 +162,14 @@ function resetMessages() {
   welcome.append(label, title, p, suggestions, note); elements.messages.append(welcome);
 }
 
-function renderMessages(messages) {
+function renderMessages(messages, candidates = []) {
   elements.messages.replaceChildren();
   if (!messages.length) return resetMessages();
-  messages.forEach((message) => appendMessage(message));
+  messages.forEach((message) => appendMessage(message, candidates.filter((candidate) => candidate.source_message_id === message.id)));
   elements.messages.scrollTop = elements.messages.scrollHeight;
 }
 
-function appendMessage(message) {
+function appendMessage(message, candidates = []) {
   const row = document.createElement("article"); row.className = `message ${message.role}`;
   const avatar = document.createElement("span"); avatar.className = "avatar"; avatar.textContent = message.role === "assistant" ? "RunCrew" : "你问";
   const bubble = document.createElement("div"); bubble.className = "bubble";
@@ -185,7 +185,35 @@ function appendMessage(message) {
       bubble.append(followups);
     }
   }
+  candidates.forEach((candidate) => bubble.append(renderMemoryCandidate(candidate)));
   row.append(avatar, bubble); elements.messages.append(row);
+}
+
+function renderMemoryCandidate(candidate) {
+  const card = document.createElement("section"); card.className = `memory-candidate ${candidate.status}`;
+  const label = document.createElement("span"); label.textContent = candidate.status === "pending" ? "待你确认的训练偏好" : "训练偏好候选";
+  const title = document.createElement("strong"); title.textContent = `长跑优先安排在${weekdayLabel(candidate.proposed_value)}`;
+  const meta = document.createElement("small");
+  const status = ({ pending: "尚未写入长期记忆", confirmed: "已确认并写入", rejected: "已忽略", superseded: "已被新候选替代", expired: "已过期" })[candidate.status] || candidate.status;
+  meta.textContent = `${status} · ${candidate.confidence === "high" ? "明确偏好表达" : "需确认的偏好表达"}`;
+  card.append(label, title, meta);
+  if (candidate.status === "pending") {
+    const actions = document.createElement("div"); actions.className = "memory-candidate-actions";
+    const reject = document.createElement("button"); reject.type = "button"; reject.className = "reject"; reject.textContent = "忽略"; reject.addEventListener("click", () => decideMemoryCandidate(candidate, "reject"));
+    const confirm = document.createElement("button"); confirm.type = "button"; confirm.className = "confirm"; confirm.textContent = "确认记住"; confirm.addEventListener("click", () => decideMemoryCandidate(candidate, "confirm"));
+    actions.append(reject, confirm); card.append(actions);
+  }
+  return card;
+}
+
+async function decideMemoryCandidate(candidate, decision) {
+  if (decision === "confirm" && !window.confirm(`确认把“长跑优先安排在${weekdayLabel(candidate.proposed_value)}”保存为长期偏好？`)) return;
+  try {
+    await api(`/api/chat/memory-candidates/${encodeURIComponent(candidate.id)}/decision`, { method: "POST", body: JSON.stringify({ decision, expected_candidate_hash: candidate.candidate_hash }) });
+    await loadConversation(candidate.conversation_id);
+    await refreshTraining();
+    showToast(decision === "confirm" ? "偏好已确认并写入长期记忆。" : "候选已忽略，不会写入长期记忆。");
+  } catch (error) { showToast(error.message); if (state.activeConversationId) await loadConversation(state.activeConversationId); }
 }
 
 async function loadConversation(id) {
@@ -194,7 +222,7 @@ async function loadConversation(id) {
     state.activeConversationId = id; state.selectedActivityId = conversation.target_activity_id;
     const activity = state.activities.find((item) => item.id === state.selectedActivityId);
     renderRunHeader(activity); elements.badge.textContent = conversation.review_input_hash ? "证据已建立" : "等待首次分析";
-    renderActivities(); renderConversations(); renderSelectedActivity(activity); renderMessages(conversation.messages);
+    renderActivities(); renderConversations(); renderSelectedActivity(activity); renderMessages(conversation.messages, conversation.memory_candidates || []);
   } catch (error) { showToast(error.message); }
 }
 
@@ -213,10 +241,10 @@ async function sendMessage(event) {
     const conversationId = await ensureConversation(content);
     const before = await api(`/api/chat/conversations/${encodeURIComponent(conversationId)}`);
     elements.input.value = "";
-    renderMessages([...before.messages, { role: "user", content }]);
+    renderMessages([...before.messages, { role: "user", content }], before.memory_candidates || []);
     appendTyping();
     const result = await api(`/api/chat/conversations/${encodeURIComponent(conversationId)}/messages`, { method: "POST", body: JSON.stringify({ content, use_deepseek: elements.deepseek.checked }) });
-    renderMessages(result.conversation.messages);
+    renderMessages(result.conversation.messages, result.conversation.memory_candidates || []);
     elements.badge.textContent = "证据已建立";
     updateTurnMeta(result); await refreshBootstrap(false);
   } catch (error) { showToast(error.message); if (state.activeConversationId) await loadConversation(state.activeConversationId); }
