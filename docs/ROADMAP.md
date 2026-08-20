@@ -159,7 +159,7 @@
 
 ## M9：可审计 Agent Memory Manager
 
-状态：**进行中（M9-A 至 M9-E 已完成；下一步进入 M9-F）**
+状态：**完成（M9-A 至 M9-F 已闭合）**
 
 - [x] M9-A：类型化 `preferred_long_run_weekday` 长期偏好；
 - [x] M9-A：显式确认、重复提交幂等、`superseded / expired / archived` 生命周期和来源追踪；
@@ -171,4 +171,4 @@
 - [x] M9-E：16场景版本化 Memory Evaluation，覆盖召回、拒绝、冲突、过期、来源、职责召回和无关记忆注入；
 - [x] M9-E：Suite Hash、Suite/Report Schema、私有报告与意外正式写入计数；
 - [x] 当前结构化职责检索16/16满足期望，没有证据引入向量数据库；
-- [ ] M9-F：Memory 控制面，集中查看候选/正式/周记忆的来源、状态与用户可用操作。
+- [x] M9-F：Memory 控制面，集中查看候选/正式/周记忆的来源、状态、职责可见性与用户可用操作。

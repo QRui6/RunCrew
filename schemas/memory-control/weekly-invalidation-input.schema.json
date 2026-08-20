@@ -1,0 +1,15 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "confirmed": {
+      "const": true,
+      "title": "Confirmed",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "confirmed"
+  ],
+  "title": "周训练记忆失效确认输入",
+  "type": "object"
+}

@@ -27,5 +27,6 @@
 | [ADR-0023](0023-role-scoped-memory-context.md) | 接受 | 按职责裁剪记忆并分离 Context Hash 与完整选择审计 Hash |
 | [ADR-0024](0024-confirmed-chat-memory-candidate.md) | 接受 | 聊天只提出带来源、有效期和完整性校验的类型化候选，确认后才能写入正式记忆 |
 | [ADR-0025](0025-versioned-memory-manager-evaluation.md) | 接受 | Memory Manager 用版本化合成场景、真实服务回放和意外写入指标建立回归基线 |
+| [ADR-0026](0026-lazy-memory-control-plane.md) | 接受 | Memory 控制面按需聚合并复用既有确认、归档和失效状态机 |
 
 新 ADR 使用四位编号，必须记录背景、决策、原因、后果和替代方案。

@@ -6,6 +6,9 @@
 
 ### Added
 
+- 增加 M9-F 按需加载的“记忆档案”，集中展示 Candidate 原话摘要、正式偏好、周训练记忆、来源、有效期、生命周期和三职责可见性；
+- 增加 Memory Control 领域契约、聚合 Service、统一 API、两份 Schema、ADR-0026、阶段交接文档和3项专项测试；
+- Candidate 确认/拒绝、偏好停用和周记忆失效继续复用原有服务；职责审计直接展示正式 Context Builder 的预算与逐条排除原因；
 - 增加 M9-E `memory-manager-eval/1.0`：16个版本化无私人数据场景覆盖 Candidate 召回/拒绝、确认边界、冲突、过期、候选/原消息篡改、职责召回和无关记忆注入；
 - 增加 Memory Suite/Case/Report 契约、Suite Hash、九类通过率、意外正式写入计数、延迟与类别分布、`runcrew eval memory`、两份 Schema、ADR-0025和5项专项测试；
 - 生命周期与完整性评测在隔离 SQLite 中运行正式 Repository/Service，召回评测运行正式 Context Builder，不建立只为评测服务的旁路；
@@ -22,8 +25,9 @@
 
 ### Changed
 
+- M9-A 至 M9-F 已闭合，Memory Manager 阶段完成；后续不再扩展记忆类型、向量库或 Agent 角色；
+- 静态资源版本升级为 `20260820-4`；
 - M9-E 基线16/16满足期望，意外正式写入为0；结构化职责检索通过无关注入场景，当前没有证据引入向量数据库；
-- 静态资源版本升级为 `20260820-3`；
 - 长期偏好文案明确为“聊天可提出候选，但不会自动写入”；会话列表不加载候选，只在打开具体会话时读取完整审核状态；
 - 修复 `planning draft` CLI 未传入周记忆 Repository、与网页 Planning Context 不一致的问题；
 
@@ -36,6 +40,8 @@
 
 ### Verified
 
+- Memory 控制面与训练运营联合专项13项、全量181项测试、Schema 漂移、Python 编译和 JavaScript 语法检查通过；控制面响应不包含 Provider 外部 ID 或 raw payload hash；
+- 当前会话没有可用浏览器实例，因此最终目视验收仍保留为用户本机收尾项，没有冒充完成截图验收；
 - 偏好记忆9项、周训练记忆7项、Memory Context 5项、Memory Candidate 15项、Memory Evaluation 5项专项测试和全量178项测试通过；Schema 导出、Python 编译和 JavaScript 语法检查通过；本阶段没有访问真实活动、COROS 或 DeepSeek。
 
 ## 2026-08-19

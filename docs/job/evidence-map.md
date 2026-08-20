@@ -4,7 +4,7 @@
 
 | 可使用的结论 | 主要证据 | 可重复验证 | 不应外推为 |
 |---|---|---|---|
-| 全量178项自动化测试通过 | `scripts/verify.py`、`tests/` | `.venv\Scripts\python.exe scripts\verify.py` | 178个真实用户场景或模型准确率 |
+| 全量181项自动化测试通过 | `scripts/verify.py`、`tests/` | `.venv\Scripts\python.exe scripts\verify.py` | 181个真实用户场景或模型准确率 |
 | 真实 COROS OAuth + PKCE/MCP 接入成功 | `docs/progress/2026-08-08-m0-coros-mcp-spike.md`、Provider 代码 | 需要个人授权，不作为公开演示步骤 | 所有 COROS 详情/FIT 接口稳定可用 |
 | FIT 可解析 session/lap/record | `src/runcrew/providers/fit.py`、FIT 测试与 M2 记录 | 运行相关 pytest；真实文件不提交 | 自动 FIT URL 已验证 |
 | 单 Agent 确定性与真实 DeepSeek 同 Hash 均12/12 | `docs/M5-B3-DeepSeek最终评测报告.md`、`docs/progress/2026-08-09-m5b3b-first-full-suite.md` | 公开套件可跑确定性基线；真实复跑会产生费用 | 复杂多工具 Agent 或生产稳定性100% |
@@ -19,9 +19,9 @@
 
 ## 三组数字如何准确表达
 
-### 178 passed
+### 181 passed
 
-它代表当前仓库全量 pytest 回归，包括领域模型、存储、Provider、Skill、Harness、Evaluation、Web/API、Memory 和 Demo Seed。它不是178个评测问题，也不是准确率。
+它代表当前仓库全量 pytest 回归，包括领域模型、存储、Provider、Skill、Harness、Evaluation、Web/API、Memory 控制面和 Demo Seed。它不是181个评测问题，也不是准确率。
 
 ### 12 / 12
 

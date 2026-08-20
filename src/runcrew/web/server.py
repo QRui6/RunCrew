@@ -19,6 +19,7 @@ from runcrew.domain.memory import (
     AthletePreferenceSubmission,
     MemoryCandidateDecisionRequest,
 )
+from runcrew.domain.memory_control import WeeklyMemoryInvalidationRequest
 from runcrew.policies.deepseek import DeepSeekPolicyError
 from runcrew.services.chat import ChatService, ChatServiceError
 from runcrew.services.training_operations import (
@@ -35,6 +36,7 @@ from runcrew.domain.training_operations import (
     WeeklyPlanDraftSubmission,
     WeeklyTrainingMemoryBuildSubmission,
 )
+from runcrew.services.memory_control import MemoryControlError, MemoryControlService
 from runcrew.web.dashboard import DemoDashboardService
 
 
@@ -52,12 +54,16 @@ class DemoApplication:
         service: DemoDashboardService,
         chat_service: ChatService | None = None,
         training_service: TrainingOperationsService | None = None,
+        memory_service: MemoryControlService | None = None,
     ) -> None:
         self.service = service
         self.chat_service = chat_service or ChatService(
             database_path=service.database_path
         )
         self.training_service = training_service or TrainingOperationsService(
+            database_path=service.database_path
+        )
+        self.memory_service = memory_service or MemoryControlService(
             database_path=service.database_path
         )
         static_root = resources.files("runcrew.web").joinpath("static")
@@ -127,6 +133,15 @@ class DemoApplication:
             return self._json_response(
                 HTTPStatus.OK,
                 self.training_service.bootstrap().model_dump(mode="json"),
+            )
+        if method == "GET" and parsed.path == "/api/memory/overview":
+            try:
+                overview = self.memory_service.overview()
+            except (MemoryControlError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(
+                HTTPStatus.OK,
+                overview.model_dump(mode="json"),
             )
         if method == "POST" and parsed.path == "/api/training/goals":
             try:
@@ -350,6 +365,41 @@ class DemoApplication:
             except (ChatServiceError, ValidationError, ValueError) as error:
                 return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
             return self._json_response(HTTPStatus.OK, result.model_dump(mode="json"))
+        memory_kind, memory_id, memory_action = _memory_control_route(parsed.path)
+        if method == "POST" and memory_kind == "candidates" and memory_action == "decision":
+            try:
+                request = MemoryCandidateDecisionRequest.model_validate(
+                    self._decode_json(body)
+                )
+                result = self.chat_service.decide_memory_candidate(memory_id, request)
+            except (ChatServiceError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(HTTPStatus.OK, result.model_dump(mode="json"))
+        if method == "POST" and memory_kind == "preferences" and memory_action == "archive":
+            try:
+                submission = AthletePreferenceArchiveSubmission.model_validate(
+                    self._decode_json(body)
+                )
+                preference = self.training_service.archive_preference(
+                    preference_id=memory_id,
+                    submission=submission,
+                )
+            except (TrainingOperationsError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(
+                HTTPStatus.OK,
+                preference.model_dump(mode="json"),
+            )
+        if method == "POST" and memory_kind == "weekly-memories" and memory_action == "invalidate":
+            try:
+                WeeklyMemoryInvalidationRequest.model_validate(self._decode_json(body))
+                memory = self.training_service.invalidate_weekly_memory(memory_id)
+            except (TrainingOperationsError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(
+                HTTPStatus.OK,
+                memory.model_dump(mode="json"),
+            )
         if method not in {"GET", "POST"}:
             return self._json_response(
                 HTTPStatus.METHOD_NOT_ALLOWED,
@@ -517,6 +567,23 @@ def _chat_memory_candidate_route(path: str) -> str | None:
     ):
         return parts[3]
     return None
+
+
+def _memory_control_route(path: str) -> tuple[str | None, str | None, str | None]:
+    parts = [part for part in path.split("/") if part]
+    if (
+        len(parts) == 5
+        and parts[:2] == ["api", "memory"]
+        and parts[2] in {"candidates", "preferences", "weekly-memories"}
+    ):
+        allowed_action = {
+            "candidates": "decision",
+            "preferences": "archive",
+            "weekly-memories": "invalidate",
+        }[parts[2]]
+        if parts[4] == allowed_action:
+            return parts[2], parts[3], parts[4]
+    return None, None, None
 
 
 def _training_check_in_route(path: str) -> str | None:

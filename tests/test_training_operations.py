@@ -431,7 +431,7 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     )
     html = application.handle("GET", "/").body.decode("utf-8")
     script = application.handle("GET", "/assets/chat.js").body.decode("utf-8")
-    style = application.handle("GET", "/assets/chat.css?v=20260820-3").body.decode("utf-8")
+    style = application.handle("GET", "/assets/chat.css?v=20260820-4").body.decode("utf-8")
     assert "训练闭环" in html
     assert "今日训练与执行" in html
     assert "新建训练目标" in html
@@ -459,8 +459,8 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     assert "renderRunHeader" in script
     assert "toggleContext" in script
     assert 'id="context-panel" class="context-panel" aria-label="回答依据" hidden' in html
-    assert "/assets/chat.css?v=20260820-3" in html
-    assert "/assets/chat.js?v=20260820-3" in html
+    assert "/assets/chat.css?v=20260820-4" in html
+    assert "/assets/chat.js?v=20260820-4" in html
     assert "memory-candidate" in style
     assert "renderMemoryCandidate" in script
     assert "grid-template-rows: 68px minmax(0, 1fr)" in style

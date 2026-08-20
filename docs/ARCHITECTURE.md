@@ -414,6 +414,22 @@ evals/memory/cases.json（输入 + 固定期望）
 
 Suite Hash 只绑定版本化题集，不绑定机器耗时；报告中的 P95 仅作本次运行诊断。无关或不可用 Memory 可以改变 Audit Hash，但不得改变实际 Context Hash。当前16场景全部满足期望，结构化过滤没有暴露检索瓶颈，因此仍不引入向量数据库。
 
+M9-F Memory 控制面链路为：
+
+```text
+用户打开“记忆档案”
+  → GET /api/memory/overview（按需加载）
+  → MemoryControlService 聚合 Candidate / Preference / Weekly Memory
+  → 通过原消息 ID 生成最小来源摘要，不复制正文或 Provider 标识
+  → 对每个激活目标运行正式 Execution / Recovery / Plan Context Builder
+  → 展示生命周期、条数/字符预算、选中与排除原因
+  → 用户确认 / 停用 / 标记失效
+  → 复用 ChatService / TrainingOperationsService 的完整性与确认状态机
+  → 后续 Context Builder 自动排除不可用版本并保留审计
+```
+
+控制面不是新的 Memory Store，也不允许硬删除或 LLM 直接写入。普通聊天首屏不预取该总览，避免把跨目标聚合成本加入每轮对话。
+
 ## 可讲解的系统视图
 
 用于求职演示的两份精简图不替代本文，而是把实现压缩为面试时可以快速讲清的视图：

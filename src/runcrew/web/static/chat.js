@@ -1,4 +1,4 @@
-const state = { activities: [], conversations: [], selectedActivityId: null, activeConversationId: null, sending: false, training: { goals: [], recent_coach_runs: [], athlete_preferences: [] }, trainingWeek: null, planDraft: null, planDraftSubmission: null, selectedGoalId: null, activeCoachRunId: null, coachRunning: false };
+const state = { activities: [], conversations: [], selectedActivityId: null, activeConversationId: null, sending: false, training: { goals: [], recent_coach_runs: [], athlete_preferences: [] }, memory: null, trainingWeek: null, planDraft: null, planDraftSubmission: null, selectedGoalId: null, activeCoachRunId: null, coachRunning: false };
 const responseModeLabels = { data_analysis: "个人数据分析", mixed_coaching: "数据＋训练思路", general_knowledge: "通用跑步知识", clarification: "需要补充信息", safety_redirect: "安全边界" };
 const claimKindLabels = { observed_fact: "数据事实", data_inference: "基于数据的推断", general_knowledge: "通用知识", coaching_suggestion: "可选建议" };
 const $ = (selector) => document.querySelector(selector);
@@ -20,6 +20,11 @@ const trainingElements = {
   goalForm: $("#goal-form"), goalName: $("#goal-name"), goalEvent: $("#goal-event"), goalDate: $("#goal-date"), goalTime: $("#goal-time"),
   preferenceForm: $("#preference-form"), preferenceDay: $("#preference-long-run-day"), preferenceValidUntil: $("#preference-valid-until"), preferenceList: $("#preference-list"),
   planForm: $("#plan-draft-form"), planWeekStart: $("#plan-week-start"), planDraft: $("#plan-draft"), weekProgress: $("#week-progress"), today: $("#today-session"), executions: $("#execution-list"), weekSummary: $("#week-summary"), memoryBuild: $("#weekly-memory-build"), memoryList: $("#weekly-memory-list"), memoryContextAudit: $("#memory-context-audit")
+};
+const memoryElements = {
+  toggle: $("#memory-toggle"), drawer: $("#memory-drawer"), backdrop: $("#memory-backdrop"), close: $("#memory-close"), generatedAt: $("#memory-generated-at"),
+  candidateCount: $("#memory-count-candidates"), preferenceCount: $("#memory-count-preferences"), weeklyCount: $("#memory-count-weekly"),
+  candidates: $("#memory-control-candidates"), preferences: $("#memory-control-preferences"), weekly: $("#memory-control-weekly"), contexts: $("#memory-control-contexts")
 };
 
 async function api(path, options = {}) {
@@ -259,13 +264,161 @@ function toggleContext(open) {
   elements.contextPanel.hidden = !open; elements.contextBackdrop.hidden = !open;
   elements.contextToggle.setAttribute("aria-expanded", String(open));
   if (open && !trainingElements.drawer.hidden) toggleTraining(false);
+  if (open && !memoryElements.drawer.hidden) toggleMemory(false);
 }
 
 function toggleTraining(open) {
   trainingElements.drawer.hidden = !open; trainingElements.backdrop.hidden = !open;
   trainingElements.toggle.setAttribute("aria-expanded", String(open));
   if (open && !elements.contextPanel.hidden) toggleContext(false);
+  if (open && !memoryElements.drawer.hidden) toggleMemory(false);
   if (open) refreshTraining().catch((error) => showToast(error.message));
+}
+
+function toggleMemory(open) {
+  memoryElements.drawer.hidden = !open; memoryElements.backdrop.hidden = !open;
+  memoryElements.toggle.setAttribute("aria-expanded", String(open));
+  if (open && !elements.contextPanel.hidden) toggleContext(false);
+  if (open && !trainingElements.drawer.hidden) toggleTraining(false);
+  if (open) refreshMemory().catch((error) => showToast(error.message));
+}
+
+const memoryStatusLabels = { pending: "等待确认", confirmed: "已确认", rejected: "已忽略", superseded: "已被替代", expired: "已过期", active: "当前有效", archived: "已停用", invalidated: "已失效" };
+const memoryReasonLabels = {
+  selected_role_relevant: "职责相关，已选中", excluded_role_not_allowed: "该职责不允许读取", excluded_wrong_goal: "不属于当前目标", excluded_future: "生成时间晚于本轮", excluded_expired: "已过期", excluded_superseded: "已被新版替代", excluded_archived: "已停用", excluded_invalidated: "已失效", excluded_outside_target_window: "不在目标周之前", excluded_item_budget: "超过条数预算", excluded_character_budget: "超过字符预算"
+};
+const memoryRoleLabels = { execution: "训练执行", recovery: "恢复评估", plan: "计划调整" };
+
+function memoryRecord({ status, kicker, title, body, meta = [], actions = [] }) {
+  const article = document.createElement("article");
+  article.className = `memory-record${status === "pending" || status === "active" ? "" : " resolved inactive"}`;
+  const copy = document.createElement("div"); copy.className = "memory-record-copy";
+  const label = document.createElement("span"); label.className = "memory-record-kicker"; const dot = document.createElement("i"); label.append(dot, kicker);
+  const heading = document.createElement("h4"); heading.textContent = title; copy.append(label, heading);
+  if (body) { const description = document.createElement("p"); description.textContent = body; copy.append(description); }
+  if (meta.length) { const details = document.createElement("div"); details.className = "memory-record-meta"; meta.forEach((value) => { const span = document.createElement("span"); span.textContent = value; details.append(span); }); copy.append(details); }
+  article.append(copy);
+  if (actions.length) { const controls = document.createElement("div"); controls.className = "memory-record-actions"; actions.forEach(({ label: actionLabel, primary = false, run }) => { const button = document.createElement("button"); button.type = "button"; button.textContent = actionLabel; button.classList.toggle("primary", primary); button.addEventListener("click", async () => { button.disabled = true; try { await run(); } finally { button.disabled = false; } }); controls.append(button); }); article.append(controls); }
+  return article;
+}
+
+function renderMemoryControl() {
+  const overview = state.memory;
+  if (!overview) return;
+  memoryElements.generatedAt.textContent = `更新于 ${fullDate(overview.generated_at)}`;
+  memoryElements.candidateCount.textContent = overview.counts.pending_candidates;
+  memoryElements.preferenceCount.textContent = overview.counts.active_preferences;
+  memoryElements.weeklyCount.textContent = overview.counts.active_weekly_memories;
+  renderMemoryControlCandidates(overview.candidates || []);
+  renderMemoryControlPreferences(overview.preferences || []);
+  renderMemoryControlWeekly(overview.weekly_memories || []);
+  renderMemoryControlContexts(overview.goal_contexts || []);
+}
+
+function renderMemoryControlCandidates(items) {
+  memoryElements.candidates.replaceChildren();
+  if (!items.length) return memoryElements.candidates.append(empty("尚未从对话中提取训练偏好候选。"));
+  items.forEach((item) => {
+    const candidate = item.candidate;
+    const actions = candidate.status === "pending" ? [
+      { label: "忽略", run: () => decideMemoryControlCandidate(candidate, "reject") },
+      { label: "确认记住", primary: true, run: () => decideMemoryControlCandidate(candidate, "confirm") }
+    ] : [];
+    memoryElements.candidates.append(memoryRecord({
+      status: candidate.status,
+      kicker: memoryStatusLabels[candidate.status] || candidate.status,
+      title: `长跑优先安排在${weekdayLabel(candidate.proposed_value)}`,
+      body: item.source_excerpt ? `原话：“${item.source_excerpt}”` : "原始消息当前不可用；该候选不会被静默确认。",
+      meta: [item.conversation_title, `置信度 ${candidate.confidence}`, `有效至 ${fullDate(candidate.expires_at)}`],
+      actions
+    }));
+  });
+}
+
+function renderMemoryControlPreferences(items) {
+  memoryElements.preferences.replaceChildren();
+  if (!items.length) return memoryElements.preferences.append(empty("尚无经过确认的长期训练偏好。"));
+  items.forEach((item) => {
+    const preference = item.preference;
+    const status = item.effective_now ? "active" : preference.status;
+    const actions = item.effective_now ? [{ label: "停用", run: () => archiveMemoryControlPreference(preference) }] : [];
+    memoryElements.preferences.append(memoryRecord({
+      status,
+      kicker: item.effective_now ? "当前会进入计划职责" : (memoryStatusLabels[preference.status] || preference.status),
+      title: `长跑优先安排在${weekdayLabel(preference.value)}`,
+      body: "该偏好只向计划调整职责开放，不会改变训练执行事实或恢复判断。",
+      meta: [`来源 ${preference.source_ref}`, `生效 ${fullDate(preference.valid_from)}`, preference.valid_until ? `截至 ${fullDate(preference.valid_until)}` : "无固定截止日"],
+      actions
+    }));
+  });
+}
+
+function renderMemoryControlWeekly(items) {
+  memoryElements.weekly.replaceChildren();
+  if (!items.length) return memoryElements.weekly.append(empty("尚无已结算的周训练记忆。"));
+  items.forEach((item) => {
+    const memory = item.memory;
+    const actions = memory.status === "active" ? [{ label: "标记失效", run: () => invalidateMemoryControlWeekly(item) }] : [];
+    memoryElements.weekly.append(memoryRecord({
+      status: memory.status,
+      kicker: memoryStatusLabels[memory.status] || memory.status,
+      title: `${item.goal_name} · ${memory.week_start} 当周 · 第 ${memory.version} 版`,
+      body: memory.summary,
+      meta: [`确认完成 ${memory.confirmed_completed_sessions}/${memory.planned_sessions}`, `来源 ${memory.source_refs.length} 条`, `证据 ${memory.input_hash.slice(0, 10)}`],
+      actions
+    }));
+  });
+}
+
+function renderMemoryControlContexts(goals) {
+  memoryElements.contexts.replaceChildren();
+  if (!goals.length) return memoryElements.contexts.append(empty("创建激活目标后，这里会展示三个职责的记忆可见性。"));
+  goals.forEach((goal) => {
+    const section = document.createElement("section"); section.className = "memory-goal-audit";
+    const header = document.createElement("header"); const title = document.createElement("strong"); title.textContent = goal.goal_name; const week = document.createElement("small"); week.textContent = `计划目标周 ${goal.target_week_start}`; header.append(title, week); section.append(header);
+    goal.contexts.forEach((context) => {
+      const details = document.createElement("details"); details.className = "memory-role-row";
+      const summary = document.createElement("summary"); const role = document.createElement("strong"); role.textContent = memoryRoleLabels[context.role] || context.role;
+      const scope = document.createElement("span"); scope.textContent = `${context.budget.used_items}/${context.budget.max_items} 条 · ${context.budget.used_chars}/${context.budget.max_chars} 字符`;
+      const result = document.createElement("em"); result.textContent = context.budget.used_items ? "已注入" : "未注入"; summary.append(role, scope, result); details.append(summary);
+      const decisions = document.createElement("div"); decisions.className = "memory-role-decisions";
+      if (!context.decisions.length) { const row = document.createElement("p"); row.append(document.createTextNode("无候选记忆")); decisions.append(row); }
+      context.decisions.forEach((decision) => { const row = document.createElement("p"); const memory = document.createElement("span"); memory.textContent = `${decision.memory_type === "athlete_preference" ? "长期偏好" : "周训练记忆"} · ${decision.memory_id.slice(0, 8)}`; const reason = document.createElement("span"); reason.textContent = memoryReasonLabels[decision.reason] || decision.reason; row.append(memory, reason); decisions.append(row); });
+      details.append(decisions); section.append(details);
+    });
+    memoryElements.contexts.append(section);
+  });
+}
+
+async function refreshMemory() {
+  state.memory = await api("/api/memory/overview");
+  renderMemoryControl();
+}
+
+async function decideMemoryControlCandidate(candidate, decision) {
+  if (decision === "confirm" && !window.confirm(`确认把“长跑优先安排在${weekdayLabel(candidate.proposed_value)}”保存为长期偏好？`)) return;
+  try {
+    await api(`/api/memory/candidates/${encodeURIComponent(candidate.id)}/decision`, { method: "POST", body: JSON.stringify({ decision, expected_candidate_hash: candidate.candidate_hash }) });
+    await Promise.all([refreshMemory(), refreshTraining()]);
+    if (state.activeConversationId === candidate.conversation_id) await loadConversation(candidate.conversation_id);
+    showToast(decision === "confirm" ? "偏好已确认；后续计划职责可以读取。" : "候选已忽略，不会写入正式记忆。");
+  } catch (error) { showToast(error.message); await refreshMemory(); }
+}
+
+async function archiveMemoryControlPreference(preference) {
+  if (!window.confirm(`确认停用“长跑优先安排在${weekdayLabel(preference.value)}”？停用后后续计划不会再读取。`)) return;
+  try {
+    await api(`/api/memory/preferences/${encodeURIComponent(preference.id)}/archive`, { method: "POST", body: JSON.stringify({ confirmed: true }) });
+    await Promise.all([refreshMemory(), refreshTraining()]); showToast("长期偏好已停用，后续上下文将自动排除。");
+  } catch (error) { showToast(error.message); await refreshMemory(); }
+}
+
+async function invalidateMemoryControlWeekly(item) {
+  if (!window.confirm(`确认将“${item.goal_name} · ${item.memory.week_start} 当周”标记为失效？原记录仍保留用于审计。`)) return;
+  try {
+    await api(`/api/memory/weekly-memories/${encodeURIComponent(item.memory.id)}/invalidate`, { method: "POST", body: JSON.stringify({ confirmed: true }) });
+    await Promise.all([refreshMemory(), refreshTraining()]); showToast("周训练记忆已失效，原记录仍保留用于审计。");
+  } catch (error) { showToast(error.message); await refreshMemory(); }
 }
 
 function selectedGoalView() { return state.training.goals.find((item) => item.goal.id === state.selectedGoalId); }
@@ -561,11 +714,15 @@ trainingElements.planForm.addEventListener("submit", draftPlan);
 trainingElements.checkIn.addEventListener("submit", saveCheckIn);
 trainingElements.run.addEventListener("click", runCoach);
 trainingElements.memoryBuild.addEventListener("click", buildPreviousWeeklyMemory);
+memoryElements.toggle.addEventListener("click", () => toggleMemory(true));
+memoryElements.close.addEventListener("click", () => toggleMemory(false));
+memoryElements.backdrop.addEventListener("click", () => toggleMemory(false));
 elements.contextToggle.addEventListener("click", () => toggleContext(true));
 elements.contextClose.addEventListener("click", () => toggleContext(false));
 elements.contextBackdrop.addEventListener("click", () => toggleContext(false));
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !trainingElements.drawer.hidden) toggleTraining(false);
+  else if (event.key === "Escape" && !memoryElements.drawer.hidden) toggleMemory(false);
   else if (event.key === "Escape" && !elements.contextPanel.hidden) toggleContext(false);
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "n") { event.preventDefault(); $("#new-chat").click(); }
 });

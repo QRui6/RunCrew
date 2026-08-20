@@ -1,0 +1,1275 @@
+{
+  "$defs": {
+    "AgentMemoryContext": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "agent-memory-context/1.0",
+          "default": "agent-memory-context/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "selection_policy_version": {
+          "const": "memory-context-policy/1.0",
+          "default": "memory-context-policy/1.0",
+          "title": "Selection Policy Version",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "execution",
+            "recovery",
+            "plan"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "goal_id": {
+          "minLength": 1,
+          "title": "Goal Id",
+          "type": "string"
+        },
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "target_week_start": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Week Start"
+        },
+        "context_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Context Hash",
+          "type": "string"
+        },
+        "audit_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Audit Hash",
+          "type": "string"
+        },
+        "selected_preferences": {
+          "items": {
+            "$ref": "#/$defs/PreferenceMemoryContextItem"
+          },
+          "maxItems": 5,
+          "title": "Selected Preferences",
+          "type": "array"
+        },
+        "selected_weekly_memories": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "plan": "#/$defs/PlanWeeklyMemoryContextItem",
+                "recovery": "#/$defs/RecoveryWeeklyMemoryContextItem"
+              },
+              "propertyName": "role"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/RecoveryWeeklyMemoryContextItem"
+              },
+              {
+                "$ref": "#/$defs/PlanWeeklyMemoryContextItem"
+              }
+            ]
+          },
+          "maxItems": 8,
+          "title": "Selected Weekly Memories",
+          "type": "array"
+        },
+        "decisions": {
+          "items": {
+            "$ref": "#/$defs/MemoryContextDecision"
+          },
+          "maxItems": 100,
+          "title": "Decisions",
+          "type": "array"
+        },
+        "budget": {
+          "$ref": "#/$defs/MemoryContextBudget"
+        }
+      },
+      "required": [
+        "role",
+        "goal_id",
+        "as_of",
+        "context_hash",
+        "audit_hash",
+        "budget"
+      ],
+      "title": "按职责裁剪的 Agent 记忆上下文",
+      "type": "object"
+    },
+    "AthletePreference": {
+      "additionalProperties": false,
+      "description": "经过用户明确确认、可追溯且有时效边界的长期训练偏好。",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "key": {
+          "const": "preferred_long_run_weekday",
+          "title": "Key",
+          "type": "string"
+        },
+        "value": {
+          "enum": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ],
+          "title": "Value",
+          "type": "string"
+        },
+        "status": {
+          "default": "active",
+          "enum": [
+            "active",
+            "superseded",
+            "expired",
+            "archived"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "source_type": {
+          "const": "explicit_user_setting",
+          "default": "explicit_user_setting",
+          "title": "Source Type",
+          "type": "string"
+        },
+        "source_ref": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Source Ref",
+          "type": "string"
+        },
+        "confirmed_at": {
+          "format": "date-time",
+          "title": "Confirmed At",
+          "type": "string"
+        },
+        "valid_from": {
+          "format": "date-time",
+          "title": "Valid From",
+          "type": "string"
+        },
+        "valid_until": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Until"
+        },
+        "supersedes_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Supersedes Id"
+        },
+        "schema_version": {
+          "const": "athlete-preference/1.0",
+          "default": "athlete-preference/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value",
+        "source_ref"
+      ],
+      "title": "AthletePreference",
+      "type": "object"
+    },
+    "AthletePreferenceControlItem": {
+      "additionalProperties": false,
+      "properties": {
+        "preference": {
+          "$ref": "#/$defs/AthletePreference"
+        },
+        "effective_now": {
+          "title": "Effective Now",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "preference",
+        "effective_now"
+      ],
+      "title": "AthletePreferenceControlItem",
+      "type": "object"
+    },
+    "MemoryCandidate": {
+      "additionalProperties": false,
+      "description": "从用户消息中提出、尚未成为正式记忆的类型化候选。",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "conversation_id": {
+          "minLength": 1,
+          "title": "Conversation Id",
+          "type": "string"
+        },
+        "source_message_id": {
+          "exclusiveMinimum": 0,
+          "title": "Source Message Id",
+          "type": "integer"
+        },
+        "source_text_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Text Hash",
+          "type": "string"
+        },
+        "memory_type": {
+          "const": "athlete_preference",
+          "default": "athlete_preference",
+          "title": "Memory Type",
+          "type": "string"
+        },
+        "key": {
+          "const": "preferred_long_run_weekday",
+          "title": "Key",
+          "type": "string"
+        },
+        "proposed_value": {
+          "enum": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ],
+          "title": "Proposed Value",
+          "type": "string"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "confidence_basis": {
+          "enum": [
+            "explicit_stable_preference",
+            "stable_preference_language"
+          ],
+          "title": "Confidence Basis",
+          "type": "string"
+        },
+        "extraction_rule_version": {
+          "const": "memory-candidate-rules/1.0",
+          "default": "memory-candidate-rules/1.0",
+          "title": "Extraction Rule Version",
+          "type": "string"
+        },
+        "candidate_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Candidate Hash",
+          "type": "string"
+        },
+        "status": {
+          "default": "pending",
+          "enum": [
+            "pending",
+            "confirmed",
+            "rejected",
+            "superseded",
+            "expired"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "requires_user_confirmation": {
+          "const": true,
+          "default": true,
+          "title": "Requires User Confirmation",
+          "type": "boolean"
+        },
+        "supersedes_candidate_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Supersedes Candidate Id"
+        },
+        "preference_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Preference Id"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "decided_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decided At"
+        }
+      },
+      "required": [
+        "conversation_id",
+        "source_message_id",
+        "source_text_hash",
+        "key",
+        "proposed_value",
+        "confidence",
+        "confidence_basis",
+        "candidate_hash",
+        "expires_at"
+      ],
+      "title": "待确认记忆候选",
+      "type": "object"
+    },
+    "MemoryCandidateControlItem": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate": {
+          "$ref": "#/$defs/MemoryCandidate"
+        },
+        "conversation_title": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Conversation Title",
+          "type": "string"
+        },
+        "source_excerpt": {
+          "anyOf": [
+            {
+              "maxLength": 240,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Excerpt"
+        },
+        "source_available": {
+          "title": "Source Available",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "candidate",
+        "conversation_title",
+        "source_available"
+      ],
+      "title": "MemoryCandidateControlItem",
+      "type": "object"
+    },
+    "MemoryContextBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "max_items": {
+          "minimum": 0,
+          "title": "Max Items",
+          "type": "integer"
+        },
+        "max_chars": {
+          "minimum": 0,
+          "title": "Max Chars",
+          "type": "integer"
+        },
+        "used_items": {
+          "minimum": 0,
+          "title": "Used Items",
+          "type": "integer"
+        },
+        "used_chars": {
+          "minimum": 0,
+          "title": "Used Chars",
+          "type": "integer"
+        },
+        "candidate_count": {
+          "minimum": 0,
+          "title": "Candidate Count",
+          "type": "integer"
+        },
+        "excluded_by_budget": {
+          "minimum": 0,
+          "title": "Excluded By Budget",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_items",
+        "max_chars",
+        "used_items",
+        "used_chars",
+        "candidate_count",
+        "excluded_by_budget"
+      ],
+      "title": "MemoryContextBudget",
+      "type": "object"
+    },
+    "MemoryContextDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "memory_type": {
+          "enum": [
+            "athlete_preference",
+            "weekly_training_memory"
+          ],
+          "title": "Memory Type",
+          "type": "string"
+        },
+        "memory_id": {
+          "minLength": 1,
+          "title": "Memory Id",
+          "type": "string"
+        },
+        "status": {
+          "maxLength": 24,
+          "minLength": 1,
+          "title": "Status",
+          "type": "string"
+        },
+        "selected": {
+          "title": "Selected",
+          "type": "boolean"
+        },
+        "reason": {
+          "enum": [
+            "selected_role_relevant",
+            "excluded_role_not_allowed",
+            "excluded_wrong_goal",
+            "excluded_future",
+            "excluded_expired",
+            "excluded_superseded",
+            "excluded_archived",
+            "excluded_invalidated",
+            "excluded_outside_target_window",
+            "excluded_item_budget",
+            "excluded_character_budget"
+          ],
+          "title": "Reason",
+          "type": "string"
+        },
+        "selected_order": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Selected Order"
+        },
+        "estimated_chars": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Estimated Chars",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "memory_type",
+        "memory_id",
+        "status",
+        "selected",
+        "reason"
+      ],
+      "title": "MemoryContextDecision",
+      "type": "object"
+    },
+    "MemoryControlCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "pending_candidates": {
+          "minimum": 0,
+          "title": "Pending Candidates",
+          "type": "integer"
+        },
+        "active_preferences": {
+          "minimum": 0,
+          "title": "Active Preferences",
+          "type": "integer"
+        },
+        "active_weekly_memories": {
+          "minimum": 0,
+          "title": "Active Weekly Memories",
+          "type": "integer"
+        },
+        "total_records": {
+          "minimum": 0,
+          "title": "Total Records",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pending_candidates",
+        "active_preferences",
+        "active_weekly_memories",
+        "total_records"
+      ],
+      "title": "MemoryControlCounts",
+      "type": "object"
+    },
+    "MemoryGoalContextAudit": {
+      "additionalProperties": false,
+      "properties": {
+        "goal_id": {
+          "minLength": 1,
+          "title": "Goal Id",
+          "type": "string"
+        },
+        "goal_name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Goal Name",
+          "type": "string"
+        },
+        "target_week_start": {
+          "format": "date",
+          "title": "Target Week Start",
+          "type": "string"
+        },
+        "contexts": {
+          "items": {
+            "$ref": "#/$defs/AgentMemoryContext"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Contexts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "goal_id",
+        "goal_name",
+        "target_week_start",
+        "contexts"
+      ],
+      "title": "MemoryGoalContextAudit",
+      "type": "object"
+    },
+    "PlanWeeklyMemoryContextItem": {
+      "additionalProperties": false,
+      "description": "Plan 可读取的周训练基线；类型层面不存在恢复敏感字段。",
+      "properties": {
+        "memory_type": {
+          "const": "weekly_training_memory",
+          "default": "weekly_training_memory",
+          "title": "Memory Type",
+          "type": "string"
+        },
+        "memory_id": {
+          "minLength": 1,
+          "title": "Memory Id",
+          "type": "string"
+        },
+        "week_start": {
+          "format": "date",
+          "title": "Week Start",
+          "type": "string"
+        },
+        "week_end": {
+          "format": "date",
+          "title": "Week End",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "input_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Hash",
+          "type": "string"
+        },
+        "completion_rate": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completion Rate"
+        },
+        "actual_duration_seconds": {
+          "minimum": 0,
+          "title": "Actual Duration Seconds",
+          "type": "integer"
+        },
+        "actual_distance_meters": {
+          "minimum": 0,
+          "title": "Actual Distance Meters",
+          "type": "number"
+        },
+        "check_in_days": {
+          "minimum": 0,
+          "title": "Check In Days",
+          "type": "integer"
+        },
+        "missing_data": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Missing Data",
+          "type": "array"
+        },
+        "role": {
+          "const": "plan",
+          "default": "plan",
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "memory_id",
+        "week_start",
+        "week_end",
+        "version",
+        "input_hash",
+        "actual_duration_seconds",
+        "actual_distance_meters",
+        "check_in_days"
+      ],
+      "title": "PlanWeeklyMemoryContextItem",
+      "type": "object"
+    },
+    "PreferenceMemoryContextItem": {
+      "additionalProperties": false,
+      "properties": {
+        "memory_type": {
+          "const": "athlete_preference",
+          "default": "athlete_preference",
+          "title": "Memory Type",
+          "type": "string"
+        },
+        "memory_id": {
+          "minLength": 1,
+          "title": "Memory Id",
+          "type": "string"
+        },
+        "key": {
+          "const": "preferred_long_run_weekday",
+          "title": "Key",
+          "type": "string"
+        },
+        "value": {
+          "enum": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ],
+          "title": "Value",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "athlete-preference/1.0",
+          "default": "athlete-preference/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "memory_id",
+        "key",
+        "value"
+      ],
+      "title": "PreferenceMemoryContextItem",
+      "type": "object"
+    },
+    "RecoveryWeeklyMemoryContextItem": {
+      "additionalProperties": false,
+      "description": "Recovery 可读取的周负荷与恢复聚合。",
+      "properties": {
+        "memory_type": {
+          "const": "weekly_training_memory",
+          "default": "weekly_training_memory",
+          "title": "Memory Type",
+          "type": "string"
+        },
+        "memory_id": {
+          "minLength": 1,
+          "title": "Memory Id",
+          "type": "string"
+        },
+        "week_start": {
+          "format": "date",
+          "title": "Week Start",
+          "type": "string"
+        },
+        "week_end": {
+          "format": "date",
+          "title": "Week End",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "input_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Hash",
+          "type": "string"
+        },
+        "completion_rate": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completion Rate"
+        },
+        "actual_duration_seconds": {
+          "minimum": 0,
+          "title": "Actual Duration Seconds",
+          "type": "integer"
+        },
+        "actual_distance_meters": {
+          "minimum": 0,
+          "title": "Actual Distance Meters",
+          "type": "number"
+        },
+        "check_in_days": {
+          "minimum": 0,
+          "title": "Check In Days",
+          "type": "integer"
+        },
+        "missing_data": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Missing Data",
+          "type": "array"
+        },
+        "role": {
+          "const": "recovery",
+          "default": "recovery",
+          "title": "Role",
+          "type": "string"
+        },
+        "average_fatigue": {
+          "anyOf": [
+            {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Average Fatigue"
+        },
+        "average_soreness": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Average Soreness"
+        },
+        "average_readiness": {
+          "anyOf": [
+            {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Average Readiness"
+        },
+        "max_pain_severity": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Pain Severity"
+        },
+        "acute_symptom_days": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Acute Symptom Days"
+        }
+      },
+      "required": [
+        "memory_id",
+        "week_start",
+        "week_end",
+        "version",
+        "input_hash",
+        "actual_duration_seconds",
+        "actual_distance_meters",
+        "check_in_days"
+      ],
+      "title": "RecoveryWeeklyMemoryContextItem",
+      "type": "object"
+    },
+    "WeeklyMemoryControlItem": {
+      "additionalProperties": false,
+      "properties": {
+        "memory": {
+          "$ref": "#/$defs/WeeklyTrainingMemory"
+        },
+        "goal_name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Goal Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "memory",
+        "goal_name"
+      ],
+      "title": "WeeklyMemoryControlItem",
+      "type": "object"
+    },
+    "WeeklyTrainingMemory": {
+      "additionalProperties": false,
+      "description": "由正式训练事实确定性生成、可版本替代的周训练记忆。",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "goal_id": {
+          "minLength": 1,
+          "title": "Goal Id",
+          "type": "string"
+        },
+        "plan_id": {
+          "minLength": 1,
+          "title": "Plan Id",
+          "type": "string"
+        },
+        "week_start": {
+          "format": "date",
+          "title": "Week Start",
+          "type": "string"
+        },
+        "week_end": {
+          "format": "date",
+          "title": "Week End",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "status": {
+          "default": "active",
+          "enum": [
+            "active",
+            "superseded",
+            "invalidated"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "plan_revision": {
+          "minimum": 1,
+          "title": "Plan Revision",
+          "type": "integer"
+        },
+        "input_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Hash",
+          "type": "string"
+        },
+        "planned_sessions": {
+          "minimum": 0,
+          "title": "Planned Sessions",
+          "type": "integer"
+        },
+        "confirmed_completed_sessions": {
+          "minimum": 0,
+          "title": "Confirmed Completed Sessions",
+          "type": "integer"
+        },
+        "confirmed_skipped_sessions": {
+          "minimum": 0,
+          "title": "Confirmed Skipped Sessions",
+          "type": "integer"
+        },
+        "unresolved_sessions": {
+          "minimum": 0,
+          "title": "Unresolved Sessions",
+          "type": "integer"
+        },
+        "completion_rate": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completion Rate"
+        },
+        "planned_duration_seconds": {
+          "minimum": 0,
+          "title": "Planned Duration Seconds",
+          "type": "integer"
+        },
+        "actual_duration_seconds": {
+          "minimum": 0,
+          "title": "Actual Duration Seconds",
+          "type": "integer"
+        },
+        "actual_distance_meters": {
+          "minimum": 0,
+          "title": "Actual Distance Meters",
+          "type": "number"
+        },
+        "check_in_days": {
+          "minimum": 0,
+          "title": "Check In Days",
+          "type": "integer"
+        },
+        "average_fatigue": {
+          "anyOf": [
+            {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Average Fatigue"
+        },
+        "average_soreness": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Average Soreness"
+        },
+        "average_sleep_quality": {
+          "anyOf": [
+            {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Average Sleep Quality"
+        },
+        "average_readiness": {
+          "anyOf": [
+            {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Average Readiness"
+        },
+        "max_pain_severity": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Pain Severity"
+        },
+        "acute_symptom_days": {
+          "minimum": 0,
+          "title": "Acute Symptom Days",
+          "type": "integer"
+        },
+        "approved_plan_changes": {
+          "minimum": 0,
+          "title": "Approved Plan Changes",
+          "type": "integer"
+        },
+        "summary": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "missing_data": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Missing Data",
+          "type": "array"
+        },
+        "source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "supersedes_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Supersedes Id"
+        },
+        "invalidated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Invalidated At"
+        },
+        "schema_version": {
+          "const": "weekly-training-memory/1.0",
+          "default": "weekly-training-memory/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "ruleset_version": {
+          "const": "weekly-training-memory-rules/1.0",
+          "default": "weekly-training-memory-rules/1.0",
+          "title": "Ruleset Version",
+          "type": "string"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "title": "Generated At",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "goal_id",
+        "plan_id",
+        "week_start",
+        "week_end",
+        "version",
+        "plan_revision",
+        "input_hash",
+        "planned_sessions",
+        "confirmed_completed_sessions",
+        "confirmed_skipped_sessions",
+        "unresolved_sessions",
+        "planned_duration_seconds",
+        "actual_duration_seconds",
+        "actual_distance_meters",
+        "check_in_days",
+        "acute_symptom_days",
+        "approved_plan_changes",
+        "summary",
+        "source_refs"
+      ],
+      "title": "WeeklyTrainingMemory",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "memory-control-overview/1.0",
+      "default": "memory-control-overview/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "counts": {
+      "$ref": "#/$defs/MemoryControlCounts"
+    },
+    "candidates": {
+      "items": {
+        "$ref": "#/$defs/MemoryCandidateControlItem"
+      },
+      "title": "Candidates",
+      "type": "array"
+    },
+    "preferences": {
+      "items": {
+        "$ref": "#/$defs/AthletePreferenceControlItem"
+      },
+      "title": "Preferences",
+      "type": "array"
+    },
+    "weekly_memories": {
+      "items": {
+        "$ref": "#/$defs/WeeklyMemoryControlItem"
+      },
+      "title": "Weekly Memories",
+      "type": "array"
+    },
+    "goal_contexts": {
+      "items": {
+        "$ref": "#/$defs/MemoryGoalContextAudit"
+      },
+      "title": "Goal Contexts",
+      "type": "array"
+    }
+  },
+  "required": [
+    "generated_at",
+    "counts"
+  ],
+  "title": "RunCrew 记忆档案总览",
+  "type": "object"
+}

@@ -7,12 +7,12 @@
 
 - 接入 COROS OAuth 2.0 + PKCE/MCP 与 Garmin FIT SDK，以 Provider 隔离厂商协议并统一 Activity Schema；设计“详情—分圈—FIT—摘要”分级降级和幂等同步，保证外部详情失败时仍保留可用活动事实。
 - 围绕“计划—执行—反馈—调整”构建 Execution / Recovery / Plan 三职责 Agent 与 Coach Harness，通过最小 Handoff、工具权限、预算/超时/重试和人工确认约束协作；实现按职责裁剪的 Memory Context，以及“聊天候选—用户确认—正式偏好”的可追溯写入闭环。
-- 计划和记忆确认时由服务端重放并校验 Hash、原始来源与 revision，阻止前端篡改或过期草案覆盖新状态；版本化评测中单 Agent 确定性 Policy 和真实 DeepSeek 同 Suite Hash 均12/12、多 Agent 确定性 Harness 18/18、Memory Manager 16/16且意外写入0，项目全量178项自动化测试通过。
+- 计划和记忆确认时由服务端重放并校验 Hash、原始来源与 revision，阻止前端篡改或过期草案覆盖新状态；版本化评测中单 Agent 确定性 Policy 和真实 DeepSeek 同 Suite Hash 均12/12、多 Agent 确定性 Harness 18/18、Memory Manager 16/16且意外写入0，项目全量181项自动化测试通过。
 
 ## 更紧凑的两行版
 
 **RunCrew｜可审计多智能体训练运营系统**：基于 COROS MCP/FIT 真实跑步数据构建计划—执行—恢复—调整闭环，以 Execution / Recovery / Plan 职责隔离、类型化 Handoff、工具权限、Trace、预算和人工确认约束 Agent；计划写入前执行服务端重放及 Hash/revision 校验。  
-构建带候选确认、职责预算和双 Hash 审计的 Agent Memory；版本化评测中单 Agent 确定性 Policy 与真实 DeepSeek 同 Hash 均12/12，多 Agent 确定性 Harness 18/18，Memory Manager 16/16且意外写入0，全量178项自动化测试通过。
+构建带候选确认、职责预算、双 Hash 审计和用户可撤销控制面的 Agent Memory；版本化评测中单 Agent 确定性 Policy 与真实 DeepSeek 同 Hash 均12/12，多 Agent 确定性 Harness 18/18，Memory Manager 16/16且意外写入0，全量181项自动化测试通过。
 
 ## 面向不同岗位的微调
 

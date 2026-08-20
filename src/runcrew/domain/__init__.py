@@ -43,6 +43,15 @@ from runcrew.domain.memory_evaluation import (
     MemoryEvaluationReport,
     MemoryEvaluationSuite,
 )
+from runcrew.domain.memory_control import (
+    AthletePreferenceControlItem,
+    MemoryCandidateControlItem,
+    MemoryControlCounts,
+    MemoryControlOverview,
+    MemoryGoalContextAudit,
+    WeeklyMemoryControlItem,
+    WeeklyMemoryInvalidationRequest,
+)
 from runcrew.domain.demo import DemoSeedSummary
 from runcrew.domain.training_cycle import (
     DailyCheckIn,
@@ -76,6 +85,13 @@ __all__ = [
     "MemoryCandidateDecisionResult",
     "MemoryEvaluationReport",
     "MemoryEvaluationSuite",
+    "AthletePreferenceControlItem",
+    "MemoryCandidateControlItem",
+    "MemoryControlCounts",
+    "MemoryControlOverview",
+    "MemoryGoalContextAudit",
+    "WeeklyMemoryControlItem",
+    "WeeklyMemoryInvalidationRequest",
     "PlanWeeklyMemoryContextItem",
     "PreferenceMemoryContextItem",
     "RecoveryWeeklyMemoryContextItem",

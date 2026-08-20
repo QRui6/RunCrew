@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="RunCrew：围绕个人跑步数据持续提供有依据的训练分析与建议。">
   <title>RunCrew · 个人跑步办公室</title>
-  <link rel="stylesheet" href="/assets/chat.css?v=20260820-3">
+  <link rel="stylesheet" href="/assets/chat.css?v=20260820-4">
 </head>
 <body>
   <header class="topbar">
@@ -17,6 +17,7 @@
     <nav class="product-nav" aria-label="产品导航">
       <span class="nav-item active">训练对话</span>
       <button id="training-toggle" class="nav-item" type="button" aria-controls="training-drawer" aria-expanded="false">训练运营</button>
+      <button id="memory-toggle" class="nav-item" type="button" aria-controls="memory-drawer" aria-expanded="false">记忆档案</button>
       <a class="nav-item" href="/engineering">工程观测</a>
     </nav>
 
@@ -277,7 +278,51 @@
     </section>
   </aside>
 
+  <div id="memory-backdrop" class="memory-backdrop" hidden></div>
+  <aside id="memory-drawer" class="memory-drawer" aria-label="记忆档案" hidden>
+    <header class="drawer-head memory-drawer-head">
+      <div><span class="eyebrow">MEMORY CONTROL</span><h2>记忆档案</h2><small>查看系统记住了什么、来自哪里，以及哪些职责可以读取</small></div>
+      <button id="memory-close" type="button" aria-label="关闭记忆档案">×</button>
+    </header>
+
+    <div class="drawer-status memory-control-status">
+      <span><i></i>只使用已确认事实</span>
+      <small id="memory-generated-at">按需读取</small>
+    </div>
+
+    <section class="memory-control-summary" aria-label="记忆档案统计">
+      <div><span>待确认</span><strong id="memory-count-candidates">—</strong></div>
+      <div><span>生效偏好</span><strong id="memory-count-preferences">—</strong></div>
+      <div><span>有效周记忆</span><strong id="memory-count-weekly">—</strong></div>
+    </section>
+
+    <section class="memory-control-section">
+      <div class="memory-control-heading"><div><span>1</span><h3>待确认候选</h3></div><small>确认前不会进入 Agent 上下文</small></div>
+      <div id="memory-control-candidates" class="memory-record-list"></div>
+    </section>
+
+    <section class="memory-control-section">
+      <div class="memory-control-heading"><div><span>2</span><h3>长期训练偏好</h3></div><small>显式确认 · 可停用 · 有时效</small></div>
+      <div id="memory-control-preferences" class="memory-record-list"></div>
+    </section>
+
+    <section class="memory-control-section">
+      <div class="memory-control-heading"><div><span>3</span><h3>周训练记忆</h3></div><small>由已确认执行事实确定性生成</small></div>
+      <div id="memory-control-weekly" class="memory-record-list"></div>
+    </section>
+
+    <section class="memory-control-section">
+      <div class="memory-control-heading"><div><span>4</span><h3>职责可见性</h3></div><small>逐条展示选中与排除原因</small></div>
+      <div id="memory-control-contexts" class="memory-role-audit"></div>
+    </section>
+
+    <footer class="memory-control-foot">
+      <strong>记忆边界</strong>
+      <p>聊天只能提出候选；正式偏好需要你确认。周记忆来自已确认的训练事实。停用或失效后，后续 Agent 上下文会自动排除该记录。</p>
+    </footer>
+  </aside>
+
   <div id="toast" class="toast" role="status" hidden></div>
-  <script src="/assets/chat.js?v=20260820-3" defer></script>
+  <script src="/assets/chat.js?v=20260820-4" defer></script>
 </body>
 </html>
