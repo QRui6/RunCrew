@@ -398,7 +398,21 @@ versioned synthetic case
   → 下一次 Plan Memory Context 才能读取
 ```
 
-浏览器只提交决定和预期 Candidate Hash，不提交候选值；候选表不复制用户消息正文。M9 不使用向量数据库，也不允许普通聊天或 LLM 直接写入正式记忆。M9-D 已完成类型化候选、七天生命周期、来源完整性重放与网页确认；下一步以版本化 Memory Evaluation 衡量提取、拒绝、冲突、过期和召回。
+浏览器只提交决定和预期 Candidate Hash，不提交候选值；候选表不复制用户消息正文。M9 不允许普通聊天或 LLM 直接写入正式记忆。
+
+M9-E 评测链为：
+
+```text
+evals/memory/cases.json（输入 + 固定期望）
+  → Candidate 纯规则场景
+  → 隔离 SQLite 中的正式 Repository / Candidate / Preference / 来源重放服务
+  → 正式 Memory Context Builder 的职责召回与注入场景
+  → 逐场景 Observation + Checks
+  → 召回 / 拒绝 / 生命周期 / 来源 / 确认 / 职责 / 注入 / Schema 指标
+  → Suite Hash + 私有 Report
+```
+
+Suite Hash 只绑定版本化题集，不绑定机器耗时；报告中的 P95 仅作本次运行诊断。无关或不可用 Memory 可以改变 Audit Hash，但不得改变实际 Context Hash。当前16场景全部满足期望，结构化过滤没有暴露检索瓶颈，因此仍不引入向量数据库。
 
 ## 可讲解的系统视图
 

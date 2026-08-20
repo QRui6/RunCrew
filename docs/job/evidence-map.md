@@ -4,7 +4,7 @@
 
 | 可使用的结论 | 主要证据 | 可重复验证 | 不应外推为 |
 |---|---|---|---|
-| 全量173项自动化测试通过 | `scripts/verify.py`、`tests/` | `.venv\Scripts\python.exe scripts\verify.py` | 173个真实用户场景或模型准确率 |
+| 全量178项自动化测试通过 | `scripts/verify.py`、`tests/` | `.venv\Scripts\python.exe scripts\verify.py` | 178个真实用户场景或模型准确率 |
 | 真实 COROS OAuth + PKCE/MCP 接入成功 | `docs/progress/2026-08-08-m0-coros-mcp-spike.md`、Provider 代码 | 需要个人授权，不作为公开演示步骤 | 所有 COROS 详情/FIT 接口稳定可用 |
 | FIT 可解析 session/lap/record | `src/runcrew/providers/fit.py`、FIT 测试与 M2 记录 | 运行相关 pytest；真实文件不提交 | 自动 FIT URL 已验证 |
 | 单 Agent 确定性与真实 DeepSeek 同 Hash 均12/12 | `docs/M5-B3-DeepSeek最终评测报告.md`、`docs/progress/2026-08-09-m5b3b-first-full-suite.md` | 公开套件可跑确定性基线；真实复跑会产生费用 | 复杂多工具 Agent 或生产稳定性100% |
@@ -14,13 +14,14 @@
 | 长期偏好显式确认且影响计划 | ADR-0020、`tests/test_athlete_memory.py` | 记忆专项测试、`runcrew memory --help` | 通用向量记忆或聊天自动学习 |
 | Memory 按职责裁剪并记录预算与排除原因 | ADR-0023、`tests/test_memory_context.py`、`runcrew memory context` | 运行 Memory Context 专项测试或 CLI | 所有 Agent 共享全部历史、RAG 或自动记忆写入 |
 | 聊天偏好候选需确认、来源与 Hash 重放后才写入 | ADR-0024、`tests/test_memory_candidates.py` | 运行 Candidate 专项测试或在合成演示对话中确认 | LLM 自动学习、真实用户抽取准确率或通用 Memory |
+| Memory Manager 版本化基线16/16、意外正式写入0 | `evals/memory/`、ADR-0025、M9-E 阶段记录 | `runcrew eval memory --output data/private/evals/memory.json` | 16个真实用户、真实语言准确率或向量检索优越性 |
 | 无私人数据演示可重复准备 | ADR-0021、`tests/test_demo_seed.py`、`docs/demo/` | `runcrew demo-seed --reset` | 合成数据证明用户训练效果 |
 
 ## 三组数字如何准确表达
 
-### 173 passed
+### 178 passed
 
-它代表当前仓库全量 pytest 回归，包括领域模型、存储、Provider、Skill、Harness、Evaluation、Web/API、Memory 和 Demo Seed。它不是173个评测问题，也不是准确率。
+它代表当前仓库全量 pytest 回归，包括领域模型、存储、Provider、Skill、Harness、Evaluation、Web/API、Memory 和 Demo Seed。它不是178个评测问题，也不是准确率。
 
 ### 12 / 12
 

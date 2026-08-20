@@ -8,13 +8,19 @@ from runcrew.evaluation.coach_agent import (
     evaluate_coach_agent_suite,
     load_coach_agent_suite,
 )
+from runcrew.evaluation.memory import (
+    evaluate_memory_suite,
+    load_memory_evaluation_suite,
+)
 
 __all__ = [
     "build_synthetic_training_review",
     "evaluate_chat_suite",
     "evaluate_coach_agent_suite",
+    "evaluate_memory_suite",
     "evaluate_review_agent_suite",
     "load_chat_evaluation_suite",
     "load_coach_agent_suite",
+    "load_memory_evaluation_suite",
     "load_review_agent_suite",
 ]

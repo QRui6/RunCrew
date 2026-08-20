@@ -39,6 +39,10 @@ from runcrew.domain.memory import (
     WeeklyTrainingMemoryBuildRequest,
     WeeklyTrainingMemoryBuildResult,
 )
+from runcrew.domain.memory_evaluation import (
+    MemoryEvaluationReport,
+    MemoryEvaluationSuite,
+)
 from runcrew.domain.demo import DemoSeedSummary
 from runcrew.domain.training_cycle import (
     DailyCheckIn,
@@ -70,6 +74,8 @@ __all__ = [
     "MemoryCandidate",
     "MemoryCandidateDecisionRequest",
     "MemoryCandidateDecisionResult",
+    "MemoryEvaluationReport",
+    "MemoryEvaluationSuite",
     "PlanWeeklyMemoryContextItem",
     "PreferenceMemoryContextItem",
     "RecoveryWeeklyMemoryContextItem",

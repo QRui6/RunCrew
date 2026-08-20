@@ -1,0 +1,212 @@
+{
+  "suite_version": "memory-manager-eval/1.0",
+  "cases": [
+    {
+      "id": "explicit_high_confidence_candidate",
+      "description": "明确、长期且单一星期的长跑偏好生成高置信候选。",
+      "category": "candidate",
+      "scenario": "explicit_high_confidence",
+      "input": {"content": "以后长跑优先安排在周日"},
+      "expected": {
+        "candidate_created": true,
+        "proposed_value": "sun",
+        "candidate_confidence": "high",
+        "candidate_status": "pending"
+      }
+    },
+    {
+      "id": "explicit_medium_confidence_candidate",
+      "description": "稳定但语气较弱的长跑偏好生成需要确认的中置信候选。",
+      "category": "candidate",
+      "scenario": "explicit_medium_confidence",
+      "input": {"content": "我平时希望星期六跑长距离"},
+      "expected": {
+        "candidate_created": true,
+        "proposed_value": "sat",
+        "candidate_confidence": "medium",
+        "candidate_status": "pending"
+      }
+    },
+    {
+      "id": "temporary_expression_rejected",
+      "description": "一次性的本周安排不能成为长期记忆候选。",
+      "category": "candidate",
+      "scenario": "temporary_expression",
+      "input": {"content": "这周日跑一次长距离"},
+      "expected": {}
+    },
+    {
+      "id": "negative_expression_rejected",
+      "description": "否定表达不能被反向写成长期偏好。",
+      "category": "candidate",
+      "scenario": "negative_expression",
+      "input": {"content": "我不想周日长跑"},
+      "expected": {}
+    },
+    {
+      "id": "ambiguous_expression_rejected",
+      "description": "包含多个星期的歧义表达不生成候选。",
+      "category": "candidate",
+      "scenario": "ambiguous_expression",
+      "input": {"content": "以后周六或周日长跑都行"},
+      "expected": {}
+    },
+    {
+      "id": "unsupported_expression_rejected",
+      "description": "当前业务不能消费的记忆类型不生成任意文本候选。",
+      "category": "candidate",
+      "scenario": "unsupported_expression",
+      "input": {"content": "以后周日做力量训练"},
+      "expected": {}
+    },
+    {
+      "id": "pending_candidate_is_not_formal_memory",
+      "description": "只提出候选时正式偏好表仍为空。",
+      "category": "lifecycle",
+      "scenario": "pending_is_not_memory",
+      "input": {"content": "以后长跑优先安排在周日"},
+      "expected": {
+        "candidate_created": true,
+        "proposed_value": "sun",
+        "candidate_confidence": "high",
+        "candidate_status": "pending"
+      }
+    },
+    {
+      "id": "confirmed_candidate_writes_server_value",
+      "description": "用户确认后由服务端重放候选值并写入一条正式偏好。",
+      "category": "lifecycle",
+      "scenario": "confirm_writes_preference",
+      "input": {
+        "content": "今后长跑固定在星期六",
+        "decision": "confirm"
+      },
+      "expected": {
+        "candidate_created": true,
+        "proposed_value": "sat",
+        "candidate_confidence": "high",
+        "candidate_status": "confirmed",
+        "formal_preference_count": 1
+      }
+    },
+    {
+      "id": "rejected_candidate_does_not_write",
+      "description": "用户忽略候选后只结束候选生命周期，不写正式偏好。",
+      "category": "lifecycle",
+      "scenario": "reject_does_not_write",
+      "input": {
+        "content": "我平时希望星期六跑长距离",
+        "decision": "reject"
+      },
+      "expected": {
+        "candidate_created": true,
+        "proposed_value": "sat",
+        "candidate_confidence": "medium",
+        "candidate_status": "rejected"
+      }
+    },
+    {
+      "id": "new_candidate_supersedes_pending",
+      "description": "同 key 新表达替代旧 pending 候选，并把确认绑定到新原消息。",
+      "category": "lifecycle",
+      "scenario": "new_candidate_supersedes",
+      "input": {
+        "content": "以后长跑优先安排在周日",
+        "second_content": "今后长跑固定在周六"
+      },
+      "expected": {
+        "candidate_created": true,
+        "proposed_value": "sun",
+        "candidate_confidence": "high",
+        "candidate_status": "superseded",
+        "secondary_candidate_status": "pending"
+      }
+    },
+    {
+      "id": "expired_candidate_cannot_write",
+      "description": "超过七天的 pending 候选转为 expired，确认请求被阻断。",
+      "category": "lifecycle",
+      "scenario": "expired_candidate_blocked",
+      "input": {"content": "以后长跑优先安排在周日"},
+      "expected": {
+        "candidate_created": true,
+        "proposed_value": "sun",
+        "candidate_confidence": "high",
+        "candidate_status": "expired",
+        "decision_blocked": true
+      }
+    },
+    {
+      "id": "candidate_tamper_blocks_confirmation",
+      "description": "候选正文被修改但 Hash 未变化时，服务端完整性重算阻断正式写入。",
+      "category": "integrity",
+      "scenario": "candidate_tamper_blocked",
+      "input": {"content": "以后长跑优先安排在周日"},
+      "expected": {
+        "candidate_created": true,
+        "proposed_value": "mon",
+        "candidate_confidence": "high",
+        "candidate_status": "pending",
+        "decision_blocked": true
+      }
+    },
+    {
+      "id": "source_message_tamper_blocks_confirmation",
+      "description": "原始用户消息发生变化时，来源 Hash 校验阻断正式写入。",
+      "category": "integrity",
+      "scenario": "source_tamper_blocked",
+      "input": {"content": "以后长跑优先安排在周日"},
+      "expected": {
+        "candidate_created": true,
+        "proposed_value": "sun",
+        "candidate_confidence": "high",
+        "candidate_status": "pending",
+        "decision_blocked": true
+      }
+    },
+    {
+      "id": "role_scoped_retrieval_is_minimal",
+      "description": "Execution 不取记忆，Recovery 只取周记忆，Plan 取偏好与去敏周记忆。",
+      "category": "retrieval",
+      "scenario": "role_scoped_retrieval",
+      "expected": {
+        "recovery_weekly_count": 1,
+        "plan_preference_count": 1,
+        "plan_weekly_count": 1
+      }
+    },
+    {
+      "id": "inactive_and_wrong_scope_memories_excluded",
+      "description": "过期、归档、失效、未来和错误目标记忆必须留下排除原因且不能召回。",
+      "category": "retrieval",
+      "scenario": "inactive_memory_excluded",
+      "expected": {
+        "exclusion_reasons": [
+          "excluded_archived",
+          "excluded_expired",
+          "excluded_future",
+          "excluded_invalidated",
+          "excluded_wrong_goal"
+        ]
+      }
+    },
+    {
+      "id": "irrelevant_injection_does_not_change_context",
+      "description": "注入不相关或不可用记忆只改变 Audit Hash，不改变实际 Context Hash。",
+      "category": "retrieval",
+      "scenario": "irrelevant_injection_stable_context",
+      "expected": {
+        "plan_preference_count": 1,
+        "plan_weekly_count": 1,
+        "exclusion_reasons": [
+          "excluded_archived",
+          "excluded_expired",
+          "excluded_future",
+          "excluded_invalidated",
+          "excluded_wrong_goal"
+        ],
+        "context_hash_unchanged": true
+      }
+    }
+  ]
+}

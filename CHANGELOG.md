@@ -6,6 +6,9 @@
 
 ### Added
 
+- 增加 M9-E `memory-manager-eval/1.0`：16个版本化无私人数据场景覆盖 Candidate 召回/拒绝、确认边界、冲突、过期、候选/原消息篡改、职责召回和无关记忆注入；
+- 增加 Memory Suite/Case/Report 契约、Suite Hash、九类通过率、意外正式写入计数、延迟与类别分布、`runcrew eval memory`、两份 Schema、ADR-0025和5项专项测试；
+- 生命周期与完整性评测在隔离 SQLite 中运行正式 Repository/Service，召回评测运行正式 Context Builder，不建立只为评测服务的旁路；
 - 增加 M9-D 聊天 Memory Candidate：只从受支持的明确长期表达生成待确认候选，保存原消息引用/Hash、类型化值、置信边界、Candidate Hash、七天有效期与完整生命周期；
 - 增加 `memory_candidates` 表、确认/拒绝 API、原消息下候选卡片、5份 Candidate/Chat Schema、ADR-0024 和15项专项测试；
 - 候选确认后复用正式长期偏好服务；未确认、拒绝、替代、过期和来源完整性失败的候选不会进入 Agent Context；
@@ -19,19 +22,21 @@
 
 ### Changed
 
+- M9-E 基线16/16满足期望，意外正式写入为0；结构化职责检索通过无关注入场景，当前没有证据引入向量数据库；
 - 静态资源版本升级为 `20260820-3`；
 - 长期偏好文案明确为“聊天可提出候选，但不会自动写入”；会话列表不加载候选，只在打开具体会话时读取完整审核状态；
 - 修复 `planning draft` CLI 未传入周记忆 Repository、与网页 Planning Context 不一致的问题；
 
 ### Fixed
 
+- Memory Evaluation 的磁盘临时 SQLite 在 Windows 清理时曾被 SQLAlchemy Engine 文件句柄阻塞；改为每场景独立内存 SQLite并显式释放 Engine；
 - 确认 Memory Candidate 时服务端同时重算 Candidate Hash 并重读原始用户消息，阻止被篡改的候选值或来源进入正式偏好；
 - 将周记忆 Context 拆为 Recovery/Plan 判别联合类型，确保 Plan JSON 与 Schema 中不出现恢复和疼痛敏感字段，而不是仅输出 `null`；
 - 为训练运营 Service 增加可注入时钟，修复偏好记忆网页测试依赖系统日期和当天零点、跨日后错误排除刚确认偏好的问题；历史回放仍保持不读取未来记忆。
 
 ### Verified
 
-- 偏好记忆9项、周训练记忆7项、Memory Context 5项、Memory Candidate 15项专项测试和全量173项测试通过；Schema 导出、Python 编译和 JavaScript 语法检查通过；本阶段没有访问真实活动、COROS 或 DeepSeek。
+- 偏好记忆9项、周训练记忆7项、Memory Context 5项、Memory Candidate 15项、Memory Evaluation 5项专项测试和全量178项测试通过；Schema 导出、Python 编译和 JavaScript 语法检查通过；本阶段没有访问真实活动、COROS 或 DeepSeek。
 
 ## 2026-08-19
 

@@ -72,4 +72,4 @@ RunCrew 是一个使用你自己的长期跑步数据，帮助完成“训练回
 → 必要的多 Agent 协作
 ```
 
-当前已经完成数据竖切、FIT 详情兜底、确定性 Training Review Skill、单 Agent Context + Harness + Loop、版本化评测、DeepSeek Policy、工程观测台和跑步数据连续对话。M7 建立并评测多 Agent 训练闭环，M8-B 把它接成网页用户流程；M9-A 至 M9-D 已依次完成显式确认的类型化偏好、由正式事实结算的周训练记忆、Execution/Recovery/Plan 职责 Context，以及聊天“候选—确认—正式记忆”写入闭环。M8-A2/A3 已形成可重复演示与求职证据包。下一步是为 Memory 建立版本化 Evaluation，而不是扩大记忆类型或无依据引入向量库。
+当前已经完成数据竖切、FIT 详情兜底、确定性 Training Review Skill、单 Agent Context + Harness + Loop、版本化评测、DeepSeek Policy、工程观测台和跑步数据连续对话。M7 建立并评测多 Agent 训练闭环，M8-B 把它接成网页用户流程；M9-A 至 M9-E 已依次完成显式确认的类型化偏好、由正式事实结算的周训练记忆、Execution/Recovery/Plan 职责 Context、聊天“候选—确认—正式记忆”写入闭环，以及16场景版本化 Memory Evaluation。当前评测没有暴露结构化检索瓶颈，因此不引入向量库；下一步集中改善用户查看、理解和管理这些记忆的控制面。

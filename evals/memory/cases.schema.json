@@ -1,0 +1,282 @@
+{
+  "$defs": {
+    "MemoryEvaluationCase": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z0-9][a-z0-9_-]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "candidate",
+            "lifecycle",
+            "integrity",
+            "retrieval"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "scenario": {
+          "enum": [
+            "explicit_high_confidence",
+            "explicit_medium_confidence",
+            "temporary_expression",
+            "negative_expression",
+            "ambiguous_expression",
+            "unsupported_expression",
+            "pending_is_not_memory",
+            "confirm_writes_preference",
+            "reject_does_not_write",
+            "new_candidate_supersedes",
+            "expired_candidate_blocked",
+            "candidate_tamper_blocked",
+            "source_tamper_blocked",
+            "role_scoped_retrieval",
+            "inactive_memory_excluded",
+            "irrelevant_injection_stable_context"
+          ],
+          "title": "Scenario",
+          "type": "string"
+        },
+        "input": {
+          "$ref": "#/$defs/MemoryEvaluationInput"
+        },
+        "expected": {
+          "$ref": "#/$defs/MemoryEvaluationObservation"
+        }
+      },
+      "required": [
+        "id",
+        "description",
+        "category",
+        "scenario",
+        "expected"
+      ],
+      "title": "Memory 评测用例",
+      "type": "object"
+    },
+    "MemoryEvaluationInput": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Content"
+        },
+        "second_content": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Second Content"
+        },
+        "decision": {
+          "anyOf": [
+            {
+              "enum": [
+                "confirm",
+                "reject"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decision"
+        }
+      },
+      "title": "Memory 评测输入",
+      "type": "object"
+    },
+    "MemoryEvaluationObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_created": {
+          "default": false,
+          "title": "Candidate Created",
+          "type": "boolean"
+        },
+        "proposed_value": {
+          "anyOf": [
+            {
+              "enum": [
+                "mon",
+                "tue",
+                "wed",
+                "thu",
+                "fri",
+                "sat",
+                "sun"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proposed Value"
+        },
+        "candidate_confidence": {
+          "anyOf": [
+            {
+              "enum": [
+                "high",
+                "medium"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Confidence"
+        },
+        "candidate_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "pending",
+                "confirmed",
+                "rejected",
+                "superseded",
+                "expired"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Status"
+        },
+        "secondary_candidate_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "pending",
+                "confirmed",
+                "rejected",
+                "superseded",
+                "expired"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Secondary Candidate Status"
+        },
+        "formal_preference_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Formal Preference Count",
+          "type": "integer"
+        },
+        "decision_blocked": {
+          "default": false,
+          "title": "Decision Blocked",
+          "type": "boolean"
+        },
+        "execution_item_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Execution Item Count",
+          "type": "integer"
+        },
+        "recovery_preference_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Recovery Preference Count",
+          "type": "integer"
+        },
+        "recovery_weekly_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Recovery Weekly Count",
+          "type": "integer"
+        },
+        "plan_preference_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Plan Preference Count",
+          "type": "integer"
+        },
+        "plan_weekly_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Plan Weekly Count",
+          "type": "integer"
+        },
+        "exclusion_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Exclusion Reasons",
+          "type": "array"
+        },
+        "context_hash_unchanged": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Context Hash Unchanged"
+        }
+      },
+      "title": "Memory 评测观察结果",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "suite_version": {
+      "const": "memory-manager-eval/1.0",
+      "default": "memory-manager-eval/1.0",
+      "title": "Suite Version",
+      "type": "string"
+    },
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/MemoryEvaluationCase"
+      },
+      "minItems": 1,
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "cases"
+  ],
+  "title": "Memory 评测套件",
+  "type": "object"
+}

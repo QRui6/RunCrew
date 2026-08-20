@@ -10,7 +10,7 @@
 4. [ROADMAP.md](ROADMAP.md)：后续阶段和验收条件；
 5. [adr/README.md](adr/README.md)：关键架构选择及其原因。
 
-当前一句话状态：M7 多智能体训练运营闭环、M8-B 网页用户闭环、M9-A 类型化偏好、M9-B 周训练记忆、M9-C 按职责 Memory Context、M9-D 聊天待确认 Memory Candidate 及 M8-A2/A3 求职证据包均已完成；全量173项测试通过。下一步是 M9-E 版本化 Memory Evaluation，真实 DeepSeek 聊天评测仍待补。
+当前一句话状态：M7 多智能体训练运营闭环、M8-B 网页用户闭环、M9-A 至 M9-E 可审计 Memory Manager 及 M8-A2/A3 求职证据包均已完成；Memory 16场景基线16/16、意外正式写入0，全量178项测试通过。下一步是 M9-F Memory 控制面，真实 DeepSeek 聊天评测仍待补。
 
 常用验收命令：
 

@@ -36,9 +36,10 @@ flowchart LR
 
 | 维度 | 当前结果 |
 |---|---:|
-| 自动化测试 | 173 passed |
+| 自动化测试 | 178 passed |
 | 多 Agent 确定性评测 | 18 / 18 |
 | DeepSeek 单 Agent 同题评测 | 12 / 12 |
+| Memory Manager 确定性评测 | 16 / 16，意外正式写入 0 |
 | 连续对话上下文窗口 | 最近 8 条消息 + 不可变 evidence 快照 |
 | 数据与服务边界 | 本地 SQLite + `127.0.0.1` |
 
@@ -54,7 +55,7 @@ providers/   外部数据接入、OAuth/MCP、FIT 获取与解析
 domain/      与厂商无关的 Activity、训练周期和 Agent Schema
 services/    同步、复盘、计划、执行、恢复和产品编排
 harness/     工具权限、Handoff、预算、重试、超时、Loop 与 Trace
-evaluation/  单 Agent、连续对话和多 Agent 版本化评测
+evaluation/  单 Agent、连续对话、多 Agent 和 Memory 版本化评测
 web/         本地聊天产品与工程观测台
 skills/      中文 Skill 说明、边界和输入输出契约
 ```
@@ -93,6 +94,7 @@ skills/      中文 Skill 说明、边界和输入输出契约
 - 将正式计划、已确认执行、规范化 Activity、Check-in 和已批准变更确定性结算为版本化周训练记忆；Planning Agent 优先消费有效记忆，失效或被替代版本不会进入新计划。
 - 为 Execution、Recovery、Plan 构建职责专属 Memory Context：固定字段白名单与条数/字符预算，记录选中顺序、排除原因、Context Hash 和 Audit Hash；Plan 不接收疼痛与急性症状明细。
 - 从聊天中的明确长期表达生成带原消息引用、Hash、置信边界和七天有效期的类型化 Memory Candidate；只有用户确认并通过服务端完整性重放后，候选才能进入正式偏好。
+- 用16个版本化合成场景回放候选提取、负样本拒绝、确认/拒绝、冲突、过期、双重来源篡改、职责召回和无关记忆注入；输出 Suite Hash、分项指标和意外正式写入计数。
 
 ## 文档导航
 
@@ -292,6 +294,15 @@ Coach 会依次委派训练执行和恢复评估；只有需要降级时才调�
 ```
 
 `coach-agent-eval/1.0` 包含18个无私人数据场景，直接运行真实 Coach Harness，并用临时 SQLite 验证批准前 stale 防护。当前确定性基线18/18通过，报告的 Suite Hash 用于未来 LLM Coach Policy 同题比较。该命令不调用外部模型，报告只能写入 `data/private/`。
+
+## 运行 Memory Manager 离线评测
+
+```powershell
+.\.venv\Scripts\runcrew.exe eval memory `
+  --output data\private\evals\memory-manager-v1.0.json
+```
+
+`memory-manager-eval/1.0` 包含16个无私人数据场景，直接回放候选服务、正式偏好写入、来源完整性和按职责 Context Builder。当前基线16/16满足期望，意外正式 Memory 写入为0，Suite Hash 为 `78e9e4dc7c1e...`。其中正样本只有2个、负样本只有4个，因此100%是合成工程回归结果，不代表真实用户语言准确率；报告只允许写入 `data/private/`。
 
 ## 同步真实 COROS 数据
 

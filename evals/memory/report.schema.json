@@ -1,0 +1,480 @@
+{
+  "$defs": {
+    "MemoryEvaluationCaseResult": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "title": "Case Id",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "candidate",
+            "lifecycle",
+            "integrity",
+            "retrieval"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "scenario": {
+          "enum": [
+            "explicit_high_confidence",
+            "explicit_medium_confidence",
+            "temporary_expression",
+            "negative_expression",
+            "ambiguous_expression",
+            "unsupported_expression",
+            "pending_is_not_memory",
+            "confirm_writes_preference",
+            "reject_does_not_write",
+            "new_candidate_supersedes",
+            "expired_candidate_blocked",
+            "candidate_tamper_blocked",
+            "source_tamper_blocked",
+            "role_scoped_retrieval",
+            "inactive_memory_excluded",
+            "irrelevant_injection_stable_context"
+          ],
+          "title": "Scenario",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "schema_valid": {
+          "title": "Schema Valid",
+          "type": "boolean"
+        },
+        "actual": {
+          "$ref": "#/$defs/MemoryEvaluationObservation"
+        },
+        "checks": {
+          "$ref": "#/$defs/MemoryEvaluationChecks"
+        },
+        "latency_ms": {
+          "minimum": 0,
+          "title": "Latency Ms",
+          "type": "number"
+        },
+        "failure_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Failure Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "case_id",
+        "category",
+        "scenario",
+        "passed",
+        "schema_valid",
+        "actual",
+        "checks",
+        "latency_ms"
+      ],
+      "title": "Memory 单用例评测结果",
+      "type": "object"
+    },
+    "MemoryEvaluationChecks": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_detection": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Detection"
+        },
+        "negative_rejection": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Negative Rejection"
+        },
+        "lifecycle_integrity": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lifecycle Integrity"
+        },
+        "source_integrity": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Integrity"
+        },
+        "confirmation_boundary": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmation Boundary"
+        },
+        "role_scope": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Scope"
+        },
+        "irrelevant_injection_resistance": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Irrelevant Injection Resistance"
+        }
+      },
+      "title": "Memory 评测检查项",
+      "type": "object"
+    },
+    "MemoryEvaluationMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "expectation_pass_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Expectation Pass Rate",
+          "type": "number"
+        },
+        "candidate_recall_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Candidate Recall Rate",
+          "type": "number"
+        },
+        "negative_rejection_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Negative Rejection Rate",
+          "type": "number"
+        },
+        "lifecycle_integrity_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Lifecycle Integrity Rate",
+          "type": "number"
+        },
+        "source_integrity_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Source Integrity Rate",
+          "type": "number"
+        },
+        "confirmation_boundary_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confirmation Boundary Rate",
+          "type": "number"
+        },
+        "role_scope_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Role Scope Rate",
+          "type": "number"
+        },
+        "irrelevant_injection_resistance_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Irrelevant Injection Resistance Rate",
+          "type": "number"
+        },
+        "schema_valid_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Schema Valid Rate",
+          "type": "number"
+        },
+        "unexpected_formal_memory_write_count": {
+          "minimum": 0,
+          "title": "Unexpected Formal Memory Write Count",
+          "type": "integer"
+        },
+        "p95_latency_ms": {
+          "minimum": 0,
+          "title": "P95 Latency Ms",
+          "type": "number"
+        },
+        "category_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Category Counts",
+          "type": "object"
+        }
+      },
+      "required": [
+        "expectation_pass_rate",
+        "candidate_recall_rate",
+        "negative_rejection_rate",
+        "lifecycle_integrity_rate",
+        "source_integrity_rate",
+        "confirmation_boundary_rate",
+        "role_scope_rate",
+        "irrelevant_injection_resistance_rate",
+        "schema_valid_rate",
+        "unexpected_formal_memory_write_count",
+        "p95_latency_ms",
+        "category_counts"
+      ],
+      "title": "Memory 评测指标",
+      "type": "object"
+    },
+    "MemoryEvaluationObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_created": {
+          "default": false,
+          "title": "Candidate Created",
+          "type": "boolean"
+        },
+        "proposed_value": {
+          "anyOf": [
+            {
+              "enum": [
+                "mon",
+                "tue",
+                "wed",
+                "thu",
+                "fri",
+                "sat",
+                "sun"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proposed Value"
+        },
+        "candidate_confidence": {
+          "anyOf": [
+            {
+              "enum": [
+                "high",
+                "medium"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Confidence"
+        },
+        "candidate_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "pending",
+                "confirmed",
+                "rejected",
+                "superseded",
+                "expired"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Status"
+        },
+        "secondary_candidate_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "pending",
+                "confirmed",
+                "rejected",
+                "superseded",
+                "expired"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Secondary Candidate Status"
+        },
+        "formal_preference_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Formal Preference Count",
+          "type": "integer"
+        },
+        "decision_blocked": {
+          "default": false,
+          "title": "Decision Blocked",
+          "type": "boolean"
+        },
+        "execution_item_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Execution Item Count",
+          "type": "integer"
+        },
+        "recovery_preference_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Recovery Preference Count",
+          "type": "integer"
+        },
+        "recovery_weekly_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Recovery Weekly Count",
+          "type": "integer"
+        },
+        "plan_preference_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Plan Preference Count",
+          "type": "integer"
+        },
+        "plan_weekly_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Plan Weekly Count",
+          "type": "integer"
+        },
+        "exclusion_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Exclusion Reasons",
+          "type": "array"
+        },
+        "context_hash_unchanged": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Context Hash Unchanged"
+        }
+      },
+      "title": "Memory 评测观察结果",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "suite_version": {
+      "const": "memory-manager-eval/1.0",
+      "title": "Suite Version",
+      "type": "string"
+    },
+    "suite_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Suite Hash",
+      "type": "string"
+    },
+    "evaluator_name": {
+      "minLength": 1,
+      "title": "Evaluator Name",
+      "type": "string"
+    },
+    "total_cases": {
+      "minimum": 1,
+      "title": "Total Cases",
+      "type": "integer"
+    },
+    "passed_cases": {
+      "minimum": 0,
+      "title": "Passed Cases",
+      "type": "integer"
+    },
+    "failed_cases": {
+      "minimum": 0,
+      "title": "Failed Cases",
+      "type": "integer"
+    },
+    "meets_baseline": {
+      "title": "Meets Baseline",
+      "type": "boolean"
+    },
+    "metrics": {
+      "$ref": "#/$defs/MemoryEvaluationMetrics"
+    },
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/MemoryEvaluationCaseResult"
+      },
+      "minItems": 1,
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "suite_version",
+    "suite_hash",
+    "evaluator_name",
+    "total_cases",
+    "passed_cases",
+    "failed_cases",
+    "meets_baseline",
+    "metrics",
+    "cases"
+  ],
+  "title": "Memory 评测报告",
+  "type": "object"
+}

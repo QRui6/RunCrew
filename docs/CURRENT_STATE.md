@@ -5,7 +5,7 @@
 
 ## 当前里程碑
 
-**M5 与 M6-A1/A2/A3a 已完成；真实 DeepSeek 聊天同题验收仍待补。M7-A 至 M7-E 和 M8-B 已完成训练产品闭环；M9-A 至 M9-D 已完成类型化偏好、版本化周记忆、按职责 Context 与聊天待确认 Memory Candidate；M8-A2/A3 已形成可重复演示与求职证据包。全量173项测试通过，下一步进入 M9-E 版本化 Memory Evaluation。**
+**M5 与 M6-A1/A2/A3a 已完成；真实 DeepSeek 聊天同题验收仍待补。M7-A 至 M7-E 和 M8-B 已完成训练产品闭环；M9-A 至 M9-E 已完成类型化偏好、版本化周记忆、按职责 Context、聊天待确认 Candidate 与16场景 Memory Evaluation；M8-A2/A3 已形成可重复演示与求职证据包。全量178项测试通过，下一步进入 M9-F Memory 控制面。**
 
 M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
@@ -41,16 +41,20 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - M9-D 已增加独立 `memory_candidates` 生命周期：聊天只从明确长期长跑日表达生成候选，临时、否定、多星期歧义和不支持内容不生成；
 - 候选保存原消息 ID/文本 Hash、类型化值、规则版本、置信边界、Candidate Hash 与七天有效期，不复制消息正文，也不进入正式 Agent Context；
 - 浏览器只提交决定和预期 Candidate Hash；确认时服务端重算候选 Hash、重读原始用户消息，并复用 M9-A 正式偏好服务，拒绝、替代、过期或来源变化均不会写入；
+- M9-E 已建立 `memory-manager-eval/1.0`：candidate 6个、lifecycle 5个、integrity 2个、retrieval 3个，共16个无私人数据场景；
+- Memory 基线16/16满足期望，候选正样本召回、负样本拒绝、生命周期、来源完整性、确认边界、职责隔离和无关注入抵抗均为100%，意外正式写入为0；Suite Hash 为 `78e9e4dc7c1e75cb94fbbbfbc60cb9b9b74874da7555757a58487567892d51ef`；
+- 生命周期与篡改场景使用隔离 SQLite 运行真实 Repository/Service，职责召回运行正式 Context Builder；这些数字只覆盖2个合成正样本、4个合成负样本和列出的工程场景，不代表真实用户语言总体准确率；
+- 无关、过期、归档、未来、失效或错误目标记忆不会改变实际 Context Hash，但会改变 Audit Hash并留下排除原因；当前没有评测证据支持引入向量数据库；
 - 周计划与执行写入分别受 `input_hash` 重放和 `revision` 保护，候选活动只有在用户确认后才计入周完成率；
 - Coach 运行开始和完成时，Execution、Recovery、Plan 三个职责节点会同步显示运行中、已完成、无需调用或生成草案状态；
-- 新界面保持 `textContent` DOM 安全边界和响应式布局，JavaScript 语法、专项静态资源测试及 173 项全量测试通过；
+- 新界面保持 `textContent` DOM 安全边界和响应式布局，JavaScript 语法、专项静态资源测试及 178 项全量测试通过；
 - `runcrew demo-seed --reset` 可以在 `data/private/demo/` 创建与个人数据库隔离的完整合成训练状态；种子不调用 COROS/DeepSeek，也不预置对话或 Coach 结论；
 - 求职演示包已包含系统架构图、训练闭环时序图、五分钟演示脚本和明确的可声明/不可声明证据边界；
-- 求职材料包已区分173项回归、真实 DeepSeek 单 Agent 12/12和确定性多 Agent 18/18，并为简历条目、核心难点和14个面试追问建立证据索引；
+- 求职材料包已区分178项回归、真实 DeepSeek 单 Agent 12/12、确定性多 Agent 18/18和 Memory Manager 16/16，并为简历条目、核心难点和14个面试追问建立证据索引；
 - 2026-08-19 应用内浏览器仍无可用实例，因此收敛版视觉和 M9-A 偏好表单点击验收仍需本机人工复核，没有冒充完成截图验收；
 
 - Python 3.13 本地环境可运行；
-- 自动化测试：173 passed；
+- 自动化测试：178 passed；
 - fixture 首次同步插入 2 条；
 - fixture 第二次同步插入 0 条、更新 2 条；
 - 真实 COROS OAuth + PKCE 成功；
@@ -192,7 +196,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 ## 当前已知限制
 
-- M9-A/M9-D 当前只支持 `preferred_long_run_weekday`，复杂隐含或跨消息偏好会保守漏召回；Memory Eval Suite 尚未实现，不能声称候选抽取具有真实用户准确率；
+- M9-A/M9-D 当前只支持 `preferred_long_run_weekday`，复杂隐含或跨消息偏好会保守漏召回；M9-E 的100%召回/拒绝只来自2个合成正样本与4个合成负样本，不能声称真实用户准确率；
 - 演示种子是合成业务场景，只能证明当前工程链路可运行，不能证明真实用户训练效果或生产级稳定性；
 - 到期偏好会在读取时排除并投影为 `expired`，当前不运行后台任务改写其历史审计 JSON；
 - `getActivityDetail` 异常；
@@ -228,9 +232,9 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 ## 下一项唯一任务
 
-**M9-E：版本化 Memory Evaluation。**
+**M9-F：可审计 Memory 控制面。**
 
-建立无私人数据的版本化场景、Suite Hash 与聚合指标，覆盖候选提取、临时/否定拒绝、冲突替代、七天过期、来源篡改、确认写入和职责召回；继续区分确定性基线与未来真实模型抽取结果。
+在本地产品中集中展示待确认/已结束 Candidate、正式长期偏好和版本化周记忆，提供来源、状态、有效期、选中/排除原因与用户允许的确认、忽略、停用操作；不增加 LLM 自动写入权限，也不扩展新的记忆类型。
 
 完整模型结论见 [M5-B3 DeepSeek 最终评测报告](M5-B3-DeepSeek最终评测报告.md)。
 
@@ -251,6 +255,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 .\.venv\Scripts\runcrew.exe eval running-chat --output data\private\evals\running-chat-offline-v1.0.json
 .\.venv\Scripts\runcrew.exe eval deepseek-chat-suite --help
 .\.venv\Scripts\runcrew.exe eval coach-agent --output data\private\evals\coach-agent-v1.0.json
+.\.venv\Scripts\runcrew.exe eval memory --output data\private\evals\memory-manager-v1.0.json
 .\.venv\Scripts\runcrew.exe cycle --help
 .\.venv\Scripts\runcrew.exe recovery assess --help
 .\.venv\Scripts\runcrew.exe demo --no-open-browser
