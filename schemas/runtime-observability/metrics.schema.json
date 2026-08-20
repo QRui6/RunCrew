@@ -1,0 +1,337 @@
+{
+  "$defs": {
+    "RuntimeBreakdownItem": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Key",
+          "type": "string"
+        },
+        "count": {
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Rate",
+          "type": "number"
+        }
+      },
+      "required": [
+        "key",
+        "count",
+        "rate"
+      ],
+      "title": "RuntimeBreakdownItem",
+      "type": "object"
+    },
+    "RuntimeInvocationGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Key",
+          "type": "string"
+        },
+        "attempt_count": {
+          "minimum": 0,
+          "title": "Attempt Count",
+          "type": "integer"
+        },
+        "success": {
+          "$ref": "#/$defs/RuntimeRate"
+        },
+        "retry": {
+          "$ref": "#/$defs/RuntimeRate"
+        },
+        "guardrail_rejection": {
+          "$ref": "#/$defs/RuntimeRate"
+        }
+      },
+      "required": [
+        "key",
+        "attempt_count",
+        "success",
+        "retry",
+        "guardrail_rejection"
+      ],
+      "title": "RuntimeInvocationGroup",
+      "type": "object"
+    },
+    "RuntimeLatencySummary": {
+      "additionalProperties": false,
+      "properties": {
+        "sample_count": {
+          "minimum": 0,
+          "title": "Sample Count",
+          "type": "integer"
+        },
+        "p50_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P50 Ms"
+        },
+        "p95_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P95 Ms"
+        },
+        "maximum_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum Ms"
+        }
+      },
+      "required": [
+        "sample_count"
+      ],
+      "title": "RuntimeLatencySummary",
+      "type": "object"
+    },
+    "RuntimeMetricGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "dimension": {
+          "enum": [
+            "workflow",
+            "workflow_version"
+          ],
+          "title": "Dimension",
+          "type": "string"
+        },
+        "key": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Key",
+          "type": "string"
+        },
+        "metrics": {
+          "$ref": "#/$defs/RuntimeMetricSet"
+        }
+      },
+      "required": [
+        "dimension",
+        "key",
+        "metrics"
+      ],
+      "title": "RuntimeMetricGroup",
+      "type": "object"
+    },
+    "RuntimeMetricSet": {
+      "additionalProperties": false,
+      "properties": {
+        "run_count": {
+          "minimum": 0,
+          "title": "Run Count",
+          "type": "integer"
+        },
+        "run_success": {
+          "$ref": "#/$defs/RuntimeRate"
+        },
+        "guardrail_rejection": {
+          "$ref": "#/$defs/RuntimeRate"
+        },
+        "tool_success": {
+          "$ref": "#/$defs/RuntimeRate"
+        },
+        "retry": {
+          "$ref": "#/$defs/RuntimeRate"
+        },
+        "budget_exhaustion": {
+          "$ref": "#/$defs/RuntimeRate"
+        },
+        "latency": {
+          "$ref": "#/$defs/RuntimeLatencySummary"
+        }
+      },
+      "required": [
+        "run_count",
+        "run_success",
+        "guardrail_rejection",
+        "tool_success",
+        "retry",
+        "budget_exhaustion",
+        "latency"
+      ],
+      "title": "RuntimeMetricSet",
+      "type": "object"
+    },
+    "RuntimeRate": {
+      "additionalProperties": false,
+      "properties": {
+        "numerator": {
+          "minimum": 0,
+          "title": "Numerator",
+          "type": "integer"
+        },
+        "denominator": {
+          "minimum": 0,
+          "title": "Denominator",
+          "type": "integer"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "title": "RuntimeRate",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "runtime-metrics/1.0",
+      "default": "runtime-metrics/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "window_days": {
+      "maximum": 30,
+      "minimum": 1,
+      "title": "Window Days",
+      "type": "integer"
+    },
+    "window_started_at": {
+      "format": "date-time",
+      "title": "Window Started At",
+      "type": "string"
+    },
+    "window_ended_at": {
+      "format": "date-time",
+      "title": "Window Ended At",
+      "type": "string"
+    },
+    "retention_days": {
+      "const": 30,
+      "default": 30,
+      "title": "Retention Days",
+      "type": "integer"
+    },
+    "sample_limit": {
+      "maximum": 500,
+      "minimum": 1,
+      "title": "Sample Limit",
+      "type": "integer"
+    },
+    "truncated": {
+      "title": "Truncated",
+      "type": "boolean"
+    },
+    "data_source": {
+      "const": "agent_runtime_runs",
+      "default": "agent_runtime_runs",
+      "title": "Data Source",
+      "type": "string"
+    },
+    "coverage_note": {
+      "maxLength": 300,
+      "minLength": 1,
+      "title": "Coverage Note",
+      "type": "string"
+    },
+    "overall": {
+      "$ref": "#/$defs/RuntimeMetricSet"
+    },
+    "workflows": {
+      "items": {
+        "$ref": "#/$defs/RuntimeMetricGroup"
+      },
+      "title": "Workflows",
+      "type": "array"
+    },
+    "workflow_versions": {
+      "items": {
+        "$ref": "#/$defs/RuntimeMetricGroup"
+      },
+      "title": "Workflow Versions",
+      "type": "array"
+    },
+    "tools": {
+      "items": {
+        "$ref": "#/$defs/RuntimeInvocationGroup"
+      },
+      "title": "Tools",
+      "type": "array"
+    },
+    "roles": {
+      "items": {
+        "$ref": "#/$defs/RuntimeInvocationGroup"
+      },
+      "title": "Roles",
+      "type": "array"
+    },
+    "termination_reasons": {
+      "items": {
+        "$ref": "#/$defs/RuntimeBreakdownItem"
+      },
+      "title": "Termination Reasons",
+      "type": "array"
+    }
+  },
+  "required": [
+    "generated_at",
+    "window_days",
+    "window_started_at",
+    "window_ended_at",
+    "sample_limit",
+    "truncated",
+    "coverage_note",
+    "overall",
+    "workflows",
+    "workflow_versions",
+    "tools",
+    "roles",
+    "termination_reasons"
+  ],
+  "title": "Agent Runtime Metrics Snapshot",
+  "type": "object"
+}

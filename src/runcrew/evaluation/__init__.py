@@ -12,6 +12,10 @@ from runcrew.evaluation.memory import (
     evaluate_memory_suite,
     load_memory_evaluation_suite,
 )
+from runcrew.evaluation.runtime_governance import (
+    evaluate_runtime_governance_suite,
+    load_runtime_governance_suite,
+)
 
 __all__ = [
     "build_synthetic_training_review",
@@ -19,8 +23,10 @@ __all__ = [
     "evaluate_coach_agent_suite",
     "evaluate_memory_suite",
     "evaluate_review_agent_suite",
+    "evaluate_runtime_governance_suite",
     "load_chat_evaluation_suite",
     "load_coach_agent_suite",
     "load_memory_evaluation_suite",
     "load_review_agent_suite",
+    "load_runtime_governance_suite",
 ]

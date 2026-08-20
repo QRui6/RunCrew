@@ -12,7 +12,7 @@
 
 > RunCrew 已经完成从真实跑步数据到可审计连续对话的基础，并建立“目标—计划—执行—反馈—风险评估—提案—用户确认”的训练闭环。M7-C 用受控 Harness 连接三个职责节点，M7-D 将防篡改/防过期审核接入聊天产品，M7-E 又用18个版本化场景建立了可回放的确定性多 Agent 基线。
 
-当前里程碑是 **M7 多职责训练闭环、M8 产品与求职演示包、M9 可审计 Memory 链路均已完成；M10-A/B 已统一四工具 Manifest/Guardrail，并持久化 Review/Coach Runtime Run/Span。下一步进入 M10-C 跨运行指标与治理评测；本机目视验收与真实 DeepSeek 聊天同题评测仍是独立收尾项**。
+当前里程碑是 **M7 多职责训练闭环、M8 产品与求职演示包、M9 可审计 Memory 链路和 M10 Agent Runtime Governance 均已完成；四工具 Manifest/Guardrail、Review/Coach Runtime Run/Span、跨运行指标、5场景治理评测与只读观测台已经闭合。下一步只做本机目视/点击验收；真实 DeepSeek 聊天同题评测仍是独立付费收尾项**。
 
 | 能力 | 当前状态 | 说明 |
 |---|---|---|
@@ -789,7 +789,7 @@ Review Agent 已完成真实 DeepSeek 同题评测，聊天也有 DeepSeek 契�
 
 ## 11. 当前下一步
 
-M7、M9 与 M10-A/B 已完成。当前唯一工程主线是 M10-C；本机目视验收与真实 DeepSeek 聊天同题评测作为独立收尾项保留：
+M7、M9 与 M10-A/B/C 已完成。当前不再扩张 Agent 工程主线；本机目视/点击验收与真实 DeepSeek 聊天同题评测作为独立收尾项保留：
 
 ```text
 [已完成] 增加受确认和共享总费用门保护的完整 Suite 命令
@@ -811,8 +811,8 @@ M7、M9 与 M10-A/B 已完成。当前唯一工程主线是 M10-C；本机目视
 → [已完成] M9 可审计 Memory Manager：候选、正式偏好、周记忆、职责 Context、Evaluation 与控制面
 → [已完成] M10-A Tool Manifest、统一前后置 Guardrail 与 Review/Coach Trace 接入
 → [已完成] M10-B 持久化统一 Runtime Run/Span 与父子时间线
-→ [下一步] M10-C 跨运行指标、治理评测与只读观测视图
-→ [待补] 用户本机最终产品目视验收
+→ [已完成] M10-C 跨运行指标、治理评测与只读观测视图
+→ [下一步] 用户本机最终产品目视与点击验收
 → [待补] 在新 Key 可用后完成显式付费真实 DeepSeek 8轮验收
 ```
 
@@ -1001,7 +1001,15 @@ M10-B 没有改写 Review/Coach 原 Trace，而是增加确定性 Mapper：每�
 
 Runtime 表不复制 Prompt、响应、工具参数、用户消息、身体反馈或活动/目标/计划 ID；产品业务关联只保存不可逆 `scope_ref_hash`。相同 Run/Trace 幂等，相同 run_id 的不同 Trace 拒绝覆盖。聊天首轮 Review 与训练运营 Coach 在业务结果返回后使用独立短事务 best-effort 写入，任何观测错误只返回错误类型，不改变 Agent 终态；离线 Evaluation 不写产品表。
 
-记录默认保留30天，提供只读最近运行和单次父子时间线 API。实施时发现 SQLite 时区列读回可能为 naive datetime，改用规范 JSON 恢复 aware 时间做单条过期判断。6项专项及产品联合24项、全量195项通过。当前尚无跨运行指标或时间线 UI，详细决策见 [ADR-0028](adr/0028-best-effort-persistent-runtime-spans.md)，交接见 [M10-B 阶段记录](progress/2026-08-20-m10b-persistent-runtime-spans.md)。
+记录默认保留30天，提供只读最近运行和单次父子时间线 API。实施时发现 SQLite 时区列读回可能为 naive datetime，改用规范 JSON 恢复 aware 时间做单条过期判断。6项专项及产品联合24项、全量195项通过。该阶段当时尚无跨运行指标或时间线 UI，详细决策见 [ADR-0028](adr/0028-best-effort-persistent-runtime-spans.md)，交接见 [M10-B 阶段记录](progress/2026-08-20-m10b-persistent-runtime-spans.md)。
+
+### M10-C：跨运行指标、治理评测与只读观测台
+
+M10-C 没有增加 Metrics Agent，而是从30天内正式 Run/Span 在读取时确定性重算指标。Run 成功率、Guardrail 拒绝率、工具成功率、重试率和预算耗尽率均携带分子、分母和值；空样本保持 `null`，P50/P95 使用 nearest-rank。聚合最多500条 Run，超限显式标记，并按 workflow、workflow version、tool、role 和 termination reason 分组。
+
+产品观测与合成评测刻意隔离。`runtime-governance-eval/1.0` 固定五个场景，覆盖未注册工具、参数篡改、确认绕过、非法输出和观测写入失败；Suite Hash 为 `4ca00de0bab7be9b1cd96b27a081481214b2beceb2327264da6ae9ab6ed2234e`，5/5符合期望，执行前阻断、非法输出阻断和观测故障隔离均为100%，禁止工具误执行与敏感错误泄漏均为0。报告范围明确为确定性合成治理，不能解释为真实 LLM 攻防效果。
+
+`/engineering` 已切换为 Runtime Control Room：可筛选7/30天窗口，查看工作流健康度、退出原因、工具/职责调用、治理基线和最近 Run；点击 Run 打开脱敏父子时间线。所有 Runtime API 只接受 GET，前端动态内容使用 `textContent`。全量202项测试通过；应用内浏览器没有可用实例，因此视觉和真实点击仍留作本机验收。详细决策见 [ADR-0029](adr/0029-on-demand-runtime-metrics-and-scoped-evaluation.md)，交接见 [M10-C 阶段记录](progress/2026-08-20-m10c-runtime-metrics-governance-eval.md)。
 
 ## M8-A2：无私人数据求职演示包
 
@@ -1009,7 +1017,7 @@ Runtime 表不复制 Prompt、响应、工具参数、用户消息、身体反�
 
 演示种子只写入业务事实，不预置对话、Coach Run 或 Agent 结论。这样现场看到的 Execution、Recovery、Plan 路由、Trace 和待审核草案都来自当前代码真实运行。种子还会按启动日动态安排已完成与待执行训练，避免周末演示时找不到下一节课；同一锚点下使用 UUIDv5 保持 ID 稳定。
 
-材料层同时形成系统架构图、训练闭环时序图、五分钟演示脚本和证据边界清单。该阶段完成时是146项自动化测试；M9-F 后为181项，M10-A 后为189项，M10-B 后当前为195项。可以声明本地链路、权限、重放、Manifest、Run/Span 和 Schema 已验证；不能外推为真实用户效果或生产级并发。
+材料层同时形成系统架构图、训练闭环时序图、五分钟演示脚本和证据边界清单。该阶段完成时是146项自动化测试；M9-F 后为181项，M10-A 后为189项，M10-B 后为195项，M10-C 后当前为202项。可以声明本地链路、权限、重放、Manifest、Run/Span、聚合指标和 Schema 已验证；不能外推为真实用户效果或生产级并发。
 
 实施时遇到一个 Windows 特有问题：第一次写完 SQLite 后，连接池仍持有文件句柄，下一次 `--reset` 删除数据库会触发 `PermissionError`。通过在种子流程结束时显式 `engine.dispose()` 释放句柄，并用连续重置测试固定该行为。
 
@@ -1019,6 +1027,6 @@ Runtime 表不复制 Prompt、响应、工具参数、用户消息、身体反�
 
 这一阶段把项目压缩成三条简历主线：外部运动数据可靠性、受约束多 Agent 训练闭环、版本化评测与人工确认。材料不再机械罗列模块，而是为每个结论绑定测试、评测报告、ADR、代码或演示命令。
 
-最关键的表达修正是把四组数字彻底分开：当前195代表全量自动化回归；12/12代表单 Agent 确定性 Policy 与真实 DeepSeek 同题对照；18/18代表确定性 Coach 基线；16/16代表确定性 Memory 基线。后三者不能合并成“真实多 Agent 大模型准确率”或真实用户效果。
+最关键的表达修正是把五组数字彻底分开：当前202代表全量自动化回归；5/5代表确定性 Runtime 治理故障基线；12/12代表单 Agent 确定性 Policy 与真实 DeepSeek 同题对照；18/18代表确定性 Coach 基线；16/16代表确定性 Memory 基线。后四者不能合并成“真实多 Agent 大模型准确率”或真实用户效果。
 
 同时形成五个核心难点的“问题—约束—方案—验证—边界”讲述框架和14个面试追问，主动记录真实多轮聊天、真实 LLM Coach、生产并发和用户训练效果尚未验证。完整材料见 [求职材料包](job/README.md) 与 [证据映射](job/evidence-map.md)。

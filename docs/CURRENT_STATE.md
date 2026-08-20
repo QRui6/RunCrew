@@ -5,7 +5,7 @@
 
 ## 当前里程碑
 
-**M7 训练产品闭环、M9 可审计 Memory Manager 与 M8 求职证据包已完成；M10-A/B 已闭合四工具 Manifest/Guardrail，以及 Review/Coach 统一 Runtime Run/Span 持久化和只读时间线 API。全量195项测试通过；下一入口为 M10-C 跨运行指标与治理评测。真实 DeepSeek 聊天同题验收仍待补。**
+**M7 训练产品闭环、M9 可审计 Memory Manager、M8 求职证据包与 M10 Agent Runtime Governance 均已完成。M10 已闭合四工具 Manifest/Guardrail、Review/Coach 统一 Run/Span、跨运行指标、5场景治理评测和只读工程观测台。全量202项测试通过；下一入口为 M8-A1.4 本机视觉与点击验收。真实 DeepSeek 聊天同题验收仍待补。**
 
 M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
@@ -52,18 +52,20 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - M10-B 已增加 `agent_runtime_runs / agent_runtime_spans`，把 Review/Coach 映射为同一 `runtime-run/1.0 + runtime-span/1.0` 父子时间线；
 - 聊天首轮 Review 与训练运营 Coach 使用独立短事务 best-effort 持久化；表缺失、锁冲突或序列化失败不会改变 Agent 终态，离线 Evaluation 不写产品 Runtime 表；
 - Runtime 只保存白名单 Hash、规则、计数、错误类型、节点/工具和时间信息，业务关联只存不可逆 `scope_ref_hash`；默认保留30天；
-- `GET /api/runtime/runs` 与 `GET /api/runtime/runs/{run_id}` 提供最近运行和单次父子时间线，写方法被拒绝；当前尚无跨运行指标大盘；
+- Runtime 指标支持1—30天窗口与最多500 Run，确定性计算成功率、Guardrail 拒绝率、工具成功率、重试率、预算耗尽率和 nearest-rank P50/P95，并按工作流、版本、工具、职责和退出原因分组；
+- `runtime-governance-eval/1.0` 五个合成场景5/5符合期望，执行前阻断、非法输出阻断和观测故障隔离均为100%，禁止工具误执行与敏感错误泄漏均为0；该结果不代表真实 LLM 攻防效果；
+- `GET /api/runtime/metrics`、`GET /api/runtime/runs`、单次父子时间线与治理评测 API 均为只读；`/engineering` 已消费这些接口形成 Runtime 观测台；
 - Candidate 决定、偏好停用和周记忆失效继续复用既有服务与确认边界；控制面不拥有新写权限，不硬删除历史，也不向浏览器返回 Provider 外部 ID、原始载荷、坐标或 Token；
 - 周计划与执行写入分别受 `input_hash` 重放和 `revision` 保护，候选活动只有在用户确认后才计入周完成率；
 - Coach 运行开始和完成时，Execution、Recovery、Plan 三个职责节点会同步显示运行中、已完成、无需调用或生成草案状态；
-- 新界面保持 `textContent` DOM 安全边界和响应式布局，JavaScript 语法、专项静态资源测试及 195 项全量测试通过；
+- 新界面保持 `textContent` DOM 安全边界和响应式布局，JavaScript 语法、专项静态资源测试及 202 项全量测试通过；
 - `runcrew demo-seed --reset` 可以在 `data/private/demo/` 创建与个人数据库隔离的完整合成训练状态；种子不调用 COROS/DeepSeek，也不预置对话或 Coach 结论；
 - 求职演示包已包含系统架构图、训练闭环时序图、五分钟演示脚本和明确的可声明/不可声明证据边界；
-- 求职材料包已区分195项回归、真实 DeepSeek 单 Agent 12/12、确定性多 Agent 18/18和 Memory Manager 16/16，并为简历条目、核心难点和14个面试追问建立证据索引；
+- 求职材料包已区分202项回归、Runtime 治理5/5、真实 DeepSeek 单 Agent 12/12、确定性多 Agent 18/18和 Memory Manager 16/16，并为简历条目、核心难点和14个面试追问建立证据索引；
 - 2026-08-20 应用内浏览器仍无可用实例，因此收敛版视觉和记忆档案点击验收仍需本机人工复核，没有冒充完成截图验收；
 
 - Python 3.13 本地环境可运行；
-- 自动化测试：195 passed；
+- 自动化测试：202 passed；
 - fixture 首次同步插入 2 条；
 - fixture 第二次同步插入 0 条、更新 2 条；
 - 真实 COROS OAuth + PKCE 成功；
@@ -134,11 +136,11 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 输入 Token 缓存命中率约81.49%；最终报告保存在 `data/private/evals/deepseek-suite-v1.1-final.json`；
 - 当前简单动作协议没有证据需要升级 `deepseek-v4-pro`，也没有职责冲突或上下文负担证据支持拆分多 Agent。
 - `runcrew demo` 已提供只绑定 `127.0.0.1:8766` 的本地产品服务；
-- `/engineering` 工程观测台可以筛选 Provider、设置可选训练目标并回放确定性 Agent，展示 activity、evidence、预算、Trace 和 Same-Hash 评测对照；
-- 工程观测 API 只接受 GET；聊天 API 提供受限 POST 并写入本地会话，两者均不返回外部活动 ID、raw payload、坐标或 Token；
+- `/engineering` 工程观测台可以筛选7/30天 Runtime 窗口，展示跨运行指标、5场景治理基线、最近 Run 和单次脱敏父子时间线；
+- Runtime 工程观测 API 只接受 GET；聊天 API 提供受限 POST 并写入本地会话，两者均不返回外部活动 ID、raw payload、坐标或 Token；
 - 本机真实 COROS 规范化数据只读验收通过：活动可用、Agent succeeded、3条 finding、9个 Trace 事件、Same-Hash 成立；
 - M6-A1 自动化测试曾增至56项，覆盖 Dashboard 数据脱敏、Agent 回放、静态资源、API 参数、只读方法、缺失数据库不落盘和 CLI 入口。
-- 产品根页面已经改为跑步数据连续对话工作区，原 Dashboard 保留为 `/engineering` 工程观测台；
+- 产品根页面是跑步数据连续对话工作区，`/engineering` 是独立的只读 Runtime 工程观测台；
 - 用户可以选择具体 Activity、创建本地会话、发送消息、加载历史并围绕同一证据快照连续追问；
 - 首次提问通过真实 `ReviewAgentHarness → review_running_training` 生成 `TrainingReviewResult + Trace`，后续追问复用快照；
 - `chat_conversations` / `chat_messages` 持久化会话、消息、evidence 引用、置信度、缺失数据、模型和用量；
@@ -241,9 +243,9 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 ## 下一项唯一任务
 
-**M10-C：跨运行指标、治理评测与只读观测视图。**
+**M8-A1.4：本机视觉与点击验收。**
 
-基于正式 Runtime 表计算按工作流/工具分组的成功率、拒绝率、重试率和P50/P95，补未注册工具、参数篡改、确认绕过、非法输出与观测写入失败的版本化场景；指标必须标明样本范围。M8-A1.4 本机目视验收与 M6-A3b 真实 DeepSeek 连续聊天同题评测仍是独立收尾项。
+使用合成演示数据库启动产品，依次复核桌面首屏、训练运营抽屉、记忆档案、`/engineering` 7/30天筛选和单次 Trace 抽屉。2026-08-20 自动化 HTTP/DOM/JS 验证已通过，但应用内浏览器没有可用实例，因此没有冒充完成目视验收。M6-A3b 真实 DeepSeek 连续聊天同题评测仍是需要用户提供有效 Key 后执行的独立付费收尾项。
 
 完整模型结论见 [M5-B3 DeepSeek 最终评测报告](M5-B3-DeepSeek最终评测报告.md)。
 

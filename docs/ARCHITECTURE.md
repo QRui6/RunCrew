@@ -47,7 +47,7 @@ Agent Evaluation Runner
   ▼
 Local Chat Product（127.0.0.1）
   ├── 对话工作区：Activity → evidence snapshot → bounded history → answer
-  └── 工程观测台：Activity → Skill → Trace → Evaluation
+  └── 工程观测台：Runtime Metrics → Governance Eval → Run/Span Timeline
   │
   ▼
 Training Cycle Foundation
@@ -112,7 +112,7 @@ Planning Memory Store
 
 位置：`src/runcrew/web/`
 
-使用 Python 标准库 HTTP Server 提供本地聊天产品和工程观测台，不增加 Web 框架依赖，并固定绑定 `127.0.0.1`。`ChatService` 负责活动选择、会话持久化、首轮 Training Review Agent、证据快照和有界历史；`DemoDashboardService` 继续只读聚合活动、Trace 和最终评测报告。
+使用 Python 标准库 HTTP Server 提供本地聊天产品和工程观测台，不增加 Web 框架依赖，并固定绑定 `127.0.0.1`。`ChatService` 负责活动选择、会话持久化、首轮 Training Review Agent、证据快照和有界历史；`RuntimeTraceService` 负责统一 Run/Span 的 best-effort 写入、只读检索和跨运行指标聚合。旧 `DemoDashboardService` 兼容 API 保留，但 `/engineering` 已切换为 Runtime Control Room。
 
 聊天 POST API 只接收内部活动 ID、用户消息和显式模型开关。浏览器不接收 Provider 外部 ID、原始 payload、坐标、Token 或完整数据库对象；启用 DeepSeek 时只发送规范化活动视图、确定性复盘、最近 8 条消息和当前问题。静态页面、领域契约、Service 与 HTTP 适配层分离，可独立测试。
 
@@ -187,7 +187,11 @@ Chat Review / Training Operations Coach
 
 每次 Capture 只有一个根 Run Span，内部 Span 通过 `parent_span_id` 表达 Policy→Guardrail→Handoff/Tool→Validation；工具开始事件会计算到对应成功/失败事件的持续时间。相同 Run/Trace 幂等，相同 run_id 的不同 Trace 拒绝覆盖。业务 scope 只保存 SHA-256，Prompt、响应、参数、用户消息和身体反馈不会进入 Runtime 表。
 
-Runtime 默认保留30天，并在下一次写入时删除过期 Run/Span。写入错误只形成脱敏 `RuntimePersistenceOutcome`，不覆盖 Review/Coach 终态。离线 Evaluation 默认不持久化，当前数据只代表两条产品路径，不代表所有 Harness 执行。M10-C 才增加跨运行指标与观测视图。
+Runtime 默认保留30天，并在下一次写入时删除过期 Run/Span。写入错误只形成脱敏 `RuntimePersistenceOutcome`，不覆盖 Review/Coach 终态。离线 Evaluation 默认不持久化，当前数据只代表两条产品路径，不代表所有 Harness 执行。
+
+M10-C 在读取时从正式 Run/Span 重算1—30天指标，最多处理500条 Run，超限显式标记。比例携带分子/分母，零样本为 `null`；P50/P95 使用 nearest-rank。聚合维度包括 workflow、workflow version、tool、role 和 termination reason，role 只由 Review workflow 或 Coach node 派生。`/api/runtime/metrics`、`/api/runtime/runs`、`/api/runtime/runs/{run_id}` 和 `/api/runtime/governance-evaluation` 全部只读。
+
+治理评测与产品观测保持隔离：`runtime-governance-eval/1.0` 使用五个合成场景验证执行前阻断、非法输出和观测失败隔离，但不写产品 Runtime 表；工程观测页并列展示正式运行事实和带 `deterministic_synthetic_governance` 范围标记的评测基线。
 
 ### Evaluation
 

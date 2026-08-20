@@ -135,3 +135,106 @@ class RuntimePersistenceOutcome(BaseModel):
     persisted: bool
     created: bool = False
     error_type: str | None = None
+
+
+class RuntimeRate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    numerator: int = Field(ge=0)
+    denominator: int = Field(ge=0)
+    value: float | None = Field(default=None, ge=0, le=1)
+
+    @model_validator(mode="after")
+    def value_matches_counts(self) -> RuntimeRate:
+        expected = (
+            round(self.numerator / self.denominator, 4)
+            if self.denominator
+            else None
+        )
+        if self.value != expected:
+            raise ValueError("Runtime rate 必须与分子、分母一致")
+        return self
+
+
+class RuntimeLatencySummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    sample_count: int = Field(ge=0)
+    p50_ms: float | None = Field(default=None, ge=0)
+    p95_ms: float | None = Field(default=None, ge=0)
+    maximum_ms: float | None = Field(default=None, ge=0)
+
+
+class RuntimeMetricSet(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    run_count: int = Field(ge=0)
+    run_success: RuntimeRate
+    guardrail_rejection: RuntimeRate
+    tool_success: RuntimeRate
+    retry: RuntimeRate
+    budget_exhaustion: RuntimeRate
+    latency: RuntimeLatencySummary
+
+
+RuntimeMetricDimension = Literal["workflow", "workflow_version"]
+
+
+class RuntimeMetricGroup(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dimension: RuntimeMetricDimension
+    key: str = Field(min_length=1, max_length=100)
+    metrics: RuntimeMetricSet
+
+
+class RuntimeInvocationGroup(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str = Field(min_length=1, max_length=100)
+    attempt_count: int = Field(ge=0)
+    success: RuntimeRate
+    retry: RuntimeRate
+    guardrail_rejection: RuntimeRate
+
+
+class RuntimeBreakdownItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str = Field(min_length=1, max_length=100)
+    count: int = Field(ge=0)
+    rate: float = Field(ge=0, le=1)
+
+
+class RuntimeMetricsSnapshot(BaseModel):
+    model_config = ConfigDict(extra="forbid", title="Agent Runtime Metrics Snapshot")
+
+    schema_version: Literal["runtime-metrics/1.0"] = "runtime-metrics/1.0"
+    generated_at: datetime
+    window_days: int = Field(ge=1, le=30)
+    window_started_at: datetime
+    window_ended_at: datetime
+    retention_days: Literal[30] = 30
+    sample_limit: int = Field(ge=1, le=500)
+    truncated: bool
+    data_source: Literal["agent_runtime_runs"] = "agent_runtime_runs"
+    coverage_note: str = Field(min_length=1, max_length=300)
+    overall: RuntimeMetricSet
+    workflows: list[RuntimeMetricGroup]
+    workflow_versions: list[RuntimeMetricGroup]
+    tools: list[RuntimeInvocationGroup]
+    roles: list[RuntimeInvocationGroup]
+    termination_reasons: list[RuntimeBreakdownItem]
+
+    @model_validator(mode="after")
+    def window_is_valid(self) -> RuntimeMetricsSnapshot:
+        if self.window_started_at >= self.window_ended_at:
+            raise ValueError("Runtime 指标窗口起点必须早于终点")
+        for value in (
+            self.generated_at,
+            self.window_started_at,
+            self.window_ended_at,
+        ):
+            if value.tzinfo is None or value.utcoffset() is None:
+                raise ValueError("Runtime 指标时间必须包含时区")
+        return self

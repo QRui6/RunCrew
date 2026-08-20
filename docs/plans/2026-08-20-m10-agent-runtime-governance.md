@@ -1,6 +1,6 @@
 # M10 Agent Runtime Governance 实施方案
 
-> 状态：M10-A/M10-B 已完成，M10-C 待开始
+> 状态：M10-A/M10-B/M10-C 已完成
 > 创建日期：2026-08-20  
 > 范围负责人：RunCrew 本地 Agent Runtime
 
@@ -113,6 +113,16 @@ Deterministic Domain Service
 - 工程观测台只读治理视图；
 - 求职证据包中的指标口径和仓库证据映射。
 
+已冻结的实现契约：
+
+- 指标只读取未过期的 `agent_runtime_runs / agent_runtime_spans`，允许查询1—30天窗口，单次最多聚合500条 Run；超过上限必须显式标记 `truncated`，不能把部分样本冒充完整总体；
+- Run 成功率按 `succeeded / 全部 Run` 计算；Guardrail 拒绝率按 `blocked Guardrail Span / 全部 Guardrail Span` 计算；工具成功率按成功终态 / 调用开始计算；重试率按 Retry Span / 调用开始计算；预算耗尽率按 `budget_exhausted / 全部 Run` 计算；
+- P50/P95 使用确定性的 nearest-rank 口径，只统计 Run 总耗时；零样本时返回 `null`，不返回伪造的0毫秒；
+- 聚合提供 workflow、workflow version、tool、role 与 termination reason 五类分组；role 只由 Review workflow 或 Coach Span 的 node 确定性派生，不调用模型推断；
+- Runtime 表写入失败不会留下可聚合记录，因此产品指标必须携带覆盖边界说明；该失败隔离只在版本化治理评测中验证，不能声称观测数据100%完整；
+- `/api/runtime/metrics`、最近 Run 与单次时间线全部只允许 GET；工程观测页只消费这些脱敏接口，不增加删除、重放、审批或训练写入能力；
+- 治理套件固定覆盖未注册工具、参数篡改、确认绕过、非法输出和观测写入失败五类场景；报告明确标记为确定性合成防线评测，不代表真实 LLM 攻防效果。
+
 ## 4. 明确不做
 
 本阶段不引入：
@@ -139,4 +149,4 @@ Deterministic Domain Service
 
 ## 6. 当前执行入口
 
-M10-A/B 已通过专项与195项全量验证。下一入口为 M10-C；当前不得把尚未实现的跨运行指标、治理评测与观测视图写成已完成功能。
+M10-A/B/C 已通过专项与202项全量验证。M10 主线已收尾；下一入口为本机视觉/点击验收，真实 DeepSeek 连续聊天同题评测仍是独立付费收尾项。

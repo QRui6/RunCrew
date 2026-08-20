@@ -14,6 +14,10 @@ from urllib.parse import parse_qs, urlparse
 
 from pydantic import ValidationError
 
+from runcrew.evaluation import (
+    evaluate_runtime_governance_suite,
+    load_runtime_governance_suite,
+)
 from runcrew.domain.memory import (
     AthletePreferenceArchiveSubmission,
     AthletePreferenceSubmission,
@@ -131,6 +135,43 @@ class DemoApplication:
                 HTTPStatus.METHOD_NOT_ALLOWED,
                 {"error": "工程观测接口只允许只读 GET 请求。"},
             )
+        if method == "GET" and parsed.path == "/api/runtime/metrics":
+            try:
+                query = parse_qs(parsed.query)
+                result = self.runtime_service.metrics(
+                    window_days=_bounded_int(
+                        query, "window_days", default=30, minimum=1, maximum=30
+                    )
+                )
+            except ValueError as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            except RuntimeObservabilityError as error:
+                return self._json_response(
+                    HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(error)}
+                )
+            return self._json_response(HTTPStatus.OK, result.model_dump(mode="json"))
+        if parsed.path == "/api/runtime/metrics":
+            return self._json_response(
+                HTTPStatus.METHOD_NOT_ALLOWED,
+                {"error": "Runtime 指标接口只允许只读 GET 请求。"},
+            )
+        if method == "GET" and parsed.path == "/api/runtime/governance-evaluation":
+            try:
+                suite = load_runtime_governance_suite(
+                    Path("evals/runtime_governance/cases.json")
+                )
+                report = evaluate_runtime_governance_suite(suite)
+            except (OSError, ValueError):
+                return self._json_response(
+                    HTTPStatus.INTERNAL_SERVER_ERROR,
+                    {"error": "Runtime 治理评测套件不可用。"},
+                )
+            return self._json_response(HTTPStatus.OK, report.model_dump(mode="json"))
+        if parsed.path == "/api/runtime/governance-evaluation":
+            return self._json_response(
+                HTTPStatus.METHOD_NOT_ALLOWED,
+                {"error": "Runtime 治理评测接口只允许只读 GET 请求。"},
+            )
         if method == "GET" and parsed.path == "/api/runtime/runs":
             try:
                 query = parse_qs(parsed.query)
@@ -143,8 +184,12 @@ class DemoApplication:
                     ),
                     workflow=workflow,
                 )
-            except (RuntimeObservabilityError, ValueError) as error:
+            except ValueError as error:
                 return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            except RuntimeObservabilityError as error:
+                return self._json_response(
+                    HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(error)}
+                )
             return self._json_response(HTTPStatus.OK, result.model_dump(mode="json"))
         runtime_run_id = _runtime_run_route(parsed.path)
         if method == "GET" and runtime_run_id:

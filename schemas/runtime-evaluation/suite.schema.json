@@ -1,0 +1,126 @@
+{
+  "$defs": {
+    "RuntimeGovernanceEvaluationCase": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z0-9][a-z0-9_-]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "registration",
+            "input_integrity",
+            "confirmation",
+            "output_validation",
+            "observability"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "scenario": {
+          "enum": [
+            "unknown_tool_blocked",
+            "argument_tampering_blocked",
+            "confirmation_bypass_blocked",
+            "invalid_output_blocked",
+            "observability_failure_isolated"
+          ],
+          "title": "Scenario",
+          "type": "string"
+        },
+        "expected": {
+          "$ref": "#/$defs/RuntimeGovernanceObservation"
+        }
+      },
+      "required": [
+        "id",
+        "description",
+        "category",
+        "scenario",
+        "expected"
+      ],
+      "title": "RuntimeGovernanceEvaluationCase",
+      "type": "object"
+    },
+    "RuntimeGovernanceObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "blocked": {
+          "default": false,
+          "title": "Blocked",
+          "type": "boolean"
+        },
+        "tool_executed": {
+          "default": false,
+          "title": "Tool Executed",
+          "type": "boolean"
+        },
+        "output_accepted": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Accepted"
+        },
+        "business_continued": {
+          "default": false,
+          "title": "Business Continued",
+          "type": "boolean"
+        },
+        "persistence_failed": {
+          "default": false,
+          "title": "Persistence Failed",
+          "type": "boolean"
+        },
+        "error_redacted": {
+          "default": true,
+          "title": "Error Redacted",
+          "type": "boolean"
+        },
+        "rule_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Rule Ids",
+          "type": "array"
+        }
+      },
+      "title": "RuntimeGovernanceObservation",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "suite_version": {
+      "const": "runtime-governance-eval/1.0",
+      "default": "runtime-governance-eval/1.0",
+      "title": "Suite Version",
+      "type": "string"
+    },
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/RuntimeGovernanceEvaluationCase"
+      },
+      "minItems": 1,
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "cases"
+  ],
+  "title": "RuntimeGovernanceEvaluationSuite",
+  "type": "object"
+}

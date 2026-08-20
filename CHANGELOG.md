@@ -6,6 +6,9 @@
 
 ### Added
 
+- 增加 M10-C `runtime-metrics/1.0`：从30天正式 Run/Span 按需计算成功率、拒绝率、重试率、预算耗尽率和 nearest-rank P50/P95，支持五类确定性分组、500 Run 上限与显式截断；
+- 增加 `runtime-governance-eval/1.0` 五场景合成治理套件、CLI、Suite/Report Schema、ADR-0029 与阶段记录；
+- `/engineering` 升级为只读 Runtime Control Room，展示7/30天指标、治理基线、最近运行和单次父子时间线抽屉；新增只读 Metrics 与 Governance Evaluation API；
 - 增加 M10-B 持久化 Runtime Observability：统一 `RuntimeRun / RuntimeSpan` 契约、`agent_runtime_runs / agent_runtime_spans`、30天保留和父子时间线；
 - 聊天首轮 Review 与训练运营 Coach 在 Harness 返回后使用独立 best-effort 短事务写入；离线 Evaluation 不污染产品观测表；
 - 增加只读 `GET /api/runtime/runs` 与 `GET /api/runtime/runs/{run_id}`、四份 Schema、ADR-0028、阶段记录和6项专项测试；
@@ -33,6 +36,7 @@
 
 ### Changed
 
+- M10-A 至 M10-C 已闭合；产品 Runtime 指标与离线治理评测保持两条证据链，静态资源版本升级为 `20260820-5`；
 - M9-A 至 M9-F 已闭合，Memory Manager 阶段完成；后续不再扩展记忆类型、向量库或 Agent 角色；
 - 静态资源版本升级为 `20260820-4`；
 - M9-E 基线16/16满足期望，意外正式写入为0；结构化职责检索通过无关注入场景，当前没有证据引入向量数据库；
@@ -51,6 +55,8 @@
 
 ### Verified
 
+- Runtime 治理套件5/5符合期望，执行前阻断、非法输出阻断和观测故障隔离均为100%，禁止工具误执行与敏感错误泄漏均为0；全量202项测试通过；
+- 工程观测页 HTTP/DOM/JavaScript 自动化通过；应用内浏览器仍无可用实例，因此真实视觉和点击验收保留为下一项，没有冒充完成；
 - Runtime Observability 与 Chat/Training Operations/Demo Web 联合专项24项、全量195项测试和四份 Schema 漂移检查通过；观测故障测试不泄露异常正文；
 - Runtime Governance 与 Review/Coach/DeepSeek Policy 联合专项38项、全量189项测试、Schema 漂移与 Python 编译通过；本阶段没有读取真实活动或调用外部服务；
 - Memory 控制面与训练运营联合专项13项、全量181项测试、Schema 漂移、Python 编译和 JavaScript 语法检查通过；控制面响应不包含 Provider 外部 ID 或 raw payload hash；

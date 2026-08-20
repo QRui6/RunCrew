@@ -1,0 +1,256 @@
+{
+  "$defs": {
+    "RuntimeGovernanceCaseResult": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "title": "Case Id",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "registration",
+            "input_integrity",
+            "confirmation",
+            "output_validation",
+            "observability"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "scenario": {
+          "enum": [
+            "unknown_tool_blocked",
+            "argument_tampering_blocked",
+            "confirmation_bypass_blocked",
+            "invalid_output_blocked",
+            "observability_failure_isolated"
+          ],
+          "title": "Scenario",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "schema_valid": {
+          "title": "Schema Valid",
+          "type": "boolean"
+        },
+        "actual": {
+          "$ref": "#/$defs/RuntimeGovernanceObservation"
+        },
+        "latency_ms": {
+          "minimum": 0,
+          "title": "Latency Ms",
+          "type": "number"
+        },
+        "failure_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Failure Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "case_id",
+        "category",
+        "scenario",
+        "passed",
+        "schema_valid",
+        "actual",
+        "latency_ms"
+      ],
+      "title": "RuntimeGovernanceCaseResult",
+      "type": "object"
+    },
+    "RuntimeGovernanceEvaluationMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "expectation_pass_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Expectation Pass Rate",
+          "type": "number"
+        },
+        "pre_execution_block_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Pre Execution Block Rate",
+          "type": "number"
+        },
+        "invalid_output_block_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Invalid Output Block Rate",
+          "type": "number"
+        },
+        "observability_failure_isolation_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Observability Failure Isolation Rate",
+          "type": "number"
+        },
+        "prohibited_tool_execution_count": {
+          "minimum": 0,
+          "title": "Prohibited Tool Execution Count",
+          "type": "integer"
+        },
+        "sensitive_error_leak_count": {
+          "minimum": 0,
+          "title": "Sensitive Error Leak Count",
+          "type": "integer"
+        },
+        "p95_latency_ms": {
+          "minimum": 0,
+          "title": "P95 Latency Ms",
+          "type": "number"
+        },
+        "category_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Category Counts",
+          "type": "object"
+        }
+      },
+      "required": [
+        "expectation_pass_rate",
+        "pre_execution_block_rate",
+        "invalid_output_block_rate",
+        "observability_failure_isolation_rate",
+        "prohibited_tool_execution_count",
+        "sensitive_error_leak_count",
+        "p95_latency_ms",
+        "category_counts"
+      ],
+      "title": "RuntimeGovernanceEvaluationMetrics",
+      "type": "object"
+    },
+    "RuntimeGovernanceObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "blocked": {
+          "default": false,
+          "title": "Blocked",
+          "type": "boolean"
+        },
+        "tool_executed": {
+          "default": false,
+          "title": "Tool Executed",
+          "type": "boolean"
+        },
+        "output_accepted": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Accepted"
+        },
+        "business_continued": {
+          "default": false,
+          "title": "Business Continued",
+          "type": "boolean"
+        },
+        "persistence_failed": {
+          "default": false,
+          "title": "Persistence Failed",
+          "type": "boolean"
+        },
+        "error_redacted": {
+          "default": true,
+          "title": "Error Redacted",
+          "type": "boolean"
+        },
+        "rule_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Rule Ids",
+          "type": "array"
+        }
+      },
+      "title": "RuntimeGovernanceObservation",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "suite_version": {
+      "const": "runtime-governance-eval/1.0",
+      "title": "Suite Version",
+      "type": "string"
+    },
+    "suite_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Suite Hash",
+      "type": "string"
+    },
+    "evaluator_name": {
+      "minLength": 1,
+      "title": "Evaluator Name",
+      "type": "string"
+    },
+    "evidence_scope": {
+      "const": "deterministic_synthetic_governance",
+      "default": "deterministic_synthetic_governance",
+      "title": "Evidence Scope",
+      "type": "string"
+    },
+    "total_cases": {
+      "minimum": 1,
+      "title": "Total Cases",
+      "type": "integer"
+    },
+    "passed_cases": {
+      "minimum": 0,
+      "title": "Passed Cases",
+      "type": "integer"
+    },
+    "failed_cases": {
+      "minimum": 0,
+      "title": "Failed Cases",
+      "type": "integer"
+    },
+    "meets_baseline": {
+      "title": "Meets Baseline",
+      "type": "boolean"
+    },
+    "metrics": {
+      "$ref": "#/$defs/RuntimeGovernanceEvaluationMetrics"
+    },
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/RuntimeGovernanceCaseResult"
+      },
+      "minItems": 1,
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "suite_version",
+    "suite_hash",
+    "evaluator_name",
+    "total_cases",
+    "passed_cases",
+    "failed_cases",
+    "meets_baseline",
+    "metrics",
+    "cases"
+  ],
+  "title": "RuntimeGovernanceEvaluationReport",
+  "type": "object"
+}

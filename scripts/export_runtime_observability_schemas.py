@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from runcrew.domain.runtime_observability import (
+    RuntimeMetricsSnapshot,
     RuntimeRun,
     RuntimeRunCapture,
     RuntimeRunList,
@@ -22,6 +23,7 @@ def main() -> None:
         "span.schema.json": RuntimeSpan.model_json_schema(),
         "capture.schema.json": RuntimeRunCapture.model_json_schema(),
         "run-list.schema.json": RuntimeRunList.model_json_schema(),
+        "metrics.schema.json": RuntimeMetricsSnapshot.model_json_schema(),
     }
     for name, schema in exports.items():
         (OUTPUT_DIRECTORY / name).write_text(

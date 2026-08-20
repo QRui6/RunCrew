@@ -31,7 +31,7 @@ M10-A 已让 Review 与 Coach 共用 Tool Manifest 和 Guardrail，但两套 Tra
 
 - 产品真实 Review/Coach 运行可以查询统一父子时间线；
 - CLI 与 Evaluation 默认不持久化，当前 Runtime 数据量不代表系统所有运行；
-- best-effort 失败不会阻塞业务，但当前也不会主动告警，只能从返回 outcome 或后续 M10-C 指标发现；
+- best-effort 失败不会阻塞业务，也不会留下可供产品指标聚合的事实行；调用方只能读取当次脱敏 outcome，M10-C 通过独立故障评测验证隔离语义而不伪造写入失败率；
 - SQLite `DateTime(timezone=True)` 读回可能丢失 tzinfo，单条过期判断必须使用规范 JSON 恢复的 aware datetime，数据库时间列只用于索引/批量清理；
 - 当前没有分布式 Trace、OpenTelemetry exporter、跨进程传播或生产级保留策略。
 

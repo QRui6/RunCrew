@@ -42,6 +42,7 @@
 | 2026-08-20 | M9-F 用户可审计 Memory 控制面 | 完成 | [M9-F Memory 控制面](progress/2026-08-20-m9f-memory-control-plane.md) |
 | 2026-08-20 | M10-A Agent Runtime Tool Governance | 完成 | [M10-A Runtime 治理](progress/2026-08-20-m10a-runtime-tool-governance.md) |
 | 2026-08-20 | M10-B 持久化 Runtime Run/Span | 完成 | [M10-B Runtime Run/Span](progress/2026-08-20-m10b-persistent-runtime-spans.md) |
+| 2026-08-20 | M10-C 跨运行指标与治理评测 | 完成 | [M10-C Runtime 指标与治理评测](progress/2026-08-20-m10c-runtime-metrics-governance-eval.md) |
 
 ## 新阶段记录模板
 

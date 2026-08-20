@@ -3,168 +3,110 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="RunCrew 随队：可验证的个人跑步 Agent 工程演示。">
-  <title>RunCrew 随队 · Agent 训练复盘</title>
-  <link rel="stylesheet" href="/assets/styles.css">
+  <meta name="description" content="RunCrew Agent Runtime 只读工程观测台。">
+  <title>RunCrew · Agent Runtime</title>
+  <link rel="stylesheet" href="/assets/styles.css?v=20260820-5">
 </head>
 <body>
-  <div class="ambient ambient-one"></div>
-  <div class="ambient ambient-two"></div>
   <header class="topbar">
-    <a class="brand" href="#top" aria-label="RunCrew 首页">
+    <a class="brand" href="/" aria-label="返回 RunCrew 训练对话">
       <span class="brand-mark">RC</span>
-      <span><strong>RunCrew</strong><small>随队 · 可验证跑步 Agent</small></span>
+      <span><strong>RunCrew</strong><small>个人跑步办公室</small></span>
     </a>
-    <div class="system-status">
-      <span class="pulse"></span>
-      <span>LOCAL / READ ONLY</span>
-    </div>
+    <nav aria-label="产品导航">
+      <a href="/">训练对话</a>
+      <a href="/">训练运营</a>
+      <span aria-current="page">工程观测</span>
+    </nav>
+    <div class="local-status"><i></i><span>本地只读</span></div>
   </header>
 
-  <main id="top">
-    <section class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow">FROM RUN DATA TO VERIFIED ACTION</p>
-        <h1>每一次跑步，<br><em>都有证据地</em>变成下一步。</h1>
-        <p class="hero-lead">真实数据接入、确定性 Skill、有界 Agent Loop 与同题模型评测，集中在一个只读演示面板中。</p>
-        <div class="capability-strip" aria-label="项目能力">
-          <span>01 · COROS MCP</span>
-          <span>02 · TRAINING SKILL</span>
-          <span>03 · AGENT HARNESS</span>
-          <span>04 · SAME-HASH EVAL</span>
-        </div>
-      </div>
-      <div class="hero-orbit" aria-hidden="true">
-        <div class="orbit-ring ring-one"></div>
-        <div class="orbit-ring ring-two"></div>
-        <div class="orbit-core"><span>LOOP</span><strong>2</strong><small>steps</small></div>
-        <span class="orbit-label label-context">CONTEXT</span>
-        <span class="orbit-label label-tool">TOOL</span>
-        <span class="orbit-label label-trace">TRACE</span>
-      </div>
-    </section>
-
-    <section class="control-deck" aria-labelledby="controls-title">
+  <main>
+    <section class="page-heading">
       <div>
-        <p class="section-index">CONTROL DECK</p>
-        <h2 id="controls-title">选择一次训练，重新回放 Agent</h2>
+        <p class="kicker">AGENT RUNTIME / CONTROL ROOM</p>
+        <h1>运行观测</h1>
+        <p>查看 Review 与 Coach 的跨运行健康度、治理拒绝和脱敏父子时间线。</p>
       </div>
-      <form id="dashboard-form" class="filters">
-        <label>数据来源
-          <select id="provider" name="provider">
-            <option value="all">自动选择最新</option>
-            <option value="coros">COROS</option>
-            <option value="fixture">Fixture 演示</option>
-            <option value="keep">Keep</option>
-          </select>
-        </label>
-        <label>回看窗口
-          <select id="lookback_days" name="lookback_days">
-            <option value="28">28 天</option>
-            <option value="14">14 天</option>
-            <option value="42">42 天</option>
-          </select>
-        </label>
-        <label>计划距离 <small>可选 / km</small>
-          <input id="planned_distance_km" name="planned_distance_km" inputmode="decimal" placeholder="例如 5.0">
-        </label>
-        <label>计划时长 <small>可选 / min</small>
-          <input id="planned_duration_minutes" name="planned_duration_minutes" inputmode="decimal" placeholder="例如 30">
-        </label>
-        <button type="submit"><span>运行只读回放</span><b>→</b></button>
+      <form id="metric-filter" class="metric-filter">
+        <label for="window-days">统计窗口</label>
+        <select id="window-days" name="window_days">
+          <option value="7">最近7天</option>
+          <option value="30" selected>最近30天</option>
+        </select>
+        <button type="submit">刷新</button>
       </form>
     </section>
 
-    <div id="loading" class="loading-panel" role="status">
-      <div class="loader-track"><span></span></div>
-      <p>正在构建有界上下文并回放 Agent…</p>
-    </div>
-    <div id="error" class="error-panel" role="alert" hidden></div>
+    <div id="error" class="notice error" role="alert" hidden></div>
+    <div id="loading" class="notice" role="status">正在读取本地 Runtime 记录…</div>
 
-    <div id="dashboard" hidden>
-      <section class="run-overview">
-        <div class="section-heading">
-          <div><p class="section-index">LATEST ACTIVITY</p><h2>本次跑步</h2></div>
-          <span id="activity-provider" class="outline-badge">—</span>
-        </div>
-        <div class="run-grid">
-          <article class="run-primary">
-            <div class="run-date"><span id="activity-day">—</span><small id="activity-month">—</small></div>
-            <div class="run-title"><p id="activity-title">—</p><span id="activity-time">—</span></div>
-            <div class="run-line"></div>
-            <div id="recent-runs" class="recent-runs"></div>
-          </article>
-          <article class="metric-card metric-distance"><small>DISTANCE</small><strong id="metric-distance">—</strong><span>KM</span></article>
-          <article class="metric-card"><small>DURATION</small><strong id="metric-duration">—</strong><span>TIME</span></article>
-          <article class="metric-card"><small>AVG PACE</small><strong id="metric-pace">—</strong><span>PER KM</span></article>
-          <article class="metric-card"><small>AVG HEART RATE</small><strong id="metric-heart-rate">—</strong><span>BPM</span></article>
-          <article class="metric-card"><small>DETAIL</small><strong id="metric-laps">—</strong><span>LAPS</span></article>
+    <div id="workspace" hidden>
+      <section class="metric-grid" aria-label="Runtime 核心指标">
+        <article><span>Run 成功率</span><strong id="run-success">—</strong><small id="run-success-sample">—</small></article>
+        <article><span>Guardrail 拒绝率</span><strong id="guardrail-rejection">—</strong><small id="guardrail-sample">—</small></article>
+        <article><span>工具成功率</span><strong id="tool-success">—</strong><small id="tool-sample">—</small></article>
+        <article><span>Run P95</span><strong id="latency-p95">—</strong><small id="latency-sample">—</small></article>
+      </section>
+
+      <section class="scope-bar">
+        <div><span>样本范围</span><strong id="sample-scope">—</strong></div>
+        <div><span>保留策略</span><strong>30天 · 最多500 Run</strong></div>
+        <p id="coverage-note">—</p>
+      </section>
+
+      <section class="split-grid">
+        <article class="panel">
+          <header><div><p>WORKFLOW HEALTH</p><h2>工作流健康度</h2></div><span id="workflow-count">0组</span></header>
+          <div id="workflow-list" class="workflow-list"></div>
+        </article>
+        <article class="panel">
+          <header><div><p>TERMINATION</p><h2>退出原因分布</h2></div><span>当前窗口</span></header>
+          <div id="termination-list" class="distribution-list"></div>
+        </article>
+      </section>
+
+      <section class="panel invocation-panel">
+        <header><div><p>CAPABILITY GOVERNANCE</p><h2>工具与职责调用</h2></div><span>只显示脱敏计数</span></header>
+        <div class="invocation-grid">
+          <div><h3>按工具</h3><div id="tool-list" class="compact-table"></div></div>
+          <div><h3>按职责</h3><div id="role-list" class="compact-table"></div></div>
         </div>
       </section>
 
-      <section class="review-section">
-        <div class="section-heading">
-          <div><p class="section-index">EVIDENCE-BACKED REVIEW</p><h2>训练复盘不是一句感觉</h2></div>
-          <div class="quality-badge"><span>DATA CONFIDENCE</span><strong id="confidence">—</strong></div>
-        </div>
-        <div id="findings" class="finding-grid"></div>
-        <div class="review-meta"><span>INPUT HASH <b id="input-hash">—</b></span><span id="missing-fields">MISSING · —</span></div>
-      </section>
-
-      <section class="agent-section">
-        <div class="agent-copy">
-          <p class="section-index">HARNESS / LOOP ENGINEERING</p>
-          <h2>模型可以提议动作，<br>执行权始终留在系统。</h2>
-          <p>白名单、参数一致性、确认门、预算、重试、超时与输出 Schema 逐层约束。右侧是本次真实回放的脱敏 Trace。</p>
-          <div class="agent-stats">
-            <div><small>STATUS</small><strong id="agent-status">—</strong></div>
-            <div><small>STEPS</small><strong id="agent-steps">—</strong></div>
-            <div><small>TOOL CALLS</small><strong id="agent-tools">—</strong></div>
-            <div><small>ATTEMPTS</small><strong id="agent-attempts">—</strong></div>
-          </div>
-          <div class="boundary-list">
-            <span>POLICY</span><i>选择 call_tool / finish</i>
-            <span>HARNESS</span><i>检查并执行</i>
-            <span>SKILL</span><i>返回确定性 evidence</i>
-          </div>
-        </div>
-        <div class="trace-shell">
-          <div class="trace-header"><span>RUN TRACE</span><small id="termination-reason">—</small></div>
-          <ol id="trace" class="trace-list"></ol>
+      <section class="panel governance-panel">
+        <header><div><p>VERSIONED GOVERNANCE EVAL</p><h2>治理防线基线</h2></div><span id="governance-suite">runtime-governance-eval/1.0</span></header>
+        <div class="governance-content">
+          <div class="governance-score"><strong id="governance-score">—</strong><span>符合版本化期望</span></div>
+          <div id="governance-metrics" class="governance-metrics"></div>
+          <p>这是确定性合成故障评测，用来验证 Harness 与观测隔离边界；不代表真实 LLM 攻防效果。</p>
         </div>
       </section>
 
-      <section class="evaluation-section">
-        <div class="section-heading evaluation-heading">
-          <div><p class="section-index">SAME-HASH EVALUATION</p><h2>不是“看起来能跑”，而是同题可比较。</h2></div>
-          <div id="same-suite" class="same-suite"><span>SUITE IDENTITY</span><strong>—</strong></div>
-        </div>
-        <div class="eval-grid">
-          <article id="baseline-eval" class="eval-card"></article>
-          <div class="versus"><span>VS</span><i></i></div>
-          <article id="deepseek-eval" class="eval-card accent"></article>
-        </div>
-        <p class="eval-note">三个非法动作场景由脚本化 Policy 注入，证明 Harness 防线；它们不被包装成模型对抗安全得分。</p>
-      </section>
-
-      <section class="pipeline-section">
-        <p class="section-index">THE RUNCREW PIPELINE</p>
-        <div class="pipeline">
-          <div><b>01</b><strong>Provider</strong><span>COROS · FIT · Fixture</span></div>
-          <i>→</i>
-          <div><b>02</b><strong>Domain</strong><span>Canonical Schema</span></div>
-          <i>→</i>
-          <div><b>03</b><strong>Skill</strong><span>Rules + Evidence</span></div>
-          <i>→</i>
-          <div><b>04</b><strong>Harness</strong><span>Budget + Trace</span></div>
-          <i>→</i>
-          <div><b>05</b><strong>Evaluation</strong><span>Replay + Compare</span></div>
+      <section class="panel run-panel">
+        <header><div><p>RECENT RUNS</p><h2>最近运行</h2></div><span>点击查看父子时间线</span></header>
+        <div class="run-table-wrap">
+          <table>
+            <thead><tr><th>时间</th><th>工作流</th><th>终态</th><th>耗时</th><th>调用 / 重试</th><th>Run ID</th></tr></thead>
+            <tbody id="run-list"></tbody>
+          </table>
         </div>
       </section>
     </div>
   </main>
 
-  <footer><span>RUNCREW / 随队</span><p>本地只读 · 不上传真实跑步数据 · 非医疗诊断</p></footer>
-  <script src="/assets/app.js" defer></script>
+  <aside id="trace-drawer" class="trace-drawer" aria-labelledby="trace-title" aria-hidden="true">
+    <div class="drawer-backdrop" data-close-drawer></div>
+    <section>
+      <header>
+        <div><p>RUNTIME TRACE</p><h2 id="trace-title">运行时间线</h2></div>
+        <button type="button" data-close-drawer aria-label="关闭时间线">关闭</button>
+      </header>
+      <div id="trace-summary" class="trace-summary"></div>
+      <ol id="trace-list" class="trace-list"></ol>
+    </section>
+  </aside>
+
+  <script src="/assets/app.js?v=20260820-5" defer></script>
 </body>
 </html>

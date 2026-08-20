@@ -36,7 +36,7 @@ flowchart LR
 
 | 维度 | 当前结果 |
 |---|---:|
-| 自动化测试 | 195 passed |
+| 自动化测试 | 202 passed |
 | 多 Agent 确定性评测 | 18 / 18 |
 | DeepSeek 单 Agent 同题评测 | 12 / 12 |
 | Memory Manager 确定性评测 | 16 / 16，意外正式写入 0 |
@@ -75,6 +75,7 @@ skills/      中文 Skill 说明、边界和输入输出契约
 - 输出成功、失败、超时或预算耗尽终态，以及完整脱敏 Trace；
 - 用四个版本化 Tool Manifest 统一声明职责、访问、副作用、风险、Schema 与运行上限；Review/Coach 在执行前检查权限、确认和参数 Hash，执行后统一拒绝非法输出；
 - 将聊天 Review 与训练运营 Coach 映射为统一持久化 Runtime Run/Span；以父子时间线记录 Policy、Guardrail、Handoff、Tool/Retry/Validation，观测写入失败不改变业务终态；
+- 从30天 Runtime 事实按需计算成功率、拒绝率、重试率与P50/P95，按工作流、版本、工具、职责和退出原因分组；5场景治理套件验证执行前阻断、非法输出和观测故障隔离；
 - 用 12 个版本化离线场景评测任务完成、故障恢复、护栏和预算行为；
 - 输出 Suite Hash、事实一致性、工具执行和调用成本等可比较指标；
 - 提供 `DeepSeekReviewPolicy` 非思考 Tool Calls 适配器，并以 Mock 验证请求、解析、重试、脱敏和 Harness 护栏；
@@ -84,7 +85,7 @@ skills/      中文 Skill 说明、边界和输入输出契约
 - 个人数据事实/推断必须引用 evidence；通用知识、假设和训练建议可以自然展开并明确标注类型；
 - 离线回答默认可用；显式开启后可把脱敏上下文交给 DeepSeek 生成结构化回答；
 - 对话、回答 evidence、置信度和缺失数据持久化到本机 SQLite；
-- 原只读 Dashboard 保留为工程观测台，展示 Skill evidence、Agent Trace 和 Same-Hash 评测对照；
+- `/engineering` 提供只读 Runtime Control Room，可查看7/30天健康指标、治理基线、最近 Run 和脱敏父子时间线；
 - 用7个场景、8个轮次评测 grounding、openness、safety 和长上下文行为；
 - 使用不含位置的合成 FIT 进行离线开发和回归测试。
 - 管理训练目标、周计划、主观身体反馈和计划变更提案；
@@ -309,6 +310,15 @@ Coach 会依次委派训练执行和恢复评估；只有需要降级时才调�
 ```
 
 `memory-manager-eval/1.0` 包含16个无私人数据场景，直接回放候选服务、正式偏好写入、来源完整性和按职责 Context Builder。当前基线16/16满足期望，意外正式 Memory 写入为0，Suite Hash 为 `78e9e4dc7c1e...`。其中正样本只有2个、负样本只有4个，因此100%是合成工程回归结果，不代表真实用户语言准确率；报告只允许写入 `data/private/`。
+
+## 运行 Runtime 治理离线评测
+
+```powershell
+.\.venv\Scripts\runcrew.exe eval runtime-governance `
+  --output data\private\evals\runtime-governance-v1.0.json
+```
+
+`runtime-governance-eval/1.0` 包含5个无私人数据场景，验证未注册工具、参数篡改、确认绕过、非法输出和观测写入失败。当前基线5/5符合期望，禁止工具误执行与敏感错误泄漏均为0。它是确定性 Harness 故障基线，不代表真实 LLM 攻防能力；报告只允许写入 `data/private/`。
 
 ## 同步真实 COROS 数据
 

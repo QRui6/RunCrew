@@ -30,5 +30,6 @@
 | [ADR-0026](0026-lazy-memory-control-plane.md) | 接受 | Memory 控制面按需聚合并复用既有确认、归档和失效状态机 |
 | [ADR-0027](0027-versioned-tool-runtime-governance.md) | 接受 | 用版本化 Tool Manifest 与统一 Guardrail 治理 Review/Coach 工具调用 |
 | [ADR-0028](0028-best-effort-persistent-runtime-spans.md) | 接受 | 以独立 best-effort 事务持久化统一 Runtime Run/Span，并限制字段与保留期 |
+| [ADR-0029](0029-on-demand-runtime-metrics-and-scoped-evaluation.md) | 接受 | 从 Runtime 事实按需聚合指标，并隔离合成治理评测与产品观测样本 |
 
 新 ADR 使用四位编号，必须记录背景、决策、原因、后果和替代方案。

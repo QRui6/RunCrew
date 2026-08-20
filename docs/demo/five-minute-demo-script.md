@@ -62,11 +62,11 @@ cd D:\AgentProjets\RunCrew
 
 ## 4:35—5:00：可靠性收尾
 
-操作：打开工程观测台或展示架构图。
+操作：打开工程观测台，展示7/30天运行指标、5场景治理基线，再点击一条 Run 打开父子时间线。
 
 讲解：
 
-> Agent 只能生成草案。用户批准时服务端重放并比较 Hash/revision；状态变化就标记 stale。长期偏好先形成待确认 Candidate，核对原消息与 Hash 后才能写入正式 Memory。四个工具通过统一 Manifest/Guardrail，Review/Coach 运行再映射为脱敏持久化 Run/Span。项目当前195项测试，单 Agent 12场景、多 Agent 18场景、Memory 16场景都有版本化基线，但不会把合成评测描述成生产效果。
+> Agent 只能生成草案。用户批准时服务端重放并比较 Hash/revision；状态变化就标记 stale。长期偏好先形成待确认 Candidate，核对原消息与 Hash 后才能写入正式 Memory。四个工具通过统一 Manifest/Guardrail，Review/Coach 运行再映射为脱敏持久化 Run/Span，并从事实重算跨运行指标。项目当前202项测试，Runtime 治理5场景、单 Agent 12场景、多 Agent 18场景、Memory 16场景都有版本化基线，但不会把合成评测描述成生产效果。
 
 ## 常见现场故障与降级
 

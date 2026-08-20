@@ -15,6 +15,7 @@ flowchart TB
         TrainingOps[Training Operations Service<br/>目标 / 计划 / 执行 / Check-in / 审核]
         Memory[Memory Manager<br/>聊天候选 / 偏好确认 / 周结算 / 版本 / 失效]
         Context[Role-scoped Context Builder<br/>字段投影 / 固定预算 / 双 Hash 审计]
+        Runtime[Runtime Observability<br/>Run/Span / 30天指标 / 只读 API]
     end
 
     subgraph Agent[Agent 工程层]
@@ -46,7 +47,7 @@ flowchart TB
     U --> Ops
     Chat --> ChatService
     Ops --> TrainingOps
-    Eng --> SQLite
+    Eng --> Runtime
     Eng --> Eval
 
     ChatService --> Context
@@ -58,6 +59,9 @@ flowchart TB
     Context --> CoachHarness
     ReviewHarness --> Guard
     CoachHarness --> Guard
+    ReviewHarness --> Runtime
+    CoachHarness --> Runtime
+    Runtime --> SQLite
     Guard --> Review
     Guard --> Execution
     Guard --> Recovery
@@ -82,5 +86,5 @@ flowchart TB
 2. 中间是确定性 Skill：计算、阈值、缺失数据和 evidence 不交给 LLM；
 3. Harness 掌握工具白名单、确认、预算、超时、Trace 和终态，Policy 只有建议权；
 4. 应用层先把聊天表达隔离为待确认 Candidate，确认时校验原消息与 Hash；正式记忆再按职责裁剪 Context：Execution 不读记忆，Recovery 只读周聚合，Plan 读取偏好和训练基线；
-5. 产品层只展示可操作流程，工程观测台单独展示 Trace 与评测证据；
+5. Review/Coach Trace 通过 best-effort 短事务进入统一 Run/Span；工程观测台从30天事实重算指标，并与不污染产品样本的合成治理评测并列展示；
 6. Evaluation 复用真实 Harness，而不是为测试重写一套模拟流程。

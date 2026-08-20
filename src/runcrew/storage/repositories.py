@@ -1069,6 +1069,48 @@ class RuntimeRunRepository:
         ).all()
         return [RuntimeRun.model_validate_json(item.canonical_json) for item in records]
 
+    def between(
+        self,
+        *,
+        started_at: datetime,
+        ended_at: datetime,
+        limit: int,
+    ) -> tuple[list[RuntimeRunCapture], bool]:
+        records = self.session.scalars(
+            select(AgentRuntimeRunRecord)
+            .where(AgentRuntimeRunRecord.recorded_at >= started_at)
+            .where(AgentRuntimeRunRecord.recorded_at <= ended_at)
+            .where(AgentRuntimeRunRecord.expires_at > ended_at)
+            .order_by(desc(AgentRuntimeRunRecord.recorded_at))
+            .limit(limit + 1)
+        ).all()
+        truncated = len(records) > limit
+        selected = records[:limit]
+        if not selected:
+            return [], truncated
+        run_ids = [record.id for record in selected]
+        spans = self.session.scalars(
+            select(AgentRuntimeSpanRecord)
+            .where(AgentRuntimeSpanRecord.run_id.in_(run_ids))
+            .order_by(
+                AgentRuntimeSpanRecord.run_id,
+                AgentRuntimeSpanRecord.sequence,
+            )
+        ).all()
+        spans_by_run: dict[str, list[RuntimeSpan]] = {run_id: [] for run_id in run_ids}
+        for record in spans:
+            spans_by_run[record.run_id].append(
+                RuntimeSpan.model_validate_json(record.canonical_json)
+            )
+        captures = [
+            RuntimeRunCapture(
+                run=RuntimeRun.model_validate_json(record.canonical_json),
+                spans=spans_by_run[record.id],
+            )
+            for record in selected
+        ]
+        return captures, truncated
+
     def delete_expired(self, *, now: datetime) -> int:
         run_ids = self.session.scalars(
             select(AgentRuntimeRunRecord.id).where(

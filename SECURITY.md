@@ -22,7 +22,7 @@ RunCrew 处理运动、睡眠、心率、HRV、恢复、位置等私人数据。
 - 下载错误不会输出签名 URL，工具错误会脱敏 URL 和长数字 ID；
 - 测试 FIT 由 Garmin Encoder 人工生成，不含坐标或真实用户指标。
 - 本地产品服务强制绑定 `127.0.0.1`，不提供公网监听参数；
-- 工程观测 API 只接受 GET；聊天 POST API 限制 JSON 正文为 64 KB；
+- Runtime 指标、运行时间线与治理评测 API 只接受 GET；聊天 POST API 限制 JSON 正文为 64 KB；
 - 浏览器 DTO 不返回 Provider 外部 ID、原始 payload、坐标或 Token；
 - DeepSeek 只有用户在界面显式开启后才调用，只发送规范化活动、确定性 evidence、最近 8 条消息和当前问题；
 - DeepSeek 回答必须通过 `ChatAnswer` Schema、evidence 引用白名单和医疗诊断措辞校验；

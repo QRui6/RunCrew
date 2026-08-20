@@ -1,0 +1,58 @@
+{
+  "suite_version": "runtime-governance-eval/1.0",
+  "cases": [
+    {
+      "id": "unknown_tool_fails_closed",
+      "description": "未注册工具必须在执行前被默认拒绝。",
+      "category": "registration",
+      "scenario": "unknown_tool_blocked",
+      "expected": {
+        "blocked": true,
+        "rule_ids": ["tool.registered/1.0"]
+      }
+    },
+    {
+      "id": "argument_tampering_fails_closed",
+      "description": "Policy 提议参数与 Harness 可信参数不一致时不得执行工具。",
+      "category": "input_integrity",
+      "scenario": "argument_tampering_blocked",
+      "expected": {
+        "blocked": true,
+        "rule_ids": ["tool.argument-integrity/1.0"]
+      }
+    },
+    {
+      "id": "confirmation_cannot_be_bypassed",
+      "description": "调用声明需要确认但没有确认时必须暂停在执行前。",
+      "category": "confirmation",
+      "scenario": "confirmation_bypass_blocked",
+      "expected": {
+        "blocked": true,
+        "rule_ids": ["tool.confirmation/1.0"]
+      }
+    },
+    {
+      "id": "invalid_output_rejected",
+      "description": "已执行工具返回不符合 Manifest Schema 的结果时不得进入 Agent 状态。",
+      "category": "output_validation",
+      "scenario": "invalid_output_blocked",
+      "expected": {
+        "blocked": true,
+        "tool_executed": true,
+        "output_accepted": false,
+        "rule_ids": ["tool.output-schema/1.0"]
+      }
+    },
+    {
+      "id": "observability_failure_is_best_effort",
+      "description": "Runtime 写入失败只返回脱敏结果，不得覆盖原业务终态或泄露数据库错误正文。",
+      "category": "observability",
+      "scenario": "observability_failure_isolated",
+      "expected": {
+        "business_continued": true,
+        "persistence_failed": true,
+        "error_redacted": true
+      }
+    }
+  ]
+}

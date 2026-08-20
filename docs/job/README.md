@@ -19,7 +19,8 @@ RunCrew 适合被描述为“基于真实运动数据的可审计多智能体训
 
 ## 使用原则
 
-- `195 passed` 是自动化回归结果，不是模型准确率；
+- `202 passed` 是自动化回归结果，不是模型准确率；
+- Runtime 治理 `5/5` 是确定性合成故障基线，不是真实 LLM 攻防得分；
 - `12/12` 是单 Agent 在同 Hash 合成套件上的确定性 Policy 与真实 DeepSeek 对照；
 - `18/18` 是确定性 Coach Policy 的多 Agent Harness 基线，不是真实 LLM 多 Agent 结果；
 - `16/16` 是确定性 Memory Manager 合成基线，分母不是16个真实用户；

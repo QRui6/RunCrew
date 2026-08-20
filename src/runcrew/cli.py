@@ -39,10 +39,12 @@ from runcrew.evaluation import (
     evaluate_coach_agent_suite,
     evaluate_memory_suite,
     evaluate_review_agent_suite,
+    evaluate_runtime_governance_suite,
     load_chat_evaluation_suite,
     load_coach_agent_suite,
     load_memory_evaluation_suite,
     load_review_agent_suite,
+    load_runtime_governance_suite,
 )
 from runcrew.harness import CoachNodeTools, CoachOrchestratorHarness, ReviewAgentHarness
 from runcrew.policies import (
@@ -1603,6 +1605,31 @@ def evaluate_memory(
         raise typer.BadParameter(f"Memory evaluation suite not found: {cases_path}")
     suite = load_memory_evaluation_suite(cases_path)
     report = evaluate_memory_suite(suite)
+    payload = report.model_dump_json(indent=2)
+    _write_private_evaluation(output_path, payload)
+    typer.echo(payload)
+    if not report.meets_baseline:
+        raise typer.Exit(code=1)
+
+
+@evaluation_app.command("runtime-governance")
+def evaluate_runtime_governance(
+    cases_path: Annotated[
+        Path,
+        typer.Option("--cases", help="Runtime 治理评测用例 JSON 路径。"),
+    ] = Path("evals/runtime_governance/cases.json"),
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", help="可选报告路径，只允许写入 data/private。"),
+    ] = None,
+) -> None:
+    """运行不调用外部模型的版本化 Runtime 治理评测。"""
+    if not cases_path.is_file():
+        raise typer.BadParameter(
+            f"Runtime governance evaluation suite not found: {cases_path}"
+        )
+    suite = load_runtime_governance_suite(cases_path)
+    report = evaluate_runtime_governance_suite(suite)
     payload = report.model_dump_json(indent=2)
     _write_private_evaluation(output_path, payload)
     typer.echo(payload)

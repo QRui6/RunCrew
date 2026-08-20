@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+from collections import Counter, defaultdict
 from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -10,7 +12,14 @@ from runcrew.domain.agent import AgentTraceEvent, ReviewAgentRunResult
 from runcrew.domain.coach import CoachAgentRunResult, CoachTraceEvent
 from runcrew.domain.runtime_observability import (
     RuntimeBudgetSnapshot,
+    RuntimeBreakdownItem,
+    RuntimeInvocationGroup,
+    RuntimeLatencySummary,
+    RuntimeMetricGroup,
+    RuntimeMetricSet,
+    RuntimeMetricsSnapshot,
     RuntimePersistenceOutcome,
+    RuntimeRate,
     RuntimeRun,
     RuntimeRunCapture,
     RuntimeRunList,
@@ -21,6 +30,7 @@ from runcrew.storage.repositories import RuntimeRunRepository
 
 
 RETENTION_DAYS = 30
+METRIC_SAMPLE_LIMIT = 500
 _RUN_EVENTS = {
     "run_started",
     "run_completed",
@@ -421,3 +431,177 @@ class RuntimeTraceService:
         if capture is None:
             raise RuntimeRunNotFoundError("Runtime 运行记录不存在或已过期。")
         return capture
+
+    def metrics(self, *, window_days: int = 30) -> RuntimeMetricsSnapshot:
+        if not 1 <= window_days <= RETENTION_DAYS:
+            raise ValueError("Runtime 指标窗口只允许1到30天。")
+        ended_at = self.clock()
+        started_at = ended_at - timedelta(days=window_days)
+        try:
+            with self.database.session() as session:
+                captures, truncated = RuntimeRunRepository(session).between(
+                    started_at=started_at,
+                    ended_at=ended_at,
+                    limit=METRIC_SAMPLE_LIMIT,
+                )
+        except Exception as error:
+            raise RuntimeObservabilityError("Runtime 指标读取失败。") from error
+        return calculate_runtime_metrics(
+            captures,
+            generated_at=ended_at,
+            window_days=window_days,
+            truncated=truncated,
+        )
+
+
+def _rate(numerator: int, denominator: int) -> RuntimeRate:
+    return RuntimeRate(
+        numerator=numerator,
+        denominator=denominator,
+        value=round(numerator / denominator, 4) if denominator else None,
+    )
+
+
+def _nearest_rank(values: Sequence[float], percentile: float) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    index = max(0, math.ceil(percentile * len(ordered)) - 1)
+    return round(ordered[index], 3)
+
+
+def _metric_set(captures: Sequence[RuntimeRunCapture]) -> RuntimeMetricSet:
+    spans = [span for capture in captures for span in capture.spans]
+    guardrails = [span for span in spans if span.kind == "guardrail"]
+    attempts = [
+        span
+        for span in spans
+        if span.name in {"tool_call_started", "node_call_started"}
+    ]
+    successes = [
+        span
+        for span in spans
+        if span.name in {"tool_call_succeeded", "node_call_succeeded"}
+    ]
+    retries = [span for span in spans if span.kind == "retry"]
+    durations = [capture.run.duration_ms for capture in captures]
+    return RuntimeMetricSet(
+        run_count=len(captures),
+        run_success=_rate(
+            sum(capture.run.status == "succeeded" for capture in captures),
+            len(captures),
+        ),
+        guardrail_rejection=_rate(
+            sum(span.status == "blocked" for span in guardrails),
+            len(guardrails),
+        ),
+        tool_success=_rate(len(successes), len(attempts)),
+        retry=_rate(len(retries), len(attempts)),
+        budget_exhaustion=_rate(
+            sum(capture.run.status == "budget_exhausted" for capture in captures),
+            len(captures),
+        ),
+        latency=RuntimeLatencySummary(
+            sample_count=len(durations),
+            p50_ms=_nearest_rank(durations, 0.5),
+            p95_ms=_nearest_rank(durations, 0.95),
+            maximum_ms=round(max(durations), 3) if durations else None,
+        ),
+    )
+
+
+def _invocation_groups(
+    captures: Sequence[RuntimeRunCapture],
+    *,
+    dimension: str,
+) -> list[RuntimeInvocationGroup]:
+    counters: dict[str, Counter[str]] = defaultdict(Counter)
+    for capture in captures:
+        for span in capture.spans:
+            if dimension == "tool":
+                key = span.tool_name
+            else:
+                key = span.node or (
+                    "review_agent" if capture.run.workflow == "review_agent" else None
+                )
+            if key is None:
+                continue
+            if span.name in {"tool_call_started", "node_call_started"}:
+                counters[key]["attempt"] += 1
+            if span.name in {"tool_call_succeeded", "node_call_succeeded"}:
+                counters[key]["success"] += 1
+            if span.kind == "retry":
+                counters[key]["retry"] += 1
+            if span.kind == "guardrail":
+                counters[key]["guardrail"] += 1
+                if span.status == "blocked":
+                    counters[key]["rejected"] += 1
+    return [
+        RuntimeInvocationGroup(
+            key=key,
+            attempt_count=counts["attempt"],
+            success=_rate(counts["success"], counts["attempt"]),
+            retry=_rate(counts["retry"], counts["attempt"]),
+            guardrail_rejection=_rate(
+                counts["rejected"], counts["guardrail"]
+            ),
+        )
+        for key, counts in sorted(counters.items())
+    ]
+
+
+def calculate_runtime_metrics(
+    captures: Sequence[RuntimeRunCapture],
+    *,
+    generated_at: datetime,
+    window_days: int,
+    truncated: bool = False,
+) -> RuntimeMetricsSnapshot:
+    started_at = generated_at - timedelta(days=window_days)
+    grouped_workflows: dict[str, list[RuntimeRunCapture]] = defaultdict(list)
+    grouped_versions: dict[str, list[RuntimeRunCapture]] = defaultdict(list)
+    termination_counts: Counter[str] = Counter()
+    for capture in captures:
+        grouped_workflows[capture.run.workflow].append(capture)
+        grouped_versions[capture.run.workflow_version].append(capture)
+        termination_counts[capture.run.termination_reason] += 1
+    total = len(captures)
+    return RuntimeMetricsSnapshot(
+        generated_at=generated_at,
+        window_days=window_days,
+        window_started_at=started_at,
+        window_ended_at=generated_at,
+        sample_limit=METRIC_SAMPLE_LIMIT,
+        truncated=truncated,
+        coverage_note=(
+            "仅统计成功写入且仍在30天保留期内的 Review/Coach Runtime；"
+            "best-effort 写入失败与离线评测运行不在本样本中。"
+        ),
+        overall=_metric_set(captures),
+        workflows=[
+            RuntimeMetricGroup(
+                dimension="workflow",
+                key=key,
+                metrics=_metric_set(items),
+            )
+            for key, items in sorted(grouped_workflows.items())
+        ],
+        workflow_versions=[
+            RuntimeMetricGroup(
+                dimension="workflow_version",
+                key=key,
+                metrics=_metric_set(items),
+            )
+            for key, items in sorted(grouped_versions.items())
+        ],
+        tools=_invocation_groups(captures, dimension="tool"),
+        roles=_invocation_groups(captures, dimension="role"),
+        termination_reasons=[
+            RuntimeBreakdownItem(
+                key=key,
+                count=count,
+                rate=round(count / total, 4) if total else 0,
+            )
+            for key, count in sorted(termination_counts.items())
+        ],
+    )
