@@ -657,6 +657,17 @@ input:focus-visible {
 .preference-row small { margin-top: 3px; color: var(--muted); }
 .preference-row button { padding: 5px 9px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--muted); background: transparent; font-size: 8px; cursor: pointer; }
 .preference-row button:hover { color: var(--ink); border-color: var(--ink); }
+.memory-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+.memory-heading strong { font-size: 10px; }
+.memory-heading button { padding: 6px 10px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--muted); background: transparent; font-size: 8px; cursor: pointer; }
+.memory-heading button:hover { color: var(--ink); border-color: var(--ink); }
+.weekly-memory-list { display: grid; border-top: 1px solid var(--line); }
+.weekly-memory-list .empty { padding: 10px 0; color: var(--muted); font-size: 9px; }
+.weekly-memory-card { padding: 11px 0; border-bottom: 1px solid var(--line); }
+.weekly-memory-card header { display: flex; justify-content: space-between; gap: 12px; }
+.weekly-memory-card strong { font-size: 9px; }
+.weekly-memory-card small { color: var(--muted); font-size: 8px; }
+.weekly-memory-card p { margin: 6px 0 0; color: var(--muted); font-size: 9px; line-height: 1.55; }
 .session-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .session-chips span { padding: 4px 7px; color: var(--green); background: var(--green-soft); border-radius: 999px; font-size: 8px; }
 .plan-draft-form { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 9px; margin-top: 12px; }

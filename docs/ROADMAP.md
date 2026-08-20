@@ -159,13 +159,13 @@
 
 ## M9：可审计 Agent Memory Manager
 
-状态：**进行中（M9-A 已完成；下一步进入 M9-B）**
+状态：**进行中（M9-A、M9-B 已完成；下一步进入 M9-C）**
 
 - [x] M9-A：类型化 `preferred_long_run_weekday` 长期偏好；
 - [x] M9-A：显式确认、重复提交幂等、`superseded / expired / archived` 生命周期和来源追踪；
 - [x] M9-A：Planning Agent 消费偏好，目标设置优先，偏好进入 `input_hash + evidence`；
 - [x] M9-A：网页和 CLI 管理入口、JSON Schema 与专项测试；
-- [ ] M9-B：从计划、执行确认和 Check-in 确定性生成版本化 Weekly Training Memory；
+- [x] M9-B：从计划、执行确认和 Check-in 确定性生成版本化 Weekly Training Memory；
 - [ ] M9-C：按职责构建 Memory Context，记录选中/排除记忆和上下文预算；
 - [ ] M9-D：聊天只生成待确认 Memory Candidate，不允许 LLM 直接写入；
 - [ ] M9-E：版本化 Memory Evaluation，覆盖召回、冲突、过期、来源和无关记忆注入；

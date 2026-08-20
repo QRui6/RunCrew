@@ -639,6 +639,288 @@
       ],
       "title": "WeekProgressSummary",
       "type": "object"
+    },
+    "WeeklyTrainingMemory": {
+      "additionalProperties": false,
+      "description": "由正式训练事实确定性生成、可版本替代的周训练记忆。",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "goal_id": {
+          "minLength": 1,
+          "title": "Goal Id",
+          "type": "string"
+        },
+        "plan_id": {
+          "minLength": 1,
+          "title": "Plan Id",
+          "type": "string"
+        },
+        "week_start": {
+          "format": "date",
+          "title": "Week Start",
+          "type": "string"
+        },
+        "week_end": {
+          "format": "date",
+          "title": "Week End",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "status": {
+          "default": "active",
+          "enum": [
+            "active",
+            "superseded",
+            "invalidated"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "plan_revision": {
+          "minimum": 1,
+          "title": "Plan Revision",
+          "type": "integer"
+        },
+        "input_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Hash",
+          "type": "string"
+        },
+        "planned_sessions": {
+          "minimum": 0,
+          "title": "Planned Sessions",
+          "type": "integer"
+        },
+        "confirmed_completed_sessions": {
+          "minimum": 0,
+          "title": "Confirmed Completed Sessions",
+          "type": "integer"
+        },
+        "confirmed_skipped_sessions": {
+          "minimum": 0,
+          "title": "Confirmed Skipped Sessions",
+          "type": "integer"
+        },
+        "unresolved_sessions": {
+          "minimum": 0,
+          "title": "Unresolved Sessions",
+          "type": "integer"
+        },
+        "completion_rate": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completion Rate"
+        },
+        "planned_duration_seconds": {
+          "minimum": 0,
+          "title": "Planned Duration Seconds",
+          "type": "integer"
+        },
+        "actual_duration_seconds": {
+          "minimum": 0,
+          "title": "Actual Duration Seconds",
+          "type": "integer"
+        },
+        "actual_distance_meters": {
+          "minimum": 0,
+          "title": "Actual Distance Meters",
+          "type": "number"
+        },
+        "check_in_days": {
+          "minimum": 0,
+          "title": "Check In Days",
+          "type": "integer"
+        },
+        "average_fatigue": {
+          "anyOf": [
+            {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Average Fatigue"
+        },
+        "average_soreness": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Average Soreness"
+        },
+        "average_sleep_quality": {
+          "anyOf": [
+            {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Average Sleep Quality"
+        },
+        "average_readiness": {
+          "anyOf": [
+            {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Average Readiness"
+        },
+        "max_pain_severity": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Pain Severity"
+        },
+        "acute_symptom_days": {
+          "minimum": 0,
+          "title": "Acute Symptom Days",
+          "type": "integer"
+        },
+        "approved_plan_changes": {
+          "minimum": 0,
+          "title": "Approved Plan Changes",
+          "type": "integer"
+        },
+        "summary": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "missing_data": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Missing Data",
+          "type": "array"
+        },
+        "source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "supersedes_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Supersedes Id"
+        },
+        "invalidated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Invalidated At"
+        },
+        "schema_version": {
+          "const": "weekly-training-memory/1.0",
+          "default": "weekly-training-memory/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "ruleset_version": {
+          "const": "weekly-training-memory-rules/1.0",
+          "default": "weekly-training-memory-rules/1.0",
+          "title": "Ruleset Version",
+          "type": "string"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "title": "Generated At",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "goal_id",
+        "plan_id",
+        "week_start",
+        "week_end",
+        "version",
+        "plan_revision",
+        "input_hash",
+        "planned_sessions",
+        "confirmed_completed_sessions",
+        "confirmed_skipped_sessions",
+        "unresolved_sessions",
+        "planned_duration_seconds",
+        "actual_duration_seconds",
+        "actual_distance_meters",
+        "check_in_days",
+        "acute_symptom_days",
+        "approved_plan_changes",
+        "summary",
+        "source_refs"
+      ],
+      "title": "WeeklyTrainingMemory",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -700,6 +982,13 @@
         }
       ],
       "default": null
+    },
+    "recent_memories": {
+      "items": {
+        "$ref": "#/$defs/WeeklyTrainingMemory"
+      },
+      "title": "Recent Memories",
+      "type": "array"
     }
   },
   "required": [

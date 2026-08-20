@@ -9,6 +9,8 @@ from runcrew.domain.memory import (
     AthletePreference,
     AthletePreferenceArchiveSubmission,
     AthletePreferenceSubmission,
+    WeeklyTrainingMemory,
+    WeeklyTrainingMemoryBuildResult,
 )
 from runcrew.domain.training_cycle import DailyCheckIn, TrainingGoal, TrainingPlan
 from runcrew.domain.training_execution import ExecutionConfirmationResult, TrainingExecutionRequest
@@ -27,6 +29,7 @@ from runcrew.domain.training_operations import (
     WeeklyPlanActivationRequest,
     WeeklyPlanActivationResult,
     WeeklyPlanDraftSubmission,
+    WeeklyTrainingMemoryBuildSubmission,
     WeekProgressSummary,
 )
 from runcrew.harness import CoachNodeTools, CoachOrchestratorHarness
@@ -48,6 +51,11 @@ from runcrew.services.training_planning import (
     execute_plan_adjustment,
     execute_weekly_plan_draft,
 )
+from runcrew.services.weekly_training_memory import (
+    WeeklyTrainingMemoryError,
+    invalidate_weekly_training_memory,
+    refresh_weekly_training_memory,
+)
 from runcrew.storage.database import Database
 from runcrew.storage.repositories import (
     ActivityRepository,
@@ -58,6 +66,7 @@ from runcrew.storage.repositories import (
     TrainingGoalRepository,
     TrainingExecutionConfirmationRepository,
     TrainingPlanRepository,
+    WeeklyTrainingMemoryRepository,
 )
 
 
@@ -182,6 +191,7 @@ class TrainingOperationsService:
                     goals=TrainingGoalRepository(session),
                     plans=TrainingPlanRepository(session),
                     preferences=AthletePreferenceRepository(session),
+                    weekly_memories=WeeklyTrainingMemoryRepository(session),
                 )
             except TrainingPlanningError as error:
                 raise TrainingOperationsError(str(error)) from error
@@ -199,6 +209,7 @@ class TrainingOperationsService:
                 goals=goals,
                 plans=plans,
                 preferences=AthletePreferenceRepository(session),
+                weekly_memories=WeeklyTrainingMemoryRepository(session),
             )
             if replayed.input_hash != request.expected_input_hash:
                 raise TrainingOperationsError(
@@ -256,6 +267,11 @@ class TrainingOperationsService:
                         plan.week_start, plan.week_start + timedelta(days=6)
                     )
                 )
+            recent_memories = WeeklyTrainingMemoryRepository(session).recent_before(
+                goal_id,
+                week_start + timedelta(days=7),
+                limit=4,
+            )
         today_ids = (
             [item.id for item in plan.sessions if item.scheduled_for == as_of.date()]
             if plan
@@ -284,7 +300,57 @@ class TrainingOperationsService:
             today_session_ids=today_ids,
             next_session_id=next_session,
             progress=progress,
+            recent_memories=recent_memories,
         )
+
+    def build_weekly_memory(
+        self,
+        *,
+        goal_id: str,
+        submission: WeeklyTrainingMemoryBuildSubmission,
+    ) -> WeeklyTrainingMemoryBuildResult:
+        with self.database.session() as session:
+            try:
+                result = refresh_weekly_training_memory(
+                    submission.to_request(goal_id),
+                    plans=TrainingPlanRepository(session),
+                    confirmations=TrainingExecutionConfirmationRepository(session),
+                    activities=ActivityRepository(session),
+                    check_ins=CheckInRepository(session),
+                    plan_changes=PlanChangeRepository(session),
+                    memories=WeeklyTrainingMemoryRepository(session),
+                )
+            except WeeklyTrainingMemoryError as error:
+                raise TrainingOperationsError(str(error)) from error
+            session.commit()
+        return result
+
+    def list_weekly_memories(
+        self,
+        *,
+        goal_id: str,
+        include_inactive: bool = False,
+        limit: int = 20,
+    ) -> list[WeeklyTrainingMemory]:
+        with self.database.session() as session:
+            return WeeklyTrainingMemoryRepository(session).list_for_goal(
+                goal_id,
+                include_inactive=include_inactive,
+                limit=limit,
+            )
+
+    def invalidate_weekly_memory(self, memory_id: str) -> WeeklyTrainingMemory:
+        with self.database.session() as session:
+            try:
+                memory = invalidate_weekly_training_memory(
+                    memory_id,
+                    memories=WeeklyTrainingMemoryRepository(session),
+                    now=self._now(),
+                )
+            except WeeklyTrainingMemoryError as error:
+                raise TrainingOperationsError(str(error)) from error
+            session.commit()
+        return memory
 
     def decide_execution(
         self, *, plan_id: str, submission: ExecutionDecisionSubmission

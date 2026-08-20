@@ -9,6 +9,8 @@ from runcrew.domain.activity import ActivitySummary, SourceProvider, SourceRef, 
 from runcrew.domain.memory import (
     AthletePreferenceArchiveSubmission,
     AthletePreferenceSubmission,
+    WeeklyTrainingMemory,
+    WeeklyTrainingMemoryBuildResult,
 )
 from runcrew.domain.training_cycle import (
     PlanSession,
@@ -29,6 +31,7 @@ from runcrew.domain.training_operations import (
     WeeklyPlanActivationRequest,
     WeeklyPlanActivationResult,
     WeeklyPlanDraftSubmission,
+    WeeklyTrainingMemoryBuildSubmission,
 )
 from runcrew.services.training_cycle import TrainingCycleService
 from runcrew.services.training_operations import TrainingOperationsService
@@ -428,7 +431,7 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     )
     html = application.handle("GET", "/").body.decode("utf-8")
     script = application.handle("GET", "/assets/chat.js").body.decode("utf-8")
-    style = application.handle("GET", "/assets/chat.css?v=20260819-1").body.decode("utf-8")
+    style = application.handle("GET", "/assets/chat.css?v=20260820-1").body.decode("utf-8")
     assert "训练闭环" in html
     assert "今日训练与执行" in html
     assert "新建训练目标" in html
@@ -437,6 +440,8 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     assert "运行跨职责评估" in html
     assert "长期训练偏好" in html
     assert "/api/training/preferences" in script
+    assert "/weekly-memories" in script
+    assert "周训练记忆" in html
     assert "/api/training/coach-runs" in script
     assert "window.confirm" in script
     assert "innerHTML" not in script
@@ -452,7 +457,7 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
     assert "renderRunHeader" in script
     assert "toggleContext" in script
     assert 'id="context-panel" class="context-panel" aria-label="回答依据" hidden' in html
-    assert "/assets/chat.css?v=20260819-1" in html
+    assert "/assets/chat.css?v=20260820-1" in html
     assert "grid-template-rows: 68px minmax(0, 1fr)" in style
     assert "position: sticky" in style
     assert ".workspace {" in style and "overflow: hidden" in style
@@ -466,6 +471,9 @@ def test_training_ui_assets_and_exported_schemas_are_current(tmp_path: Path) -> 
         "bootstrap.schema.json": TrainingOperationsBootstrap,
         "athlete-preference-input.schema.json": AthletePreferenceSubmission,
         "athlete-preference-archive-input.schema.json": AthletePreferenceArchiveSubmission,
+        "weekly-memory-input.schema.json": WeeklyTrainingMemoryBuildSubmission,
+        "weekly-memory-output.schema.json": WeeklyTrainingMemoryBuildResult,
+        "weekly-memory.schema.json": WeeklyTrainingMemory,
         "check-in-input.schema.json": CheckInSubmission,
         "coach-run-input.schema.json": CoachRunSubmission,
         "coach-run-output.schema.json": CoachRunView,

@@ -14,7 +14,7 @@ from runcrew.domain.activity import (
     SportType,
 )
 from runcrew.domain.demo import DemoSeedSummary
-from runcrew.domain.memory import AthletePreference
+from runcrew.domain.memory import AthletePreference, WeeklyTrainingMemoryBuildRequest
 from runcrew.domain.training_cycle import (
     DailyCheckIn,
     PlanSession,
@@ -27,10 +27,13 @@ from runcrew.storage.repositories import (
     ActivityRepository,
     AthletePreferenceRepository,
     CheckInRepository,
+    PlanChangeRepository,
     TrainingExecutionConfirmationRepository,
     TrainingGoalRepository,
     TrainingPlanRepository,
+    WeeklyTrainingMemoryRepository,
 )
+from runcrew.services.weekly_training_memory import refresh_weekly_training_memory
 
 
 class DemoSeedError(ValueError):
@@ -72,6 +75,9 @@ def prepare_demo_database(
 
     historical = _historical_activities(anchor, completed_day, latest_activity_id)
     current_run = historical[-1]
+    previous_week_start = week_start - timedelta(days=7)
+    previous_easy_activity = historical[-3]
+    previous_long_activity = historical[-2]
     planned_sessions = [
         PlanSession(
             id=_stable_id("session", f"{week_start}:completed"),
@@ -117,6 +123,44 @@ def prepare_demo_database(
         created_at=anchor - timedelta(days=5),
         updated_at=anchor - timedelta(days=2),
     )
+    previous_plan = TrainingPlan(
+        id=_stable_id("plan", previous_week_start.isoformat()),
+        goal_id=goal_id,
+        week_start=previous_week_start,
+        status="completed",
+        revision=3,
+        source="deterministic",
+        sessions=[
+            PlanSession(
+                id=_stable_id("session", f"{previous_week_start}:easy"),
+                scheduled_for=previous_easy_activity.started_at.date(),
+                session_type="easy",
+                duration_seconds=previous_easy_activity.duration_seconds,
+                purpose="维持轻松有氧训练。",
+                status="completed",
+                linked_activity_id=previous_easy_activity.id,
+            ),
+            PlanSession(
+                id=_stable_id("session", f"{previous_week_start}:long"),
+                scheduled_for=previous_long_activity.started_at.date(),
+                session_type="long_run",
+                duration_seconds=previous_long_activity.duration_seconds,
+                purpose="完成本周长距离耐力训练。",
+                status="completed",
+                linked_activity_id=previous_long_activity.id,
+            ),
+            PlanSession(
+                id=_stable_id("session", f"{previous_week_start}:recovery"),
+                scheduled_for=previous_week_start + timedelta(days=5),
+                session_type="recovery",
+                duration_seconds=1500,
+                purpose="在长跑后进行恢复训练。",
+                status="skipped",
+            ),
+        ],
+        created_at=anchor - timedelta(days=14),
+        updated_at=anchor - timedelta(days=2),
+    )
     goal = TrainingGoal(
         id=goal_id,
         name="十公里稳定完赛 · 演示目标",
@@ -160,6 +204,60 @@ def prepare_demo_database(
         comment="演示数据：用户确认该活动对应周一轻松跑。",
         created_at=anchor - timedelta(days=1),
     )
+    previous_confirmations = [
+        TrainingExecutionConfirmation(
+            id=_stable_id("execution", previous_plan.sessions[0].id),
+            plan_id=previous_plan.id,
+            base_revision=1,
+            applied_revision=2,
+            session_id=previous_plan.sessions[0].id,
+            decision="confirm_match",
+            activity_id=previous_easy_activity.id,
+            comment="合成演示数据：用户确认轻松跑匹配。",
+            created_at=anchor - timedelta(days=7),
+        ),
+        TrainingExecutionConfirmation(
+            id=_stable_id("execution", previous_plan.sessions[1].id),
+            plan_id=previous_plan.id,
+            base_revision=2,
+            applied_revision=3,
+            session_id=previous_plan.sessions[1].id,
+            decision="confirm_match",
+            activity_id=previous_long_activity.id,
+            comment="合成演示数据：用户确认长距离匹配。",
+            created_at=anchor - timedelta(days=6),
+        ),
+        TrainingExecutionConfirmation(
+            id=_stable_id("execution", previous_plan.sessions[2].id),
+            plan_id=previous_plan.id,
+            base_revision=2,
+            applied_revision=3,
+            session_id=previous_plan.sessions[2].id,
+            decision="mark_skipped",
+            comment="合成演示数据：用户确认跳过恢复跑。",
+            created_at=anchor - timedelta(days=4),
+        ),
+    ]
+    previous_check_ins = [
+        DailyCheckIn(
+            id=_stable_id("check-in", (previous_week_start + timedelta(days=1)).isoformat()),
+            day=previous_week_start + timedelta(days=1),
+            fatigue=2,
+            soreness=2,
+            sleep_quality=4,
+            readiness=4,
+            created_at=anchor - timedelta(days=8),
+        ),
+        DailyCheckIn(
+            id=_stable_id("check-in", (previous_week_start + timedelta(days=4)).isoformat()),
+            day=previous_week_start + timedelta(days=4),
+            fatigue=3,
+            soreness=3,
+            sleep_quality=3,
+            readiness=3,
+            created_at=anchor - timedelta(days=5),
+        ),
+    ]
 
     database = Database(f"sqlite:///{resolved.as_posix()}")
     try:
@@ -169,10 +267,30 @@ def prepare_demo_database(
             for activity in historical:
                 activities.upsert(activity)
             TrainingGoalRepository(session).save(goal)
+            TrainingPlanRepository(session).save(previous_plan)
             TrainingPlanRepository(session).save(current_plan)
             AthletePreferenceRepository(session).save(preference)
             CheckInRepository(session).save(check_in)
+            for previous_check_in in previous_check_ins:
+                CheckInRepository(session).save(previous_check_in)
             TrainingExecutionConfirmationRepository(session).save(confirmation)
+            for previous_confirmation in previous_confirmations:
+                TrainingExecutionConfirmationRepository(session).save(
+                    previous_confirmation
+                )
+            refresh_weekly_training_memory(
+                WeeklyTrainingMemoryBuildRequest(
+                    goal_id=goal_id,
+                    week_start=previous_week_start,
+                    as_of=anchor,
+                ),
+                plans=TrainingPlanRepository(session),
+                confirmations=TrainingExecutionConfirmationRepository(session),
+                activities=ActivityRepository(session),
+                check_ins=CheckInRepository(session),
+                plan_changes=PlanChangeRepository(session),
+                memories=WeeklyTrainingMemoryRepository(session),
+            )
             session.commit()
     finally:
         database.engine.dispose()
@@ -197,7 +315,7 @@ def _historical_activities(
     completed_day: date,
     latest_activity_id: str,
 ) -> list[ActivitySummary | ActivityDetail]:
-    offsets = [28, 24, 21, 17, 14, 10, 7]
+    offsets = [28, 24, 21, 17, 14, 9, 7]
     result: list[ActivitySummary | ActivityDetail] = []
     for index, days_ago in enumerate(offsets, start=1):
         started_at = datetime.combine(

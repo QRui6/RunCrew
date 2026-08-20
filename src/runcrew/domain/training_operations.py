@@ -7,7 +7,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from runcrew.domain.activity import SourceProvider
 from runcrew.domain.coach import CoachAgentRunRequest, CoachAgentRunResult
-from runcrew.domain.memory import AthletePreference
+from runcrew.domain.memory import (
+    AthletePreference,
+    WeeklyTrainingMemory,
+    WeeklyTrainingMemoryBuildRequest,
+    WeeklyTrainingMemoryBuildResult,
+)
 from runcrew.domain.training_cycle import (
     AcuteSymptom,
     DailyCheckIn,
@@ -98,6 +103,30 @@ class WeeklyPlanDraftSubmission(BaseModel):
         return WeeklyPlanDraftRequest(goal_id=goal_id, **self.model_dump())
 
 
+class WeeklyTrainingMemoryBuildSubmission(BaseModel):
+    model_config = ConfigDict(extra="forbid", title="周训练记忆生成输入")
+
+    week_start: date
+    as_of: datetime
+
+    @field_validator("week_start")
+    @classmethod
+    def require_memory_monday(cls, value: date) -> date:
+        if value.weekday() != 0:
+            raise ValueError("周训练记忆必须从星期一开始。")
+        return value
+
+    @field_validator("as_of")
+    @classmethod
+    def require_memory_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("as_of 必须包含时区。")
+        return value
+
+    def to_request(self, goal_id: str) -> WeeklyTrainingMemoryBuildRequest:
+        return WeeklyTrainingMemoryBuildRequest(goal_id=goal_id, **self.model_dump())
+
+
 class WeeklyPlanActivationRequest(WeeklyPlanDraftSubmission):
     model_config = ConfigDict(extra="forbid", title="周计划草案确认输入")
 
@@ -134,6 +163,7 @@ class TrainingWeekView(BaseModel):
     today_session_ids: list[str] = Field(default_factory=list)
     next_session_id: str | None = None
     progress: WeekProgressSummary | None = None
+    recent_memories: list[WeeklyTrainingMemory] = Field(default_factory=list)
 
 
 class WeeklyPlanActivationResult(BaseModel):

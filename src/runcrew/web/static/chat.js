@@ -19,7 +19,7 @@ const trainingElements = {
   painArea: $("#check-in-pain-area"), note: $("#check-in-note"), run: $("#coach-run"), result: $("#coach-result"), runs: $("#coach-runs"),
   goalForm: $("#goal-form"), goalName: $("#goal-name"), goalEvent: $("#goal-event"), goalDate: $("#goal-date"), goalTime: $("#goal-time"),
   preferenceForm: $("#preference-form"), preferenceDay: $("#preference-long-run-day"), preferenceValidUntil: $("#preference-valid-until"), preferenceList: $("#preference-list"),
-  planForm: $("#plan-draft-form"), planWeekStart: $("#plan-week-start"), planDraft: $("#plan-draft"), weekProgress: $("#week-progress"), today: $("#today-session"), executions: $("#execution-list"), weekSummary: $("#week-summary")
+  planForm: $("#plan-draft-form"), planWeekStart: $("#plan-week-start"), planDraft: $("#plan-draft"), weekProgress: $("#week-progress"), today: $("#today-session"), executions: $("#execution-list"), weekSummary: $("#week-summary"), memoryBuild: $("#weekly-memory-build"), memoryList: $("#weekly-memory-list")
 };
 
 async function api(path, options = {}) {
@@ -35,6 +35,7 @@ function localDateValue() { const now = new Date(); return `${now.getFullYear()}
 function dateInputValue(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
 function nextMondayValue() { const date = new Date(); const days = ((8 - date.getDay()) % 7) || 7; date.setDate(date.getDate() + days); return dateInputValue(date); }
 function futureDateValue(days = 84) { const date = new Date(); date.setDate(date.getDate() + days); return dateInputValue(date); }
+function previousMondayValue() { const date = new Date(); const sinceMonday = (date.getDay() + 6) % 7; date.setDate(date.getDate() - sinceMonday - 7); return dateInputValue(date); }
 function sessionTypeLabel(value) { return ({ easy: "轻松跑", long_run: "长距离", tempo: "节奏跑", interval: "间歇跑", recovery: "恢复跑", rest: "休息", test: "测试跑" })[value] || value; }
 function durationLabel(seconds) { if (!seconds) return "未设时长"; const minutes = Math.round(seconds / 60); return `${minutes} 分钟`; }
 function statusLabel(value) { return ({ completed: "已完成", awaiting_user_confirmation: "等待确认", blocked: "安全阻断", failed: "运行失败", approved: "已批准", rejected: "已拒绝", stale: "已过期" })[value] || value; }
@@ -354,6 +355,7 @@ async function activatePlan() {
 function renderTrainingWeek() {
   const view = state.trainingWeek;
   [trainingElements.weekProgress, trainingElements.today, trainingElements.executions, trainingElements.weekSummary].forEach((node) => node.replaceChildren());
+  renderWeeklyMemories(view ? view.recent_memories : []);
   if (!view || !view.plan || !view.execution || !view.progress) {
     trainingElements.weekProgress.className = "week-progress empty"; trainingElements.weekProgress.textContent = "当前目标还没有可执行的激活计划。";
     trainingElements.today.className = "today-session empty"; trainingElements.today.textContent = "激活计划后，这里会显示今日或下一节训练。";
@@ -368,6 +370,28 @@ function renderTrainingWeek() {
   else trainingElements.today.textContent = "本周已没有待执行训练。";
   view.execution.sessions.filter((item) => item.outcome !== "rest" && item.outcome !== "upcoming").forEach((comparison) => renderExecutionRow(comparison, view.plan));
   trainingElements.weekSummary.className = "week-summary"; const headline = document.createElement("strong"); headline.textContent = progress.headline; const copy = document.createElement("p"); const rate = progress.completion_rate == null ? "尚未形成" : `${Math.round(progress.completion_rate * 100)}%`; copy.textContent = `计划总时长 ${durationLabel(progress.planned_duration_seconds)}；到期训练确认率 ${rate}；跳过 ${progress.skipped_sessions} 节。`; trainingElements.weekSummary.append(headline, copy);
+}
+
+function renderWeeklyMemories(memories = []) {
+  trainingElements.memoryList.replaceChildren();
+  if (!memories.length) return trainingElements.memoryList.append(empty("尚无已结算的周训练记忆。"));
+  memories.forEach((memory) => {
+    const card = document.createElement("article"); card.className = "weekly-memory-card";
+    const header = document.createElement("header"); const title = document.createElement("strong"); title.textContent = `${memory.week_start} 当周 · 第 ${memory.version} 版`; const status = document.createElement("small"); status.textContent = memory.status === "active" ? "当前有效" : memory.status; header.append(title, status);
+    const summary = document.createElement("p"); const rate = memory.completion_rate == null ? "无计划训练" : `${Math.round(memory.completion_rate * 100)}%`; summary.textContent = `${memory.summary} 确认完成率 ${rate}，实际 ${durationLabel(memory.actual_duration_seconds)}。`;
+    card.append(header, summary); trainingElements.memoryList.append(card);
+  });
+}
+
+async function buildPreviousWeeklyMemory() {
+  const view = selectedGoalView(); if (!view) return showToast("请先选择训练目标。");
+  if (!window.confirm("确认根据正式计划、执行确认和身体反馈结算上一训练周？")) return;
+  trainingElements.memoryBuild.disabled = true;
+  try {
+    const result = await api(`/api/training/goals/${encodeURIComponent(view.goal.id)}/weekly-memories`, { method: "POST", body: JSON.stringify({ week_start: previousMondayValue(), as_of: new Date().toISOString() }) });
+    showToast(result.outcome === "unchanged" ? "周训练记忆没有变化。" : result.outcome === "superseded" ? "周训练记忆已生成新版本。" : "周训练记忆已生成。"); await refreshTraining();
+  } catch (error) { showToast(error.message); }
+  finally { trainingElements.memoryBuild.disabled = false; }
 }
 
 function renderExecutionRow(comparison, plan) {
@@ -495,6 +519,7 @@ trainingElements.preferenceForm.addEventListener("submit", savePreference);
 trainingElements.planForm.addEventListener("submit", draftPlan);
 trainingElements.checkIn.addEventListener("submit", saveCheckIn);
 trainingElements.run.addEventListener("click", runCoach);
+trainingElements.memoryBuild.addEventListener("click", buildPreviousWeeklyMemory);
 elements.contextToggle.addEventListener("click", () => toggleContext(true));
 elements.contextClose.addEventListener("click", () => toggleContext(false));
 elements.contextBackdrop.addEventListener("click", () => toggleContext(false));

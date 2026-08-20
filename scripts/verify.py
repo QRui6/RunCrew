@@ -46,6 +46,7 @@ REQUIRED_FILES = [
     "docs/adr/0019-versioned-coach-agent-evaluation.md",
     "docs/adr/0020-confirmed-typed-athlete-preference-memory.md",
     "docs/adr/0021-isolated-synthetic-demo-database.md",
+    "docs/adr/0022-versioned-weekly-training-memory.md",
     "docs/progress/2026-08-09-m3-training-review-skill.md",
     "docs/progress/2026-08-09-m4-review-agent-loop.md",
     "docs/progress/2026-08-09-m5-agent-evaluation-baseline.md",
@@ -65,6 +66,7 @@ REQUIRED_FILES = [
     "docs/progress/2026-08-19-m9a-athlete-preference-memory.md",
     "docs/progress/2026-08-19-m8a2-job-demo-package.md",
     "docs/progress/2026-08-19-m8a3-job-narrative-evidence.md",
+    "docs/progress/2026-08-20-m9b-weekly-training-memory.md",
     "docs/job/README.md",
     "docs/job/resume-entry.md",
     "docs/job/core-challenges.md",
@@ -94,6 +96,7 @@ REQUIRED_FILES = [
     "src/runcrew/domain/training_operations.py",
     "src/runcrew/domain/memory.py",
     "src/runcrew/services/athlete_memory.py",
+    "src/runcrew/services/weekly_training_memory.py",
     "src/runcrew/domain/demo.py",
     "src/runcrew/services/demo_seed.py",
     "docs/demo/README.md",
@@ -118,6 +121,9 @@ REQUIRED_FILES = [
     "schemas/training-operations/plan-activation-input.schema.json",
     "schemas/training-operations/plan-activation-output.schema.json",
     "schemas/training-operations/week-view.schema.json",
+    "schemas/training-operations/weekly-memory-input.schema.json",
+    "schemas/training-operations/weekly-memory-output.schema.json",
+    "schemas/training-operations/weekly-memory.schema.json",
     "schemas/training-operations/execution-decision-input.schema.json",
     "schemas/demo/seed-output.schema.json",
     "src/runcrew/web/dashboard.py",
@@ -149,6 +155,7 @@ REQUIRED_FILES = [
     "skills/compare-training-execution/references/decision-output.schema.json",
     "skills/compare-training-execution/references/execution-boundary.md",
     "skills/assess-running-recovery/references/safety-boundary.md",
+    "tests/test_weekly_training_memory.py",
 ]
 
 

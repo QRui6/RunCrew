@@ -4,13 +4,24 @@
 
 ## 2026-08-20
 
+### Added
+
+- 增加 M9-B Weekly Training Memory：只从正式计划、已应用执行确认、规范化 Activity、Check-in 和已批准变更确定性生成；
+- 增加 `weekly_training_memories` 本地表、版本/替代/失效生命周期、来源引用、输入 Hash、API、CLI 和网页“结算上一训练周”入口；
+- Planning Agent 优先消费最近有效周记忆计算确认训练时长基线，并把记忆 ID、版本和 Hash 写入 evidence 与计划输入 Hash；不足时回退到规范化 Activity；
+- 演示种子增加一个已结算历史训练周；增加 ADR-0022、3份 JSON Schema 和7项周训练记忆专项测试；
+
+### Changed
+
+- 静态资源版本升级为 `20260820-1`；
+
 ### Fixed
 
 - 为训练运营 Service 增加可注入时钟，修复偏好记忆网页测试依赖系统日期和当天零点、跨日后错误排除刚确认偏好的问题；历史回放仍保持不读取未来记忆。
 
 ### Verified
 
-- 偏好记忆9项专项测试和全量146项测试通过。
+- 偏好记忆9项专项测试、周训练记忆7项专项测试和全量153项测试通过；Schema 导出、Python 编译和 JavaScript 语法检查通过；本阶段没有访问真实活动、COROS 或 DeepSeek。
 
 ## 2026-08-19
 

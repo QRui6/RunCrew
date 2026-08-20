@@ -35,6 +35,13 @@ def test_demo_seed_creates_complete_synthetic_product_state(tmp_path: Path) -> N
     assert bootstrap.goals[0].active_plan.revision == 2
     assert bootstrap.goals[0].latest_check_in is not None
     assert bootstrap.athlete_preferences[0].value == "sun"
+    week_view = service.week_view(
+        goal_id=summary.goal_id,
+        as_of=ANCHOR,
+        provider="fixture",
+    )
+    assert len(week_view.recent_memories) == 1
+    assert week_view.recent_memories[0].confirmed_completed_sessions == 2
     assert "coros" not in json.dumps(
         bootstrap.model_dump(mode="json"), ensure_ascii=False
     ).lower()

@@ -39,6 +39,11 @@ sequenceDiagram
     Web->>Ops: activity + session + base_revision
     Ops->>DB: 写入执行确认并提升revision
 
+    User->>Web: 训练周结束后结算周记忆
+    Web->>Memory: plan + applied confirmations + check-ins + as_of
+    Memory->>DB: 保存input_hash、来源、版本与缺失数据
+    Note over Memory,Planning: 下周规划只读取active版本；不足时回退到Activity
+
     User->>Web: 保存跑后Check-in并运行联合评估
     Web->>Coach: goal + plan + as_of
     Coach->>Exec: 对照计划与活动
@@ -70,5 +75,4 @@ sequenceDiagram
     end
 ```
 
-这张图的核心不是三个 Agent 名称，而是三次人工确认边界：长期偏好写入、计划激活、计划调整批准。任何一步的事实或 Hash 变化都会拒绝旧操作。
-
+这张图的核心不是三个 Agent 名称，而是事实确认和写入权限边界：长期偏好写入、计划激活、执行匹配、计划调整批准都由用户确认；周训练记忆只能从这些正式事实结算。任何一步的事实或 Hash 变化都会拒绝旧操作或产生新记忆版本。

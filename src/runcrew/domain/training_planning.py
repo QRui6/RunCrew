@@ -85,6 +85,7 @@ class PlanningEvidence(BaseModel):
         "goal",
         "availability",
         "athlete_preference",
+        "weekly_training_memory",
         "training_history",
         "current_plan",
         "recovery_action",
@@ -96,6 +97,7 @@ class PlanningEvidence(BaseModel):
     rule_source: Literal[
         "user_goal",
         "confirmed_athlete_preference",
+        "confirmed_training_memory",
         "normalized_activity",
         "active_plan",
         "recovery_assessment",

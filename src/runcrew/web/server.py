@@ -32,6 +32,7 @@ from runcrew.domain.training_operations import (
     TrainingGoalSubmission,
     WeeklyPlanActivationRequest,
     WeeklyPlanDraftSubmission,
+    WeeklyTrainingMemoryBuildSubmission,
 )
 from runcrew.web.dashboard import DemoDashboardService
 
@@ -160,6 +161,45 @@ class DemoApplication:
                 HTTPStatus.OK, preference.model_dump(mode="json")
             )
         training_goal_id, training_goal_action = _training_goal_route(parsed.path)
+        if (
+            method == "GET"
+            and training_goal_id
+            and training_goal_action == "weekly-memories"
+        ):
+            try:
+                query = parse_qs(parsed.query)
+                memories = self.training_service.list_weekly_memories(
+                    goal_id=training_goal_id,
+                    include_inactive=(_single(query, "include_inactive") == "true"),
+                    limit=_bounded_int(
+                        query, "limit", default=8, minimum=1, maximum=50
+                    ),
+                )
+            except (TrainingOperationsError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(
+                HTTPStatus.OK,
+                [item.model_dump(mode="json") for item in memories],
+            )
+        if (
+            method == "POST"
+            and training_goal_id
+            and training_goal_action == "weekly-memories"
+        ):
+            try:
+                submission = WeeklyTrainingMemoryBuildSubmission.model_validate(
+                    self._decode_json(body)
+                )
+                result = self.training_service.build_weekly_memory(
+                    goal_id=training_goal_id,
+                    submission=submission,
+                )
+            except (TrainingOperationsError, ValidationError, ValueError) as error:
+                return self._json_response(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return self._json_response(
+                HTTPStatus.CREATED if result.outcome == "created" else HTTPStatus.OK,
+                result.model_dump(mode="json"),
+            )
         if method == "POST" and training_goal_id and training_goal_action == "plan-drafts":
             try:
                 submission = WeeklyPlanDraftSubmission.model_validate(self._decode_json(body))
@@ -476,7 +516,7 @@ def _training_preference_archive_route(path: str) -> str | None:
 def _training_goal_route(path: str) -> tuple[str | None, str | None]:
     parts = [part for part in path.split("/") if part]
     if len(parts) == 5 and parts[:3] == ["api", "training", "goals"]:
-        if parts[4] in {"plan-drafts", "week"}:
+        if parts[4] in {"plan-drafts", "week", "weekly-memories"}:
             return parts[3], parts[4]
     if (
         len(parts) == 6

@@ -13,7 +13,7 @@ flowchart TB
     subgraph Application[应用与上下文层]
         ChatService[Chat Service<br/>Evidence Snapshot + 最近8条消息]
         TrainingOps[Training Operations Service<br/>目标 / 计划 / 执行 / Check-in / 审核]
-        Memory[Memory Manager<br/>确认 / 时效 / 替代 / 来源]
+        Memory[Memory Manager<br/>偏好确认 / 周结算 / 版本 / 失效]
         Context[Task-scoped Context<br/>最小字段 + Hash]
     end
 
@@ -80,7 +80,6 @@ flowchart TB
 1. 最下面是数据可信边界：外部格式先经过 Provider 和 Parser 变成统一 Activity；
 2. 中间是确定性 Skill：计算、阈值、缺失数据和 evidence 不交给 LLM；
 3. Harness 掌握工具白名单、确认、预算、超时、Trace 和终态，Policy 只有建议权；
-4. 应用层按任务裁剪 Context，并把对话、训练状态和长期偏好分层；
+4. 应用层按任务裁剪 Context，并把对话、训练状态、长期偏好和周训练记忆分层；
 5. 产品层只展示可操作流程，工程观测台单独展示 Trace 与评测证据；
 6. Evaluation 复用真实 Harness，而不是为测试重写一套模拟流程。
-

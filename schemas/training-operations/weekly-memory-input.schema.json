@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "week_start": {
+      "format": "date",
+      "title": "Week Start",
+      "type": "string"
+    },
+    "as_of": {
+      "format": "date-time",
+      "title": "As Of",
+      "type": "string"
+    }
+  },
+  "required": [
+    "week_start",
+    "as_of"
+  ],
+  "title": "周训练记忆生成输入",
+  "type": "object"
+}

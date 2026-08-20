@@ -24,6 +24,9 @@ from runcrew.domain.memory import (
     AthletePreference,
     AthletePreferenceArchiveSubmission,
     AthletePreferenceSubmission,
+    WeeklyTrainingMemory,
+    WeeklyTrainingMemoryBuildRequest,
+    WeeklyTrainingMemoryBuildResult,
 )
 from runcrew.domain.demo import DemoSeedSummary
 from runcrew.domain.training_cycle import (
@@ -49,6 +52,9 @@ __all__ = [
     "AthletePreference",
     "AthletePreferenceArchiveSubmission",
     "AthletePreferenceSubmission",
+    "WeeklyTrainingMemory",
+    "WeeklyTrainingMemoryBuildRequest",
+    "WeeklyTrainingMemoryBuildResult",
     "ChatAnswer",
     "ChatClaim",
     "ChatConversation",

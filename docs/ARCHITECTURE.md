@@ -64,6 +64,16 @@ assess-running-recovery Skill
   ▼
 RecoveryAssessmentResult
   └── evidence + missing data + input hash + plan_action（不直接写计划）
+  │
+  ▼
+Weekly Training Memory Builder
+  ├── formal Plan + applied Execution Confirmation
+  ├── confirmed Activity + Check-in + approved Change
+  └── input_hash + source_refs + active/superseded/invalidated
+  │
+  ▼
+Planning Memory Store
+  └── 最近有效完整周 → evidence + next Plan input_hash
 ```
 
 ## 分层职责
@@ -314,7 +324,7 @@ versioned synthetic case
   → private evaluation report
 ```
 
-## M9-A 类型化长期偏好记忆
+## M9 可审计训练记忆
 
 ```text
 网页 / CLI 显式确认
@@ -341,8 +351,21 @@ versioned synthetic case
 | 训练业务状态 | 目标、计划、执行、Check-in、Coach Run | 跨会话确定性状态 |
 | Agent Working State | Coach 单次运行状态与 Handoff | 单次编排 |
 | 长期偏好 | 已确认长跑星期、来源、时效、替代链 | 跨会话/跨目标默认偏好 |
+| 周训练记忆 | 正式计划、已确认执行、反馈、版本与来源 | 跨周复盘和下一周 Planning 基线 |
 
-M9-A 不使用向量数据库，也不允许普通聊天或 LLM 直接写入。未来 Memory Candidate 必须先通过类型校验与用户确认，才能进入长期记忆。
+周训练记忆链路为：
+
+```text
+完整正式训练周 + as_of
+  → 只读取 applied 执行确认及其 Activity
+  → 聚合 Check-in 与已批准计划变更
+  → stable input_hash + source_refs + missing_data
+  → active version（旧版本 superseded，或人工 invalidated）
+  → Planning 读取最近有效版本
+  → memory id/version/hash 进入 evidence 和计划 input_hash
+```
+
+M9 不使用向量数据库，也不允许普通聊天或 LLM 直接写入正式记忆。未来 Memory Candidate 必须先通过类型校验与用户确认，才能进入长期偏好；按职责 Context Builder 还需要明确记录记忆的选中/排除理由与预算。
 
 ## 可讲解的系统视图
 

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from runcrew.domain.activity import ActivityDetail, ActivitySummary
 from runcrew.domain.chat import ChatAnswer, ChatConversation, ChatMessage, ChatTurnUsage
-from runcrew.domain.memory import AthletePreference, PreferenceKey
+from runcrew.domain.memory import AthletePreference, PreferenceKey, WeeklyTrainingMemory
 from runcrew.domain.training_cycle import (
     DailyCheckIn,
     PlanChangeProposal,
@@ -35,6 +35,7 @@ from runcrew.storage.models import (
     TrainingExecutionConfirmationRecord,
     TrainingPlanRecord,
     UserConfirmationRecord,
+    WeeklyTrainingMemoryRecord,
 )
 
 
@@ -476,6 +477,113 @@ class AthletePreferenceRepository:
         ]
 
 
+class WeeklyTrainingMemoryRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def save(self, memory: WeeklyTrainingMemory) -> None:
+        record = self.session.get(WeeklyTrainingMemoryRecord, memory.id)
+        if record is None:
+            record = WeeklyTrainingMemoryRecord(id=memory.id)
+            self.session.add(record)
+        record.goal_id = memory.goal_id
+        record.plan_id = memory.plan_id
+        record.week_start = memory.week_start
+        record.version = memory.version
+        record.status = memory.status
+        record.input_hash = memory.input_hash
+        record.supersedes_id = memory.supersedes_id
+        record.canonical_json = memory.model_dump_json()
+        record.generated_at = memory.generated_at
+        record.updated_at = memory.updated_at
+        self.session.flush()
+
+    def get(self, memory_id: str) -> WeeklyTrainingMemory | None:
+        record = self.session.get(WeeklyTrainingMemoryRecord, memory_id)
+        return (
+            WeeklyTrainingMemory.model_validate_json(record.canonical_json)
+            if record
+            else None
+        )
+
+    def current_for_week(
+        self, goal_id: str, week_start: date
+    ) -> WeeklyTrainingMemory | None:
+        record = self.session.scalar(
+            select(WeeklyTrainingMemoryRecord)
+            .where(
+                WeeklyTrainingMemoryRecord.goal_id == goal_id,
+                WeeklyTrainingMemoryRecord.week_start == week_start,
+                WeeklyTrainingMemoryRecord.status == "active",
+            )
+            .order_by(desc(WeeklyTrainingMemoryRecord.version))
+            .limit(1)
+        )
+        return (
+            WeeklyTrainingMemory.model_validate_json(record.canonical_json)
+            if record
+            else None
+        )
+
+    def latest_for_week(
+        self, goal_id: str, week_start: date
+    ) -> WeeklyTrainingMemory | None:
+        record = self.session.scalar(
+            select(WeeklyTrainingMemoryRecord)
+            .where(
+                WeeklyTrainingMemoryRecord.goal_id == goal_id,
+                WeeklyTrainingMemoryRecord.week_start == week_start,
+            )
+            .order_by(desc(WeeklyTrainingMemoryRecord.version))
+            .limit(1)
+        )
+        return (
+            WeeklyTrainingMemory.model_validate_json(record.canonical_json)
+            if record
+            else None
+        )
+
+    def recent_before(
+        self, goal_id: str, before: date, *, limit: int = 4
+    ) -> list[WeeklyTrainingMemory]:
+        records = self.session.scalars(
+            select(WeeklyTrainingMemoryRecord)
+            .where(
+                WeeklyTrainingMemoryRecord.goal_id == goal_id,
+                WeeklyTrainingMemoryRecord.week_start < before,
+                WeeklyTrainingMemoryRecord.status == "active",
+            )
+            .order_by(
+                desc(WeeklyTrainingMemoryRecord.week_start),
+                desc(WeeklyTrainingMemoryRecord.version),
+            )
+            .limit(limit)
+        ).all()
+        return [
+            WeeklyTrainingMemory.model_validate_json(record.canonical_json)
+            for record in records
+        ]
+
+    def list_for_goal(
+        self, goal_id: str, *, include_inactive: bool = False, limit: int = 20
+    ) -> list[WeeklyTrainingMemory]:
+        statement = select(WeeklyTrainingMemoryRecord).where(
+            WeeklyTrainingMemoryRecord.goal_id == goal_id
+        )
+        if not include_inactive:
+            statement = statement.where(WeeklyTrainingMemoryRecord.status == "active")
+        records = self.session.scalars(
+            statement.order_by(
+                desc(WeeklyTrainingMemoryRecord.week_start),
+                desc(WeeklyTrainingMemoryRecord.version),
+            ).limit(limit)
+        ).all()
+        return [
+            WeeklyTrainingMemory.model_validate_json(record.canonical_json)
+            for record in records
+        ]
+
+
 class TrainingPlanRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -637,6 +745,20 @@ class PlanChangeRepository:
                 PlanChangeProposalRecord.status == "pending",
             )
             .order_by(PlanChangeProposalRecord.created_at)
+        ).all()
+        return [
+            PlanChangeProposal.model_validate_json(record.canonical_json)
+            for record in records
+        ]
+
+    def for_plan(self, plan_id: str) -> list[PlanChangeProposal]:
+        records = self.session.scalars(
+            select(PlanChangeProposalRecord)
+            .where(PlanChangeProposalRecord.plan_id == plan_id)
+            .order_by(
+                PlanChangeProposalRecord.created_at,
+                PlanChangeProposalRecord.id,
+            )
         ).all()
         return [
             PlanChangeProposal.model_validate_json(record.canonical_json)

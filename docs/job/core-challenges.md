@@ -56,9 +56,8 @@
 
 **约束**：长期偏好会影响未来计划，错误写入的影响跨会话持续存在。
 
-**方案**：v1 只支持类型化 `preferred_long_run_weekday`，必须显式确认；保存来源、确认时间、有效期、Schema 版本、替代链和状态。Planning Agent 采用偏好时把版本与来源写入 evidence 和 `input_hash`，归档和到期记忆不进入上下文。
+**方案**：长期偏好使用类型化 `preferred_long_run_weekday` 并要求显式确认；周训练记忆只从正式计划、已确认执行、Activity、Check-in 和已批准变更确定性生成。两者都保存来源、Hash、版本、替代链和状态；Planning Agent 消费时把具体版本写入 evidence 与 `input_hash`，过期、被替代和失效记忆不进入上下文。
 
-**验证**：专项测试覆盖拒绝未确认写入、幂等、替代、过期、归档、目标优先级、API/CLI 和旧草案失效。
+**验证**：专项测试覆盖拒绝未确认偏好写入、幂等、替代、过期、归档、目标优先级、完整周结算、执行确认边界、周记忆失效、Planning 消费、API/CLI 和旧草案失效。
 
-**边界**：尚无 Weekly Training Memory、聊天候选抽取、向量检索或独立 Memory Eval，不应包装成完整通用记忆平台。
-
+**边界**：尚无按职责 Memory Context、聊天候选抽取、向量检索或独立 Memory Eval，不应包装成完整通用记忆平台。

@@ -6,6 +6,8 @@ from pathlib import Path
 from runcrew.domain.memory import (
     AthletePreferenceArchiveSubmission,
     AthletePreferenceSubmission,
+    WeeklyTrainingMemory,
+    WeeklyTrainingMemoryBuildResult,
 )
 from runcrew.domain.training_operations import (
     CheckInSubmission,
@@ -20,6 +22,7 @@ from runcrew.domain.training_operations import (
     WeeklyPlanActivationRequest,
     WeeklyPlanActivationResult,
     WeeklyPlanDraftSubmission,
+    WeeklyTrainingMemoryBuildSubmission,
 )
 
 
@@ -30,6 +33,9 @@ def main() -> None:
         "bootstrap.schema.json": TrainingOperationsBootstrap.model_json_schema(),
         "athlete-preference-input.schema.json": AthletePreferenceSubmission.model_json_schema(),
         "athlete-preference-archive-input.schema.json": AthletePreferenceArchiveSubmission.model_json_schema(),
+        "weekly-memory-input.schema.json": WeeklyTrainingMemoryBuildSubmission.model_json_schema(),
+        "weekly-memory-output.schema.json": WeeklyTrainingMemoryBuildResult.model_json_schema(),
+        "weekly-memory.schema.json": WeeklyTrainingMemory.model_json_schema(),
         "check-in-input.schema.json": CheckInSubmission.model_json_schema(),
         "coach-run-input.schema.json": CoachRunSubmission.model_json_schema(),
         "coach-run-output.schema.json": CoachRunView.model_json_schema(),

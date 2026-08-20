@@ -16,7 +16,10 @@ from runcrew.providers.fixture import FixtureActivityProvider
 from runcrew.providers.coros import CorosActivityProvider
 from runcrew.domain.agent import ReviewAgentRunRequest
 from runcrew.domain.coach import CoachAgentRunRequest
-from runcrew.domain.memory import AthletePreferenceSubmission
+from runcrew.domain.memory import (
+    AthletePreferenceSubmission,
+    WeeklyTrainingMemoryBuildRequest,
+)
 from runcrew.domain.training_review import PlannedSession, TrainingReviewRequest
 from runcrew.domain.training_cycle import (
     DailyCheckIn,
@@ -72,6 +75,11 @@ from runcrew.services.training_execution import (
     confirm_training_execution,
     execute_training_comparison,
 )
+from runcrew.services.weekly_training_memory import (
+    WeeklyTrainingMemoryError,
+    invalidate_weekly_training_memory,
+    refresh_weekly_training_memory,
+)
 from runcrew.storage.database import Database
 from runcrew.storage.models import ActivityRecord, RawProviderEvent, SyncRunRecord
 from runcrew.storage.repositories import (
@@ -82,6 +90,7 @@ from runcrew.storage.repositories import (
     TrainingGoalRepository,
     TrainingPlanRepository,
     TrainingExecutionConfirmationRepository,
+    WeeklyTrainingMemoryRepository,
 )
 from runcrew.web import serve_demo
 
@@ -217,6 +226,87 @@ def archive_memory(
     except AthleteMemoryError as error:
         raise typer.BadParameter(str(error)) from error
     echo_domain(preference)
+
+
+@memory_app.command("build-week")
+def build_weekly_memory(
+    goal_id: Annotated[str, typer.Option(help="训练目标 ID。")],
+    week_start: Annotated[str, typer.Option(help="已结束训练周的星期一，YYYY-MM-DD。")],
+    as_of: Annotated[str, typer.Option(help="知识截止时间，必须包含时区。")],
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    database = open_database(database_path)
+    try:
+        request = WeeklyTrainingMemoryBuildRequest(
+            goal_id=goal_id,
+            week_start=parse_iso_date(week_start, option_name="--week-start"),
+            as_of=parse_iso_datetime(as_of, option_name="--as-of"),
+        )
+        with database.session() as session:
+            result = refresh_weekly_training_memory(
+                request,
+                plans=TrainingPlanRepository(session),
+                confirmations=TrainingExecutionConfirmationRepository(session),
+                activities=ActivityRepository(session),
+                check_ins=CheckInRepository(session),
+                plan_changes=PlanChangeRepository(session),
+                memories=WeeklyTrainingMemoryRepository(session),
+            )
+            session.commit()
+    except (ValueError, WeeklyTrainingMemoryError) as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(result)
+
+
+@memory_app.command("weekly")
+def list_weekly_memories(
+    goal_id: Annotated[str, typer.Option(help="训练目标 ID。")],
+    include_inactive: Annotated[
+        bool,
+        typer.Option("--include-inactive", help="同时显示已替代或已失效版本。"),
+    ] = False,
+    limit: Annotated[int, typer.Option(min=1, max=50)] = 12,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    database = open_database(database_path)
+    with database.session() as session:
+        memories = WeeklyTrainingMemoryRepository(session).list_for_goal(
+            goal_id,
+            include_inactive=include_inactive,
+            limit=limit,
+        )
+    typer.echo(
+        json.dumps(
+            [item.model_dump(mode="json") for item in memories],
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+
+
+@memory_app.command("invalidate-week")
+def invalidate_weekly_memory_command(
+    memory_id: Annotated[str, typer.Option(help="待失效周训练记忆 ID。")],
+    confirm: Annotated[
+        bool,
+        typer.Option("--confirm", help="明确确认停止该版本进入 Agent Context。"),
+    ] = False,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    if not confirm:
+        raise typer.BadParameter("必须传入 --confirm 才会使周训练记忆失效")
+    database = open_database(database_path)
+    try:
+        with database.session() as session:
+            memory = invalidate_weekly_training_memory(
+                memory_id,
+                memories=WeeklyTrainingMemoryRepository(session),
+                now=datetime.now().astimezone(),
+            )
+            session.commit()
+    except WeeklyTrainingMemoryError as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(memory)
 
 
 def parse_iso_date(value: str, *, option_name: str) -> date:

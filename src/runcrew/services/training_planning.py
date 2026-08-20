@@ -8,7 +8,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Protocol
 
 from runcrew.domain.activity import ActivityDetail, ActivitySummary, SportType
-from runcrew.domain.memory import AthletePreference
+from runcrew.domain.memory import AthletePreference, WeeklyTrainingMemory
 from runcrew.domain.recovery_assessment import RecoveryAssessmentResult
 from runcrew.domain.training_cycle import PlanSession, PlanSessionPatch, TrainingGoal, TrainingPlan
 from runcrew.domain.training_planning import (
@@ -66,6 +66,12 @@ class PlanningPreferenceStore(Protocol):
     def active_at(self, at: datetime) -> list[AthletePreference]: ...
 
 
+class PlanningWeeklyMemoryStore(Protocol):
+    def recent_before(
+        self, goal_id: str, before: date, *, limit: int = 4
+    ) -> list[WeeklyTrainingMemory]: ...
+
+
 class TrainingPlanningError(ValueError):
     pass
 
@@ -77,6 +83,7 @@ def execute_weekly_plan_draft(
     goals: PlanningGoalStore,
     plans: PlanningPlanStore,
     preferences: PlanningPreferenceStore | None = None,
+    weekly_memories: PlanningWeeklyMemoryStore | None = None,
 ) -> TrainingPlanningResult:
     goal = _require_active_goal(goals, request.goal_id)
     cutoff = min(
@@ -90,12 +97,22 @@ def execute_weekly_plan_draft(
     )
     existing = plans.for_goal_week(goal.id, request.week_start)
     active_preferences = preferences.active_at(request.as_of) if preferences else []
+    recent_memories = (
+        weekly_memories.recent_before(
+            request.goal_id,
+            request.week_start,
+            limit=max(2, min(8, request.lookback_days // 7)),
+        )
+        if weekly_memories
+        else []
+    )
     return build_weekly_plan_draft(
         request,
         goal=goal,
         activities=history,
         existing_plan=existing,
         athlete_preferences=active_preferences,
+        weekly_training_memories=recent_memories,
     )
 
 
@@ -106,6 +123,7 @@ def build_weekly_plan_draft(
     activities: list[Activity],
     existing_plan: TrainingPlan | None,
     athlete_preferences: list[AthletePreference] | None = None,
+    weekly_training_memories: list[WeeklyTrainingMemory] | None = None,
 ) -> TrainingPlanningResult:
     active_preferences = [
         item
@@ -119,6 +137,16 @@ def build_weekly_plan_draft(
             if item.key == "preferred_long_run_weekday"
         ),
         None,
+    )
+    active_memories = sorted(
+        (
+            item
+            for item in (weekly_training_memories or [])
+            if item.status == "active"
+            and item.week_end < request.week_start
+            and item.generated_at <= request.as_of
+        ),
+        key=lambda item: (item.week_start, item.version, item.id),
     )
     cutoff = min(
         request.as_of,
@@ -145,9 +173,32 @@ def build_weekly_plan_draft(
             "athlete_preferences": [
                 _preference_features(item) for item in active_preferences
             ],
+            "weekly_training_memories": [
+                _weekly_memory_features(item) for item in active_memories
+            ],
         }
     )
     evidence = _draft_evidence(request, goal, relevant)
+    if active_memories:
+        evidence.append(
+            PlanningEvidence(
+                id="weekly-memory:" + _hash_payload(
+                    {"ids": [item.id for item in active_memories]}
+                )[:24],
+                type="weekly_training_memory",
+                message="计划使用经过确认且仍生效的周训练记忆估算近期实际训练量。",
+                values={
+                    "memory_ids": [item.id for item in active_memories],
+                    "weeks": [item.week_start.isoformat() for item in active_memories],
+                    "versions": [item.version for item in active_memories],
+                    "input_hashes": [item.input_hash for item in active_memories],
+                    "confirmed_duration_seconds": [
+                        item.actual_duration_seconds for item in active_memories
+                    ],
+                },
+                rule_source="confirmed_training_memory",
+            )
+        )
     if existing_plan is not None:
         return _blocked_draft(
             request,
@@ -236,10 +287,22 @@ def build_weekly_plan_draft(
                 rule_source="confirmed_athlete_preference",
             )
         )
-    baseline_seconds = sum(item.duration_seconds for item in relevant) / (
-        request.lookback_days / 7
+    memory_baseline_seconds = (
+        sum(item.actual_duration_seconds for item in active_memories)
+        / len(active_memories)
+        if active_memories
+        else 0
     )
-    sufficient_history = len(relevant) >= 3 and baseline_seconds >= 45 * 60
+    if len(active_memories) >= 2 and memory_baseline_seconds >= 45 * 60:
+        baseline_seconds = memory_baseline_seconds
+        sufficient_history = True
+        baseline_source = "weekly_training_memory"
+    else:
+        baseline_seconds = sum(item.duration_seconds for item in relevant) / (
+            request.lookback_days / 7
+        )
+        sufficient_history = len(relevant) >= 3 and baseline_seconds >= 45 * 60
+        baseline_source = "normalized_activity"
     warnings: list[str] = []
     if sufficient_history:
         total_seconds = _round_to_five_minutes(baseline_seconds * 1.05)
@@ -283,6 +346,7 @@ def build_weekly_plan_draft(
                 "planned_duration_seconds": total_duration,
                 "sufficient_history": sufficient_history,
                 "increase_cap_ratio": 0.05 if sufficient_history else None,
+                "baseline_source": baseline_source,
             },
             rule_source="runcrew_conservative_rule",
         )
@@ -740,4 +804,21 @@ def _preference_features(preference: AthletePreference) -> dict:
             preference.valid_until.isoformat() if preference.valid_until else None
         ),
         "schema_version": preference.schema_version,
+    }
+
+
+def _weekly_memory_features(memory: WeeklyTrainingMemory) -> dict:
+    return {
+        "id": memory.id,
+        "week_start": memory.week_start.isoformat(),
+        "version": memory.version,
+        "input_hash": memory.input_hash,
+        "actual_duration_seconds": memory.actual_duration_seconds,
+        "actual_distance_meters": memory.actual_distance_meters,
+        "completion_rate": memory.completion_rate,
+        "check_in_days": memory.check_in_days,
+        "average_fatigue": memory.average_fatigue,
+        "average_readiness": memory.average_readiness,
+        "missing_data": memory.missing_data,
+        "schema_version": memory.schema_version,
     }
