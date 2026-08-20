@@ -19,7 +19,7 @@ const trainingElements = {
   painArea: $("#check-in-pain-area"), note: $("#check-in-note"), run: $("#coach-run"), result: $("#coach-result"), runs: $("#coach-runs"),
   goalForm: $("#goal-form"), goalName: $("#goal-name"), goalEvent: $("#goal-event"), goalDate: $("#goal-date"), goalTime: $("#goal-time"),
   preferenceForm: $("#preference-form"), preferenceDay: $("#preference-long-run-day"), preferenceValidUntil: $("#preference-valid-until"), preferenceList: $("#preference-list"),
-  planForm: $("#plan-draft-form"), planWeekStart: $("#plan-week-start"), planDraft: $("#plan-draft"), weekProgress: $("#week-progress"), today: $("#today-session"), executions: $("#execution-list"), weekSummary: $("#week-summary"), memoryBuild: $("#weekly-memory-build"), memoryList: $("#weekly-memory-list")
+  planForm: $("#plan-draft-form"), planWeekStart: $("#plan-week-start"), planDraft: $("#plan-draft"), weekProgress: $("#week-progress"), today: $("#today-session"), executions: $("#execution-list"), weekSummary: $("#week-summary"), memoryBuild: $("#weekly-memory-build"), memoryList: $("#weekly-memory-list"), memoryContextAudit: $("#memory-context-audit")
 };
 
 async function api(path, options = {}) {
@@ -356,6 +356,7 @@ function renderTrainingWeek() {
   const view = state.trainingWeek;
   [trainingElements.weekProgress, trainingElements.today, trainingElements.executions, trainingElements.weekSummary].forEach((node) => node.replaceChildren());
   renderWeeklyMemories(view ? view.recent_memories : []);
+  renderMemoryContexts(view ? view.memory_contexts : []);
   if (!view || !view.plan || !view.execution || !view.progress) {
     trainingElements.weekProgress.className = "week-progress empty"; trainingElements.weekProgress.textContent = "当前目标还没有可执行的激活计划。";
     trainingElements.today.className = "today-session empty"; trainingElements.today.textContent = "激活计划后，这里会显示今日或下一节训练。";
@@ -380,6 +381,18 @@ function renderWeeklyMemories(memories = []) {
     const header = document.createElement("header"); const title = document.createElement("strong"); title.textContent = `${memory.week_start} 当周 · 第 ${memory.version} 版`; const status = document.createElement("small"); status.textContent = memory.status === "active" ? "当前有效" : memory.status; header.append(title, status);
     const summary = document.createElement("p"); const rate = memory.completion_rate == null ? "无计划训练" : `${Math.round(memory.completion_rate * 100)}%`; summary.textContent = `${memory.summary} 确认完成率 ${rate}，实际 ${durationLabel(memory.actual_duration_seconds)}。`;
     card.append(header, summary); trainingElements.memoryList.append(card);
+  });
+}
+
+function renderMemoryContexts(contexts = []) {
+  trainingElements.memoryContextAudit.replaceChildren();
+  if (!contexts.length) return trainingElements.memoryContextAudit.append(empty("尚无职责上下文审计。"));
+  const labels = { execution: "执行核对", recovery: "恢复评估", plan: "计划调整" };
+  contexts.forEach((context) => {
+    const row = document.createElement("div"); row.className = "memory-context-row";
+    const role = document.createElement("strong"); role.textContent = labels[context.role] || context.role;
+    const usage = document.createElement("span"); const excluded = context.decisions.filter((item) => !item.selected).length; usage.textContent = `选中 ${context.budget.used_items}/${context.budget.max_items} 条 · ${context.budget.used_chars}/${context.budget.max_chars} 字符 · 排除 ${excluded} 条`;
+    row.append(role, usage); trainingElements.memoryContextAudit.append(row);
   });
 }
 

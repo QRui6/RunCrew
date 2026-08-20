@@ -74,6 +74,13 @@ runcrew execution decide `
 
 详细规则见 [执行对照边界](references/execution-boundary.md)。
 
+## 记忆上下文边界
+
+- Execution 只核对当前计划 revision 与候选 Activity，不读取长期训练偏好或历史周训练记忆；
+- 输出中的 `memory_context` 必须是 `role=execution`，选中条数和字符用量均为 0；
+- 已存在的偏好和周记忆仍会留下排除审计，原因固定为 `excluded_role_not_allowed`，用于证明最小权限不是口头约定；
+- 不得因为历史偏好或周总结而自动认领当前活动、修改完成度或跳过用户确认。
+
 ## 权限护栏
 
 - `compare` 只读，不修改计划；

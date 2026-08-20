@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from runcrew.domain.activity import ActivityDetail, ActivitySummary
+from runcrew.domain.memory import AgentMemoryContext
 from runcrew.domain.recovery_assessment import (
     RecoveryAssessmentRequest,
     RecoveryWindowMetrics,
@@ -25,6 +26,7 @@ class RecoveryAssessmentContext:
     current_7d: RecoveryWindowMetrics
     previous_7d: RecoveryWindowMetrics
     input_hash: str
+    memory_context: AgentMemoryContext | None = None
 
 
 def build_recovery_context(
@@ -33,6 +35,7 @@ def build_recovery_context(
     activities: list[Activity],
     check_ins: list[DailyCheckIn],
     next_session: PlanSession | None,
+    memory_context: AgentMemoryContext | None = None,
 ) -> RecoveryAssessmentContext:
     start = request.assessed_at - timedelta(days=request.lookback_days)
     activities_by_id = {
@@ -75,6 +78,9 @@ def build_recovery_context(
             for item in relevant_check_ins
         ],
         "next_session": next_session.model_dump(mode="json") if next_session else None,
+        "memory_context_hash": (
+            memory_context.context_hash if memory_context is not None else None
+        ),
     }
     digest = hashlib.sha256(
         json.dumps(
@@ -92,6 +98,7 @@ def build_recovery_context(
         current_7d=current,
         previous_7d=previous,
         input_hash=digest,
+        memory_context=memory_context,
     )
 
 

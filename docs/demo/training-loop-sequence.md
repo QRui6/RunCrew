@@ -7,6 +7,7 @@ sequenceDiagram
     participant Web as 网页训练闭环
     participant Ops as Training Operations
     participant Memory as Memory Manager
+    participant Context as Memory Context Builder
     participant Planning as Planning Skill
     participant Coach as Coach Harness
     participant Exec as Execution Agent
@@ -20,8 +21,10 @@ sequenceDiagram
 
     User->>Web: 预览下一周计划
     Web->>Ops: goal + week + as_of
-    Ops->>Memory: 读取当前有效偏好
-    Ops->>Planning: 目标 + 历史活动 + 已确认偏好
+    Ops->>Memory: 读取全部偏好与周记忆候选
+    Memory->>Context: role=plan + goal + as_of + target_week
+    Context-->>Ops: 职责投影 + 预算 + context/audit hash
+    Ops->>Planning: 目标 + 历史活动 + Plan Memory Context
     Planning-->>Web: 草案 + evidence + input_hash
     Note over Planning,Web: 只生成草案，不写正式计划
 
@@ -46,6 +49,8 @@ sequenceDiagram
 
     User->>Web: 保存跑后Check-in并运行联合评估
     Web->>Coach: goal + plan + as_of
+    Coach->>Context: 分别构建Execution / Recovery / Plan上下文
+    Context-->>Coach: 0条 / 周聚合 / 偏好与训练基线
     Coach->>Exec: 对照计划与活动
     Exec-->>Coach: 类型化Execution Handoff
     Coach->>Recovery: 执行结果 + 最小恢复上下文
@@ -75,4 +80,4 @@ sequenceDiagram
     end
 ```
 
-这张图的核心不是三个 Agent 名称，而是事实确认和写入权限边界：长期偏好写入、计划激活、执行匹配、计划调整批准都由用户确认；周训练记忆只能从这些正式事实结算。任何一步的事实或 Hash 变化都会拒绝旧操作或产生新记忆版本。
+这张图的核心不是三个 Agent 名称，而是事实确认、读取最小权限和写入权限边界：长期偏好写入、计划激活、执行匹配、计划调整批准都由用户确认；周训练记忆只能从这些正式事实结算。不同职责只收到允许字段和固定预算，任何一步的事实或 Hash 变化都会拒绝旧操作或产生新记忆版本。

@@ -893,7 +893,7 @@ RunCrew 原先已经保存对话、证据快照、训练计划和 Coach Run，�
 
 > 我没有把“聊天记录落库”直接称为 Agent Memory，也没有为了关键词先上向量库。我先做了类型化偏好记忆：只有用户确认的稳定偏好能写入，带来源、有效期和替代链；Planning Agent 按职责读取，并把记忆版本纳入 input hash 和 evidence。这样个性化不会破坏可回放和人工确认边界。
 
-M9-A 完成时的边界是只有长跑星期一种长期偏好，还没有周训练记忆、自动候选提取或独立 Memory Eval。之后 M9-B 已补上周训练记忆；自动候选提取、按职责 Context Builder 和独立 Memory Eval 仍未实现。
+M9-A 完成时的边界是只有长跑星期一种长期偏好，还没有周训练记忆、自动候选提取或独立 Memory Eval。之后 M9-B 已补上周训练记忆，M9-C 已补上按职责 Context Builder；自动候选提取和独立 Memory Eval 仍未实现。
 
 ### M9-B：由已确认事实生成版本化周训练记忆
 
@@ -909,7 +909,23 @@ Planning Agent 优先使用目标周之前最近的有效周训练记忆。至�
 
 > 我的 Memory 不是把聊天切片丢进向量库。长期偏好需要用户确认，周训练记忆则只从正式计划和已确认执行事实确定性结算；两者都有来源、版本、失效和 input hash。Planning 消费具体版本时会把它写入证据，所以我既能做跨周个性化，也能解释计划为什么使用这段历史、历史变化后为什么旧计划会失效。
 
-当前边界是尚未实现 M9-C 按职责 Memory Context、聊天候选抽取和独立 Memory Evaluation；结构化检索尚未出现瓶颈，因此没有引入向量数据库。详细决策见 [ADR-0022](adr/0022-versioned-weekly-training-memory.md)，完整交接见 [M9-B 阶段记录](progress/2026-08-20-m9b-weekly-training-memory.md)。
+M9-B 完成时尚未实现按职责 Memory Context、聊天候选抽取和独立 Memory Evaluation；随后 M9-C 已补上第一项。结构化检索尚未出现瓶颈，因此没有引入向量数据库。详细决策见 [ADR-0022](adr/0022-versioned-weekly-training-memory.md)，完整交接见 [M9-B 阶段记录](progress/2026-08-20-m9b-weekly-training-memory.md)。
+
+### M9-C：按职责裁剪、受预算约束且可审计的 Memory Context
+
+M9-C 解决的不是“有没有存记忆”，而是“每个 Agent 到底应该看到什么”。系统新增统一 `Memory Context Builder`，从全部长期偏好与周训练记忆候选开始，依次执行职责许可、目标、知识截止时间、有效期、生命周期、目标周窗口和预算过滤，并为每条候选记录选中或排除理由。
+
+三类职责采用固定最小权限：Execution 为0条/0字符，不读取历史记忆；Recovery 只读最多2条、1400字符的周训练聚合，不读取长期偏好，也不允许记忆改变疼痛等安全阈值；Plan 最多读取5条、1800字符的偏好与周训练基线，但其周记忆投影不会暴露疼痛等级、急性症状等恢复敏感字段。Context 会进入 Agent 结果、Evidence、Trace、CLI 和网页“职责上下文审计”。
+
+为了同时保证业务稳定性和审计完整性，系统使用两个 Hash：`context_hash` 只覆盖真正进入 Agent 的职责投影；`audit_hash` 覆盖全部候选的选中/排除决定与预算。因此新增一条失效记忆不会让业务输入无意义漂移，但审计层仍能看见候选集合变化。
+
+实施中还发现 M9-B 的网页 Planning 会传入周记忆 Repository，而 `planning draft` CLI 没有传入，造成相同业务从不同入口运行时 Context 不一致。M9-C 将 CLI、网页、Training Operations 与 Coach 工具统一接入同一个 Builder，并用5项专项测试覆盖职责字段最小化、未来/过期/替代/失效/错误目标排除、预算截断、双 Hash 语义、Planning Evidence、CLI 与 Schema。完成后全量测试为158项。
+
+面试表达：
+
+> 我没有把数据库里所有历史都塞进每个 Agent。Memory Manager 会先按职责、知识截止和生命周期筛选，再做字段级投影与预算截断。Execution 不读记忆，Recovery 只读负荷与恢复聚合，Plan 读偏好和训练基线但看不到急性症状细节；业务上下文和完整审计分别 Hash，因此既控制 Token 和权限，也能解释每条记忆为什么进入或没有进入模型。
+
+当前边界是聊天还不能自动提出待确认 Memory Candidate，也没有独立 Memory Evaluation Suite；结构化过滤仍足够，因此没有为了关键词引入向量数据库。详细决策见 [ADR-0023](adr/0023-role-scoped-memory-context.md)，完整交接见 [M9-C 阶段记录](progress/2026-08-20-m9c-role-scoped-memory-context.md)。
 
 ## M8-A2：无私人数据求职演示包
 
@@ -917,7 +933,7 @@ Planning Agent 优先使用目标周之前最近的有效周训练记忆。至�
 
 演示种子只写入业务事实，不预置对话、Coach Run 或 Agent 结论。这样现场看到的 Execution、Recovery、Plan 路由、Trace 和待审核草案都来自当前代码真实运行。种子还会按启动日动态安排已完成与待执行训练，避免周末演示时找不到下一节课；同一锚点下使用 UUIDv5 保持 ID 稳定。
 
-材料层同时形成系统架构图、训练闭环时序图、五分钟演示脚本和证据边界清单。该阶段完成时是146项自动化测试；M9-B 完成后当前为153项。可以声明本地链路、权限、重放和 Schema 已验证；不能把合成场景描述成真实用户效果、医疗诊断、真实 LLM 多 Agent 稳定性或生产级并发验证。
+材料层同时形成系统架构图、训练闭环时序图、五分钟演示脚本和证据边界清单。该阶段完成时是146项自动化测试；M9-B 完成后为153项，M9-C 完成后当前为158项。可以声明本地链路、权限、重放和 Schema 已验证；不能把合成场景描述成真实用户效果、医疗诊断、真实 LLM 多 Agent 稳定性或生产级并发验证。
 
 实施时遇到一个 Windows 特有问题：第一次写完 SQLite 后，连接池仍持有文件句柄，下一次 `--reset` 删除数据库会触发 `PermissionError`。通过在种子流程结束时显式 `engine.dispose()` 释放句柄，并用连续重置测试固定该行为。
 
@@ -927,6 +943,6 @@ Planning Agent 优先使用目标周之前最近的有效周训练记忆。至�
 
 这一阶段把项目压缩成三条简历主线：外部运动数据可靠性、受约束多 Agent 训练闭环、版本化评测与人工确认。材料不再机械罗列模块，而是为每个结论绑定测试、评测报告、ADR、代码或演示命令。
 
-最关键的表达修正是把三组数字彻底分开：当前153代表全量自动化回归；12/12代表单 Agent 确定性 Policy 与真实 DeepSeek 在同 Suite Hash 下的对照；18/18代表确定性 Coach Policy 的多 Agent Harness 基线。后两者不能合并成“真实多 Agent 大模型准确率”。
+最关键的表达修正是把三组数字彻底分开：当前158代表全量自动化回归；12/12代表单 Agent 确定性 Policy 与真实 DeepSeek 在同 Suite Hash 下的对照；18/18代表确定性 Coach Policy 的多 Agent Harness 基线。后两者不能合并成“真实多 Agent 大模型准确率”。
 
 同时形成五个核心难点的“问题—约束—方案—验证—边界”讲述框架和14个面试追问，主动记录真实多轮聊天、真实 LLM Coach、生产并发和用户训练效果尚未验证。完整材料见 [求职材料包](job/README.md) 与 [证据映射](job/evidence-map.md)。

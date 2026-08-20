@@ -18,6 +18,7 @@ from runcrew.domain.agent import ReviewAgentRunRequest
 from runcrew.domain.coach import CoachAgentRunRequest
 from runcrew.domain.memory import (
     AthletePreferenceSubmission,
+    MemoryContextBuildRequest,
     WeeklyTrainingMemoryBuildRequest,
 )
 from runcrew.domain.training_review import PlannedSession, TrainingReviewRequest
@@ -80,6 +81,7 @@ from runcrew.services.weekly_training_memory import (
     invalidate_weekly_training_memory,
     refresh_weekly_training_memory,
 )
+from runcrew.services.memory_context import load_agent_memory_context
 from runcrew.storage.database import Database
 from runcrew.storage.models import ActivityRecord, RawProviderEvent, SyncRunRecord
 from runcrew.storage.repositories import (
@@ -307,6 +309,48 @@ def invalidate_weekly_memory_command(
     except WeeklyTrainingMemoryError as error:
         raise typer.BadParameter(str(error)) from error
     echo_domain(memory)
+
+
+@memory_app.command("context")
+def inspect_memory_context(
+    role: Annotated[str, typer.Option(help="execution、recovery 或 plan。")],
+    goal_id: Annotated[str, typer.Option(help="训练目标 ID。")],
+    as_of: Annotated[
+        str | None,
+        typer.Option(help="知识截止时间；不传则使用系统本地时间。"),
+    ] = None,
+    target_week_start: Annotated[
+        str | None,
+        typer.Option(help="Plan 角色必填的目标周一日期。"),
+    ] = None,
+    database_path: Annotated[Path, typer.Option("--db")] = Path("data/runcrew.db"),
+) -> None:
+    """只读展示不同职责选中、排除的记忆以及上下文预算。"""
+    database = open_database(database_path)
+    try:
+        request = MemoryContextBuildRequest(
+            role=role,
+            goal_id=goal_id,
+            as_of=(
+                parse_iso_datetime(as_of, option_name="--as-of")
+                if as_of
+                else datetime.now().astimezone()
+            ),
+            target_week_start=(
+                parse_iso_date(target_week_start, option_name="--target-week-start")
+                if target_week_start
+                else None
+            ),
+        )
+        with database.session() as session:
+            context = load_agent_memory_context(
+                request,
+                preferences=AthletePreferenceRepository(session),
+                weekly_memories=WeeklyTrainingMemoryRepository(session),
+            )
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    echo_domain(context)
 
 
 def parse_iso_date(value: str, *, option_name: str) -> date:
@@ -684,6 +728,8 @@ def recovery_assess(
                 check_ins=CheckInRepository(session),
                 plans=TrainingPlanRepository(session),
                 goals=TrainingGoalRepository(session),
+                preferences=AthletePreferenceRepository(session),
+                weekly_memories=WeeklyTrainingMemoryRepository(session),
             )
     except (ValueError, RecoveryAssessmentGoalNotFoundError) as error:
         raise typer.BadParameter(str(error)) from error
@@ -726,6 +772,7 @@ def planning_draft(
                 goals=TrainingGoalRepository(session),
                 plans=TrainingPlanRepository(session),
                 preferences=AthletePreferenceRepository(session),
+                weekly_memories=WeeklyTrainingMemoryRepository(session),
             )
     except (ValueError, TrainingPlanningError) as error:
         raise typer.BadParameter(str(error)) from error
@@ -767,6 +814,8 @@ def planning_adjust(
                 check_ins=CheckInRepository(session),
                 plans=TrainingPlanRepository(session),
                 goals=TrainingGoalRepository(session),
+                preferences=AthletePreferenceRepository(session),
+                weekly_memories=WeeklyTrainingMemoryRepository(session),
             )
             result = execute_plan_adjustment(
                 adjustment_request_from_recovery(recovery_result),
@@ -814,6 +863,8 @@ def execution_compare(
                 request,
                 activities=ActivityRepository(session),
                 plans=TrainingPlanRepository(session),
+                preferences=AthletePreferenceRepository(session),
+                weekly_memories=WeeklyTrainingMemoryRepository(session),
             )
     except (ValueError, TrainingExecutionError) as error:
         raise typer.BadParameter(str(error)) from error
@@ -924,6 +975,8 @@ def coach_run(
                 node_request,
                 activities=activities,
                 plans=plans,
+                preferences=AthletePreferenceRepository(session),
+                weekly_memories=WeeklyTrainingMemoryRepository(session),
             )
 
         async def recovery_tool(node_request: RecoveryAssessmentRequest):
@@ -933,6 +986,8 @@ def coach_run(
                 check_ins=check_ins,
                 plans=plans,
                 goals=goals,
+                preferences=AthletePreferenceRepository(session),
+                weekly_memories=WeeklyTrainingMemoryRepository(session),
             )
 
         async def plan_tool(node_request):

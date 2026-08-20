@@ -69,6 +69,9 @@ runcrew planning adjust `
 - 每个结果携带 `input_hash + ruleset_version`；草案课 ID 由输入确定，可用于同输入回放。
 - 实际读取的偏好版本必须进入 `input_hash` 和 evidence；偏好变化后旧草案不得继续激活。
 - 实际读取的周训练记忆 ID、版本和 `input_hash` 必须进入计划 evidence 与新草案 `input_hash`；`superseded` 或 `invalidated` 记忆不得进入规划上下文。
+- Plan 的统一记忆上下文最多 5 条、1800 字符；先按职责和时点过滤，再按偏好、近期周摘要的确定顺序装入预算；
+- Plan 周摘要投影不得包含疼痛部位、疼痛严重度、急性症状或恢复量表明细；这些字段只允许 Recovery 使用；
+- `memory_context` 必须同时记录 `context_hash`、排除审计 `audit_hash`、选中顺序、排除原因和预算用量；增加无关失效记忆不能改变计划 `context_hash`。
 
 规则来源与已知限制见 [规划规则边界](references/planning-boundary.md)。
 

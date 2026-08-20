@@ -6,6 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from runcrew.domain.activity import SourceProvider
+from runcrew.domain.memory import AgentMemoryContext
 from runcrew.domain.recovery_assessment import RecoveryPlanAction
 from runcrew.domain.training_cycle import PlanSession, PlanSessionPatch
 
@@ -86,6 +87,7 @@ class PlanningEvidence(BaseModel):
         "availability",
         "athlete_preference",
         "weekly_training_memory",
+        "memory_context",
         "training_history",
         "current_plan",
         "recovery_action",
@@ -98,6 +100,7 @@ class PlanningEvidence(BaseModel):
         "user_goal",
         "confirmed_athlete_preference",
         "confirmed_training_memory",
+        "role_scoped_memory_context",
         "normalized_activity",
         "active_plan",
         "recovery_assessment",
@@ -163,6 +166,7 @@ class TrainingPlanningResult(BaseModel):
     evidence: list[PlanningEvidence] = Field(min_length=1, max_length=30)
     missing_data: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list, max_length=20)
+    memory_context: AgentMemoryContext | None = None
 
     @model_validator(mode="after")
     def payload_matches_status(self) -> TrainingPlanningResult:
@@ -181,4 +185,9 @@ class TrainingPlanningResult(BaseModel):
             and self.weekly_plan_draft is not None
         ):
             raise ValueError("adjust_from_recovery 不能返回周计划草案")
+        if self.memory_context is not None and (
+            self.memory_context.role != "plan"
+            or self.memory_context.goal_id != self.goal_id
+        ):
+            raise ValueError("Plan 结果包含了不属于当前任务的记忆上下文。")
         return self

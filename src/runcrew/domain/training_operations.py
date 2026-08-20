@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from runcrew.domain.activity import SourceProvider
 from runcrew.domain.coach import CoachAgentRunRequest, CoachAgentRunResult
 from runcrew.domain.memory import (
+    AgentMemoryContext,
     AthletePreference,
     WeeklyTrainingMemory,
     WeeklyTrainingMemoryBuildRequest,
@@ -164,6 +165,7 @@ class TrainingWeekView(BaseModel):
     next_session_id: str | None = None
     progress: WeekProgressSummary | None = None
     recent_memories: list[WeeklyTrainingMemory] = Field(default_factory=list)
+    memory_contexts: list[AgentMemoryContext] = Field(default_factory=list, max_length=3)
 
 
 class WeeklyPlanActivationResult(BaseModel):

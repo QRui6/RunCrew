@@ -6,6 +6,9 @@
 
 ### Added
 
+- 增加 M9-C 按职责 Memory Context：Execution 为0条/0字符，Recovery 最多2条/1400字符，Plan 最多5条/1800字符；
+- 增加职责专属字段投影、选中顺序、生命周期/时点/权限/预算排除原因，以及分离的 `context_hash + audit_hash`；
+- Execution、Recovery、Planning 输出和网页周视图携带 Context 审计；增加 `runcrew memory context`、两份 Schema、ADR-0023 和5项专项测试；
 - 增加 M9-B Weekly Training Memory：只从正式计划、已应用执行确认、规范化 Activity、Check-in 和已批准变更确定性生成；
 - 增加 `weekly_training_memories` 本地表、版本/替代/失效生命周期、来源引用、输入 Hash、API、CLI 和网页“结算上一训练周”入口；
 - Planning Agent 优先消费最近有效周记忆计算确认训练时长基线，并把记忆 ID、版本和 Hash 写入 evidence 与计划输入 Hash；不足时回退到规范化 Activity；
@@ -13,15 +16,17 @@
 
 ### Changed
 
-- 静态资源版本升级为 `20260820-1`；
+- 静态资源版本升级为 `20260820-2`；
+- 修复 `planning draft` CLI 未传入周记忆 Repository、与网页 Planning Context 不一致的问题；
 
 ### Fixed
 
+- 将周记忆 Context 拆为 Recovery/Plan 判别联合类型，确保 Plan JSON 与 Schema 中不出现恢复和疼痛敏感字段，而不是仅输出 `null`；
 - 为训练运营 Service 增加可注入时钟，修复偏好记忆网页测试依赖系统日期和当天零点、跨日后错误排除刚确认偏好的问题；历史回放仍保持不读取未来记忆。
 
 ### Verified
 
-- 偏好记忆9项专项测试、周训练记忆7项专项测试和全量153项测试通过；Schema 导出、Python 编译和 JavaScript 语法检查通过；本阶段没有访问真实活动、COROS 或 DeepSeek。
+- 偏好记忆9项、周训练记忆7项、Memory Context 5项专项测试和全量158项测试通过；Schema 导出、Python 编译和 JavaScript 语法检查通过；本阶段没有访问真实活动、COROS 或 DeepSeek。
 
 ## 2026-08-19
 

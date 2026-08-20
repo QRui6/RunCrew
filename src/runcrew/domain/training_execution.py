@@ -7,6 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from runcrew.domain.activity import SourceProvider
+from runcrew.domain.memory import AgentMemoryContext
 from runcrew.domain.training_cycle import TrainingPlan
 
 
@@ -145,6 +146,17 @@ class TrainingExecutionResult(BaseModel):
     summary: str = Field(min_length=1, max_length=500)
     sessions: list[SessionExecutionComparison] = Field(max_length=14)
     unassigned_activity_ids: list[str] = Field(default_factory=list)
+    memory_context: AgentMemoryContext | None = None
+
+    @model_validator(mode="after")
+    def memory_context_matches_execution(self) -> TrainingExecutionResult:
+        if self.memory_context is not None and (
+            self.memory_context.role != "execution"
+            or self.memory_context.goal_id != self.goal_id
+            or self.memory_context.as_of != self.as_of
+        ):
+            raise ValueError("Execution 结果包含了不属于当前任务的记忆上下文。")
+        return self
 
 
 class TrainingExecutionConfirmation(BaseModel):

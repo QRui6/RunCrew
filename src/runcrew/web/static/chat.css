@@ -668,6 +668,12 @@ input:focus-visible {
 .weekly-memory-card strong { font-size: 9px; }
 .weekly-memory-card small { color: var(--muted); font-size: 8px; }
 .weekly-memory-card p { margin: 6px 0 0; color: var(--muted); font-size: 9px; line-height: 1.55; }
+.memory-context-heading { display: flex; align-items: center; justify-content: space-between; margin: 20px 0 8px; }
+.memory-context-heading small { color: var(--muted); font-size: 8px; }
+.memory-context-audit { display: grid; border-top: 1px solid var(--line); }
+.memory-context-row { display: grid; grid-template-columns: minmax(80px, .7fr) 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.memory-context-row strong { font-size: 9px; }
+.memory-context-row span { color: var(--muted); font-size: 8px; line-height: 1.5; }
 .session-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .session-chips span { padding: 4px 7px; color: var(--green); background: var(--green-soft); border-radius: 999px; font-size: 8px; }
 .plan-draft-form { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 9px; margin-top: 12px; }

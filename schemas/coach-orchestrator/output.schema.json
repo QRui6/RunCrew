@@ -1,5 +1,115 @@
 {
   "$defs": {
+    "AgentMemoryContext": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "agent-memory-context/1.0",
+          "default": "agent-memory-context/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "selection_policy_version": {
+          "const": "memory-context-policy/1.0",
+          "default": "memory-context-policy/1.0",
+          "title": "Selection Policy Version",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "execution",
+            "recovery",
+            "plan"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "goal_id": {
+          "minLength": 1,
+          "title": "Goal Id",
+          "type": "string"
+        },
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "target_week_start": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Week Start"
+        },
+        "context_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Context Hash",
+          "type": "string"
+        },
+        "audit_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Audit Hash",
+          "type": "string"
+        },
+        "selected_preferences": {
+          "items": {
+            "$ref": "#/$defs/PreferenceMemoryContextItem"
+          },
+          "maxItems": 5,
+          "title": "Selected Preferences",
+          "type": "array"
+        },
+        "selected_weekly_memories": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "plan": "#/$defs/PlanWeeklyMemoryContextItem",
+                "recovery": "#/$defs/RecoveryWeeklyMemoryContextItem"
+              },
+              "propertyName": "role"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/RecoveryWeeklyMemoryContextItem"
+              },
+              {
+                "$ref": "#/$defs/PlanWeeklyMemoryContextItem"
+              }
+            ]
+          },
+          "maxItems": 8,
+          "title": "Selected Weekly Memories",
+          "type": "array"
+        },
+        "decisions": {
+          "items": {
+            "$ref": "#/$defs/MemoryContextDecision"
+          },
+          "maxItems": 100,
+          "title": "Decisions",
+          "type": "array"
+        },
+        "budget": {
+          "$ref": "#/$defs/MemoryContextBudget"
+        }
+      },
+      "required": [
+        "role",
+        "goal_id",
+        "as_of",
+        "context_hash",
+        "audit_hash",
+        "budget"
+      ],
+      "title": "按职责裁剪的 Agent 记忆上下文",
+      "type": "object"
+    },
     "CoachBudgetUsage": {
       "additionalProperties": false,
       "properties": {
@@ -332,6 +442,124 @@
       "title": "ExecutionEvidence",
       "type": "object"
     },
+    "MemoryContextBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "max_items": {
+          "minimum": 0,
+          "title": "Max Items",
+          "type": "integer"
+        },
+        "max_chars": {
+          "minimum": 0,
+          "title": "Max Chars",
+          "type": "integer"
+        },
+        "used_items": {
+          "minimum": 0,
+          "title": "Used Items",
+          "type": "integer"
+        },
+        "used_chars": {
+          "minimum": 0,
+          "title": "Used Chars",
+          "type": "integer"
+        },
+        "candidate_count": {
+          "minimum": 0,
+          "title": "Candidate Count",
+          "type": "integer"
+        },
+        "excluded_by_budget": {
+          "minimum": 0,
+          "title": "Excluded By Budget",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_items",
+        "max_chars",
+        "used_items",
+        "used_chars",
+        "candidate_count",
+        "excluded_by_budget"
+      ],
+      "title": "MemoryContextBudget",
+      "type": "object"
+    },
+    "MemoryContextDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "memory_type": {
+          "enum": [
+            "athlete_preference",
+            "weekly_training_memory"
+          ],
+          "title": "Memory Type",
+          "type": "string"
+        },
+        "memory_id": {
+          "minLength": 1,
+          "title": "Memory Id",
+          "type": "string"
+        },
+        "status": {
+          "maxLength": 24,
+          "minLength": 1,
+          "title": "Status",
+          "type": "string"
+        },
+        "selected": {
+          "title": "Selected",
+          "type": "boolean"
+        },
+        "reason": {
+          "enum": [
+            "selected_role_relevant",
+            "excluded_role_not_allowed",
+            "excluded_wrong_goal",
+            "excluded_future",
+            "excluded_expired",
+            "excluded_superseded",
+            "excluded_archived",
+            "excluded_invalidated",
+            "excluded_outside_target_window",
+            "excluded_item_budget",
+            "excluded_character_budget"
+          ],
+          "title": "Reason",
+          "type": "string"
+        },
+        "selected_order": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Selected Order"
+        },
+        "estimated_chars": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Estimated Chars",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "memory_type",
+        "memory_id",
+        "status",
+        "selected",
+        "reason"
+      ],
+      "title": "MemoryContextDecision",
+      "type": "object"
+    },
     "PlanChangeProposalDraft": {
       "additionalProperties": false,
       "description": "可交给 TrainingCycleService 的提案参数，不代表已保存或已批准。",
@@ -611,6 +839,98 @@
       "title": "PlanSessionPatch",
       "type": "object"
     },
+    "PlanWeeklyMemoryContextItem": {
+      "additionalProperties": false,
+      "description": "Plan 可读取的周训练基线；类型层面不存在恢复敏感字段。",
+      "properties": {
+        "memory_type": {
+          "const": "weekly_training_memory",
+          "default": "weekly_training_memory",
+          "title": "Memory Type",
+          "type": "string"
+        },
+        "memory_id": {
+          "minLength": 1,
+          "title": "Memory Id",
+          "type": "string"
+        },
+        "week_start": {
+          "format": "date",
+          "title": "Week Start",
+          "type": "string"
+        },
+        "week_end": {
+          "format": "date",
+          "title": "Week End",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "input_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Hash",
+          "type": "string"
+        },
+        "completion_rate": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completion Rate"
+        },
+        "actual_duration_seconds": {
+          "minimum": 0,
+          "title": "Actual Duration Seconds",
+          "type": "integer"
+        },
+        "actual_distance_meters": {
+          "minimum": 0,
+          "title": "Actual Distance Meters",
+          "type": "number"
+        },
+        "check_in_days": {
+          "minimum": 0,
+          "title": "Check In Days",
+          "type": "integer"
+        },
+        "missing_data": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Missing Data",
+          "type": "array"
+        },
+        "role": {
+          "const": "plan",
+          "default": "plan",
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "memory_id",
+        "week_start",
+        "week_end",
+        "version",
+        "input_hash",
+        "actual_duration_seconds",
+        "actual_distance_meters",
+        "check_in_days"
+      ],
+      "title": "PlanWeeklyMemoryContextItem",
+      "type": "object"
+    },
     "PlanningEvidence": {
       "additionalProperties": false,
       "properties": {
@@ -626,6 +946,7 @@
             "availability",
             "athlete_preference",
             "weekly_training_memory",
+            "memory_context",
             "training_history",
             "current_plan",
             "recovery_action",
@@ -651,6 +972,7 @@
             "user_goal",
             "confirmed_athlete_preference",
             "confirmed_training_memory",
+            "role_scoped_memory_context",
             "normalized_activity",
             "active_plan",
             "recovery_assessment",
@@ -668,6 +990,53 @@
         "rule_source"
       ],
       "title": "PlanningEvidence",
+      "type": "object"
+    },
+    "PreferenceMemoryContextItem": {
+      "additionalProperties": false,
+      "properties": {
+        "memory_type": {
+          "const": "athlete_preference",
+          "default": "athlete_preference",
+          "title": "Memory Type",
+          "type": "string"
+        },
+        "memory_id": {
+          "minLength": 1,
+          "title": "Memory Id",
+          "type": "string"
+        },
+        "key": {
+          "const": "preferred_long_run_weekday",
+          "title": "Key",
+          "type": "string"
+        },
+        "value": {
+          "enum": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ],
+          "title": "Value",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "athlete-preference/1.0",
+          "default": "athlete-preference/1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "memory_id",
+        "key",
+        "value"
+      ],
+      "title": "PreferenceMemoryContextItem",
       "type": "object"
     },
     "RecoveryAssessmentResult": {
@@ -760,6 +1129,17 @@
         },
         "plan_action": {
           "$ref": "#/$defs/RecoveryPlanAction"
+        },
+        "memory_context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AgentMemoryContext"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -828,6 +1208,7 @@
             "readiness",
             "training_volume",
             "planned_session",
+            "memory_context",
             "missing_data"
           ],
           "title": "Type",
@@ -849,6 +1230,7 @@
             "user_report",
             "runcrew_conservative_rule",
             "exercise_safety_red_flag",
+            "role_scoped_memory_context",
             "missing_data_policy"
           ],
           "title": "Rule Source",
@@ -907,6 +1289,167 @@
         "reason"
       ],
       "title": "RecoveryPlanAction",
+      "type": "object"
+    },
+    "RecoveryWeeklyMemoryContextItem": {
+      "additionalProperties": false,
+      "description": "Recovery 可读取的周负荷与恢复聚合。",
+      "properties": {
+        "memory_type": {
+          "const": "weekly_training_memory",
+          "default": "weekly_training_memory",
+          "title": "Memory Type",
+          "type": "string"
+        },
+        "memory_id": {
+          "minLength": 1,
+          "title": "Memory Id",
+          "type": "string"
+        },
+        "week_start": {
+          "format": "date",
+          "title": "Week Start",
+          "type": "string"
+        },
+        "week_end": {
+          "format": "date",
+          "title": "Week End",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "input_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Hash",
+          "type": "string"
+        },
+        "completion_rate": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completion Rate"
+        },
+        "actual_duration_seconds": {
+          "minimum": 0,
+          "title": "Actual Duration Seconds",
+          "type": "integer"
+        },
+        "actual_distance_meters": {
+          "minimum": 0,
+          "title": "Actual Distance Meters",
+          "type": "number"
+        },
+        "check_in_days": {
+          "minimum": 0,
+          "title": "Check In Days",
+          "type": "integer"
+        },
+        "missing_data": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Missing Data",
+          "type": "array"
+        },
+        "role": {
+          "const": "recovery",
+          "default": "recovery",
+          "title": "Role",
+          "type": "string"
+        },
+        "average_fatigue": {
+          "anyOf": [
+            {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Average Fatigue"
+        },
+        "average_soreness": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Average Soreness"
+        },
+        "average_readiness": {
+          "anyOf": [
+            {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Average Readiness"
+        },
+        "max_pain_severity": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Pain Severity"
+        },
+        "acute_symptom_days": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Acute Symptom Days"
+        }
+      },
+      "required": [
+        "memory_id",
+        "week_start",
+        "week_end",
+        "version",
+        "input_hash",
+        "actual_duration_seconds",
+        "actual_distance_meters",
+        "check_in_days"
+      ],
+      "title": "RecoveryWeeklyMemoryContextItem",
       "type": "object"
     },
     "RecoveryWindowMetrics": {
@@ -1134,6 +1677,17 @@
           },
           "title": "Unassigned Activity Ids",
           "type": "array"
+        },
+        "memory_context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AgentMemoryContext"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -1252,6 +1806,17 @@
           "maxItems": 20,
           "title": "Warnings",
           "type": "array"
+        },
+        "memory_context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AgentMemoryContext"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [

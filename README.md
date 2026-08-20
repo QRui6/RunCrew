@@ -36,7 +36,7 @@ flowchart LR
 
 | 维度 | 当前结果 |
 |---|---:|
-| 自动化测试 | 153 passed |
+| 自动化测试 | 158 passed |
 | 多 Agent 确定性评测 | 18 / 18 |
 | DeepSeek 单 Agent 同题评测 | 12 / 12 |
 | 连续对话上下文窗口 | 最近 8 条消息 + 不可变 evidence 快照 |
@@ -91,6 +91,7 @@ skills/      中文 Skill 说明、边界和输入输出契约
 - 用18个版本化多 Agent 场景评测任务、韧性、护栏、证据血缘、确认边界与批准前状态漂移。
 - 管理经过用户显式确认的长期长跑日偏好，保留来源、有效期、替代链和停用状态；Planning Agent 使用偏好时将其写入 `input_hash` 与 evidence，偏好变化会使旧计划草案失效。
 - 将正式计划、已确认执行、规范化 Activity、Check-in 和已批准变更确定性结算为版本化周训练记忆；Planning Agent 优先消费有效记忆，失效或被替代版本不会进入新计划。
+- 为 Execution、Recovery、Plan 构建职责专属 Memory Context：固定字段白名单与条数/字符预算，记录选中顺序、排除原因、Context Hash 和 Audit Hash；Plan 不接收疼痛与急性症状明细。
 
 ## 文档导航
 
@@ -273,7 +274,14 @@ Coach 会依次委派训练执行和恢复评估；只有需要降级时才调�
 
 架构图、训练闭环时序图和五分钟演示顺序见 [求职演示包](docs/demo/README.md)。
 
-当前 v1 只支持会被周计划真实消费的长跑星期偏好；普通聊天不会自动写入长期记忆。
+当前长期偏好只支持会被周计划真实消费的长跑星期；普通聊天不会自动写入正式记忆。可用以下命令检查不同职责的记忆可见范围：
+
+```powershell
+.\.venv\Scripts\runcrew.exe memory context `
+  --role plan `
+  --goal-id <目标ID> `
+  --target-week-start 2026-08-24
+```
 
 ## 运行 Coach 多 Agent 离线评测
 

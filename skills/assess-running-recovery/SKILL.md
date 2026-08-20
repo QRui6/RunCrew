@@ -51,6 +51,9 @@ runcrew recovery assess `
 - 训练负荷字段覆盖不足时可使用训练时长变化作为代理，必须在 evidence 中标明 `duration_seconds_proxy`；
 - 缺少足够新的身体反馈时返回 `insufficient_data`，但历史反馈中的严重红旗仍需升级；
 - 每个结论使用 `input_hash + ruleset_version` 支持回放。
+- Recovery 最多读取最近 2 份有效完整周摘要，字符预算为 1400；不读取长跑星期偏好；
+- 周摘要只提供完成量、反馈聚合和缺失数据，不包含 Provider 原始记录；失效、被替代、未来和当前未结束周必须记录排除原因；
+- `memory_context` 只提供跨周背景，不改变急性红旗和恢复风险阈值；`affects_safety_thresholds=false` 必须进入 evidence。
 
 权威红旗资料和本项目规则归属见 [安全边界](references/safety-boundary.md)。
 

@@ -42,6 +42,15 @@ def test_demo_seed_creates_complete_synthetic_product_state(tmp_path: Path) -> N
     )
     assert len(week_view.recent_memories) == 1
     assert week_view.recent_memories[0].confirmed_completed_sessions == 2
+    assert [item.role for item in week_view.memory_contexts] == [
+        "execution",
+        "recovery",
+        "plan",
+    ]
+    contexts = {item.role: item for item in week_view.memory_contexts}
+    assert contexts["execution"].budget.used_items == 0
+    assert contexts["recovery"].budget.used_items == 1
+    assert contexts["plan"].budget.used_items == 2
     assert "coros" not in json.dumps(
         bootstrap.model_dump(mode="json"), ensure_ascii=False
     ).lower()

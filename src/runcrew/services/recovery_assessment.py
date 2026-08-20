@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 from typing import Protocol
 
 from runcrew.domain.activity import ActivityDetail, ActivitySummary
+from runcrew.domain.memory import MemoryContextBuildRequest
 from runcrew.domain.recovery_assessment import (
     RecoveryAssessmentRequest,
     RecoveryAssessmentResult,
@@ -15,6 +16,11 @@ from runcrew.domain.training_cycle import TrainingGoal
 from runcrew.services.recovery_context import (
     RecoveryAssessmentContext,
     build_recovery_context,
+)
+from runcrew.services.memory_context import (
+    MemoryContextPreferenceStore,
+    MemoryContextWeeklyStore,
+    load_agent_memory_context,
 )
 
 
@@ -66,6 +72,8 @@ def execute_recovery_assessment(
     check_ins: RecoveryAssessmentCheckInStore,
     plans: RecoveryAssessmentPlanStore,
     goals: RecoveryAssessmentGoalStore,
+    preferences: MemoryContextPreferenceStore | None = None,
+    weekly_memories: MemoryContextWeeklyStore | None = None,
 ) -> RecoveryAssessmentResult:
     goal = goals.get(request.goal_id)
     if goal is None or goal.status != "active":
@@ -83,11 +91,25 @@ def execute_recovery_assessment(
     week_start = assessed_day - timedelta(days=assessed_day.weekday())
     relevant_plans = plans.active_from_week(request.goal_id, week_start, limit=2)
     next_session = _next_planned_session(relevant_plans, request.assessed_at.date())
+    memory_context = (
+        load_agent_memory_context(
+            MemoryContextBuildRequest(
+                role="recovery",
+                goal_id=request.goal_id,
+                as_of=request.assessed_at,
+            ),
+            preferences=preferences,
+            weekly_memories=weekly_memories,
+        )
+        if preferences is not None or weekly_memories is not None
+        else None
+    )
     context = build_recovery_context(
         request,
         activities=history,
         check_ins=recent_check_ins,
         next_session=next_session,
+        memory_context=memory_context,
     )
     return build_recovery_assessment(context)
 
@@ -98,6 +120,29 @@ def build_recovery_assessment(
     latest = context.check_ins[-1] if context.check_ins else None
     missing: list[str] = []
     evidence: list[RecoveryEvidence] = []
+    if context.memory_context is not None:
+        evidence.append(
+            RecoveryEvidence(
+                id=f"memory-context:{context.memory_context.context_hash[:24]}",
+                type="memory_context",
+                message="Recovery 只接收近期有效周摘要；训练日偏好和失效版本已排除。",
+                values={
+                    "context_hash": context.memory_context.context_hash,
+                    "selected_memory_ids": [
+                        item.memory_id
+                        for item in context.memory_context.selected_weekly_memories
+                    ],
+                    "selected_count": context.memory_context.budget.used_items,
+                    "excluded_count": sum(
+                        not item.selected for item in context.memory_context.decisions
+                    ),
+                    "used_chars": context.memory_context.budget.used_chars,
+                    "max_chars": context.memory_context.budget.max_chars,
+                    "affects_safety_thresholds": False,
+                },
+                rule_source="role_scoped_memory_context",
+            )
+        )
     if latest is None:
         missing.append("recent_check_in")
         evidence.append(
@@ -183,6 +228,7 @@ def build_recovery_assessment(
         current_7d=context.current_7d,
         previous_7d=context.previous_7d,
         plan_action=action,
+        memory_context=context.memory_context,
     )
 
 

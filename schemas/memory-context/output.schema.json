@@ -1,115 +1,5 @@
 {
   "$defs": {
-    "AgentMemoryContext": {
-      "additionalProperties": false,
-      "properties": {
-        "schema_version": {
-          "const": "agent-memory-context/1.0",
-          "default": "agent-memory-context/1.0",
-          "title": "Schema Version",
-          "type": "string"
-        },
-        "selection_policy_version": {
-          "const": "memory-context-policy/1.0",
-          "default": "memory-context-policy/1.0",
-          "title": "Selection Policy Version",
-          "type": "string"
-        },
-        "role": {
-          "enum": [
-            "execution",
-            "recovery",
-            "plan"
-          ],
-          "title": "Role",
-          "type": "string"
-        },
-        "goal_id": {
-          "minLength": 1,
-          "title": "Goal Id",
-          "type": "string"
-        },
-        "as_of": {
-          "format": "date-time",
-          "title": "As Of",
-          "type": "string"
-        },
-        "target_week_start": {
-          "anyOf": [
-            {
-              "format": "date",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Target Week Start"
-        },
-        "context_hash": {
-          "pattern": "^[0-9a-f]{64}$",
-          "title": "Context Hash",
-          "type": "string"
-        },
-        "audit_hash": {
-          "pattern": "^[0-9a-f]{64}$",
-          "title": "Audit Hash",
-          "type": "string"
-        },
-        "selected_preferences": {
-          "items": {
-            "$ref": "#/$defs/PreferenceMemoryContextItem"
-          },
-          "maxItems": 5,
-          "title": "Selected Preferences",
-          "type": "array"
-        },
-        "selected_weekly_memories": {
-          "items": {
-            "discriminator": {
-              "mapping": {
-                "plan": "#/$defs/PlanWeeklyMemoryContextItem",
-                "recovery": "#/$defs/RecoveryWeeklyMemoryContextItem"
-              },
-              "propertyName": "role"
-            },
-            "oneOf": [
-              {
-                "$ref": "#/$defs/RecoveryWeeklyMemoryContextItem"
-              },
-              {
-                "$ref": "#/$defs/PlanWeeklyMemoryContextItem"
-              }
-            ]
-          },
-          "maxItems": 8,
-          "title": "Selected Weekly Memories",
-          "type": "array"
-        },
-        "decisions": {
-          "items": {
-            "$ref": "#/$defs/MemoryContextDecision"
-          },
-          "maxItems": 100,
-          "title": "Decisions",
-          "type": "array"
-        },
-        "budget": {
-          "$ref": "#/$defs/MemoryContextBudget"
-        }
-      },
-      "required": [
-        "role",
-        "goal_id",
-        "as_of",
-        "context_hash",
-        "audit_hash",
-        "budget"
-      ],
-      "title": "按职责裁剪的 Agent 记忆上下文",
-      "type": "object"
-    },
     "MemoryContextBudget": {
       "additionalProperties": false,
       "properties": {
@@ -367,108 +257,6 @@
       "title": "PreferenceMemoryContextItem",
       "type": "object"
     },
-    "RecoveryEvidence": {
-      "additionalProperties": false,
-      "properties": {
-        "id": {
-          "maxLength": 120,
-          "minLength": 1,
-          "title": "Id",
-          "type": "string"
-        },
-        "type": {
-          "enum": [
-            "check_in",
-            "acute_symptom",
-            "pain",
-            "fatigue",
-            "sleep",
-            "readiness",
-            "training_volume",
-            "planned_session",
-            "memory_context",
-            "missing_data"
-          ],
-          "title": "Type",
-          "type": "string"
-        },
-        "message": {
-          "maxLength": 300,
-          "minLength": 1,
-          "title": "Message",
-          "type": "string"
-        },
-        "values": {
-          "additionalProperties": true,
-          "title": "Values",
-          "type": "object"
-        },
-        "rule_source": {
-          "enum": [
-            "user_report",
-            "runcrew_conservative_rule",
-            "exercise_safety_red_flag",
-            "role_scoped_memory_context",
-            "missing_data_policy"
-          ],
-          "title": "Rule Source",
-          "type": "string"
-        }
-      },
-      "required": [
-        "id",
-        "type",
-        "message",
-        "rule_source"
-      ],
-      "title": "RecoveryEvidence",
-      "type": "object"
-    },
-    "RecoveryPlanAction": {
-      "additionalProperties": false,
-      "properties": {
-        "action": {
-          "enum": [
-            "keep",
-            "ask_plan_agent_to_reduce",
-            "ask_plan_agent_to_replace_with_rest",
-            "hold_until_professional_review",
-            "wait_for_more_data"
-          ],
-          "title": "Action",
-          "type": "string"
-        },
-        "target_session_id": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Target Session Id"
-        },
-        "requires_user_confirmation": {
-          "default": true,
-          "title": "Requires User Confirmation",
-          "type": "boolean"
-        },
-        "reason": {
-          "maxLength": 300,
-          "minLength": 1,
-          "title": "Reason",
-          "type": "string"
-        }
-      },
-      "required": [
-        "action",
-        "reason"
-      ],
-      "title": "RecoveryPlanAction",
-      "type": "object"
-    },
     "RecoveryWeeklyMemoryContextItem": {
       "additionalProperties": false,
       "description": "Recovery 可读取的周负荷与恢复聚合。",
@@ -629,170 +417,114 @@
       ],
       "title": "RecoveryWeeklyMemoryContextItem",
       "type": "object"
-    },
-    "RecoveryWindowMetrics": {
-      "additionalProperties": false,
-      "properties": {
-        "activity_count": {
-          "minimum": 0,
-          "title": "Activity Count",
-          "type": "integer"
-        },
-        "distance_meters": {
-          "minimum": 0,
-          "title": "Distance Meters",
-          "type": "number"
-        },
-        "duration_seconds": {
-          "minimum": 0,
-          "title": "Duration Seconds",
-          "type": "integer"
-        },
-        "training_load_total": {
-          "anyOf": [
-            {
-              "minimum": 0,
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Training Load Total"
-        },
-        "training_load_coverage": {
-          "maximum": 1,
-          "minimum": 0,
-          "title": "Training Load Coverage",
-          "type": "number"
-        }
-      },
-      "required": [
-        "activity_count",
-        "distance_meters",
-        "duration_seconds",
-        "training_load_coverage"
-      ],
-      "title": "RecoveryWindowMetrics",
-      "type": "object"
     }
   },
   "additionalProperties": false,
   "properties": {
     "schema_version": {
-      "const": "1.0",
-      "default": "1.0",
+      "const": "agent-memory-context/1.0",
+      "default": "agent-memory-context/1.0",
       "title": "Schema Version",
       "type": "string"
     },
-    "ruleset_version": {
-      "const": "recovery-risk-rules/1.0",
-      "default": "recovery-risk-rules/1.0",
-      "title": "Ruleset Version",
+    "selection_policy_version": {
+      "const": "memory-context-policy/1.0",
+      "default": "memory-context-policy/1.0",
+      "title": "Selection Policy Version",
       "type": "string"
     },
-    "input_hash": {
-      "pattern": "^[0-9a-f]{64}$",
-      "title": "Input Hash",
+    "role": {
+      "enum": [
+        "execution",
+        "recovery",
+        "plan"
+      ],
+      "title": "Role",
       "type": "string"
     },
     "goal_id": {
+      "minLength": 1,
       "title": "Goal Id",
       "type": "string"
     },
-    "assessed_at": {
+    "as_of": {
       "format": "date-time",
-      "title": "Assessed At",
+      "title": "As Of",
       "type": "string"
     },
-    "recommendation": {
-      "enum": [
-        "proceed",
-        "reduce",
-        "rest",
-        "seek_professional_help",
-        "insufficient_data"
-      ],
-      "title": "Recommendation",
-      "type": "string"
-    },
-    "risk_level": {
-      "enum": [
-        "low",
-        "moderate",
-        "high",
-        "escalate",
-        "unknown"
-      ],
-      "title": "Risk Level",
-      "type": "string"
-    },
-    "summary": {
-      "maxLength": 500,
-      "minLength": 1,
-      "title": "Summary",
-      "type": "string"
-    },
-    "evidence": {
-      "items": {
-        "$ref": "#/$defs/RecoveryEvidence"
-      },
-      "maxItems": 30,
-      "minItems": 1,
-      "title": "Evidence",
-      "type": "array"
-    },
-    "missing_data": {
-      "items": {
-        "type": "string"
-      },
-      "title": "Missing Data",
-      "type": "array"
-    },
-    "confidence": {
-      "enum": [
-        "high",
-        "medium",
-        "low"
-      ],
-      "title": "Confidence",
-      "type": "string"
-    },
-    "current_7d": {
-      "$ref": "#/$defs/RecoveryWindowMetrics"
-    },
-    "previous_7d": {
-      "$ref": "#/$defs/RecoveryWindowMetrics"
-    },
-    "plan_action": {
-      "$ref": "#/$defs/RecoveryPlanAction"
-    },
-    "memory_context": {
+    "target_week_start": {
       "anyOf": [
         {
-          "$ref": "#/$defs/AgentMemoryContext"
+          "format": "date",
+          "type": "string"
         },
         {
           "type": "null"
         }
       ],
-      "default": null
+      "default": null,
+      "title": "Target Week Start"
+    },
+    "context_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Context Hash",
+      "type": "string"
+    },
+    "audit_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Audit Hash",
+      "type": "string"
+    },
+    "selected_preferences": {
+      "items": {
+        "$ref": "#/$defs/PreferenceMemoryContextItem"
+      },
+      "maxItems": 5,
+      "title": "Selected Preferences",
+      "type": "array"
+    },
+    "selected_weekly_memories": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "plan": "#/$defs/PlanWeeklyMemoryContextItem",
+            "recovery": "#/$defs/RecoveryWeeklyMemoryContextItem"
+          },
+          "propertyName": "role"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/RecoveryWeeklyMemoryContextItem"
+          },
+          {
+            "$ref": "#/$defs/PlanWeeklyMemoryContextItem"
+          }
+        ]
+      },
+      "maxItems": 8,
+      "title": "Selected Weekly Memories",
+      "type": "array"
+    },
+    "decisions": {
+      "items": {
+        "$ref": "#/$defs/MemoryContextDecision"
+      },
+      "maxItems": 100,
+      "title": "Decisions",
+      "type": "array"
+    },
+    "budget": {
+      "$ref": "#/$defs/MemoryContextBudget"
     }
   },
   "required": [
-    "input_hash",
+    "role",
     "goal_id",
-    "assessed_at",
-    "recommendation",
-    "risk_level",
-    "summary",
-    "evidence",
-    "confidence",
-    "current_7d",
-    "previous_7d",
-    "plan_action"
+    "as_of",
+    "context_hash",
+    "audit_hash",
+    "budget"
   ],
-  "title": "跑步恢复风险评估输出",
+  "title": "按职责裁剪的 Agent 记忆上下文",
   "type": "object"
 }

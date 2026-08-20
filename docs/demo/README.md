@@ -39,8 +39,9 @@ cd D:\AgentProjets\RunCrew
 - 数据、计划、Memory、Agent Harness 和网页闭环均在本地真实运行；
 - 训练判断来自确定性 Service/Skill，回答可追溯到 evidence；
 - Execution、Recovery、Plan 三个职责由 Harness 按权限编排；
+- 三个职责的记忆上下文按字段和预算裁剪，网页可查看选中数量、预算和排除审计；
 - 计划和长期偏好写入需要用户确认；
-- 当前全量153项自动化测试通过；周训练记忆专项测试覆盖知识截止、确认边界、版本替代、失效与 Planning 消费。
+- 当前全量158项自动化测试通过；Memory 专项测试覆盖知识截止、确认边界、版本替代、失效、职责投影、预算和 Planning 消费。
 
 演示时不能声明：
 

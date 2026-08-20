@@ -6,6 +6,7 @@ from typing import Callable
 
 from runcrew.domain.coach import CoachAgentRunRequest, CoachAgentRunResult
 from runcrew.domain.memory import (
+    MemoryContextBuildRequest,
     AthletePreference,
     AthletePreferenceArchiveSubmission,
     AthletePreferenceSubmission,
@@ -56,6 +57,7 @@ from runcrew.services.weekly_training_memory import (
     invalidate_weekly_training_memory,
     refresh_weekly_training_memory,
 )
+from runcrew.services.memory_context import load_agent_memory_context
 from runcrew.storage.database import Database
 from runcrew.storage.repositories import (
     ActivityRepository,
@@ -261,6 +263,8 @@ class TrainingOperationsService:
                     ),
                     activities=ActivityRepository(session),
                     plans=plans,
+                    preferences=AthletePreferenceRepository(session),
+                    weekly_memories=WeeklyTrainingMemoryRepository(session),
                 )
                 check_in_days = len(
                     CheckInRepository(session).between(
@@ -272,6 +276,23 @@ class TrainingOperationsService:
                 week_start + timedelta(days=7),
                 limit=4,
             )
+            preference_repository = AthletePreferenceRepository(session)
+            memory_repository = WeeklyTrainingMemoryRepository(session)
+            memory_contexts = [
+                load_agent_memory_context(
+                    MemoryContextBuildRequest(
+                        role=role,
+                        goal_id=goal_id,
+                        as_of=as_of,
+                        target_week_start=(
+                            week_start + timedelta(days=7) if role == "plan" else None
+                        ),
+                    ),
+                    preferences=preference_repository,
+                    weekly_memories=memory_repository,
+                )
+                for role in ("execution", "recovery", "plan")
+            ]
         today_ids = (
             [item.id for item in plan.sessions if item.scheduled_for == as_of.date()]
             if plan
@@ -301,6 +322,7 @@ class TrainingOperationsService:
             next_session_id=next_session,
             progress=progress,
             recent_memories=recent_memories,
+            memory_contexts=memory_contexts,
         )
 
     def build_weekly_memory(
@@ -517,7 +539,11 @@ class TrainingOperationsService:
 
             async def execution_tool(node_request):
                 return execute_training_comparison(
-                    node_request, activities=activities, plans=plans
+                    node_request,
+                    activities=activities,
+                    plans=plans,
+                    preferences=AthletePreferenceRepository(session),
+                    weekly_memories=WeeklyTrainingMemoryRepository(session),
                 )
 
             async def recovery_tool(node_request):
@@ -527,6 +553,8 @@ class TrainingOperationsService:
                     check_ins=check_ins,
                     plans=plans,
                     goals=goals,
+                    preferences=AthletePreferenceRepository(session),
+                    weekly_memories=WeeklyTrainingMemoryRepository(session),
                 )
 
             async def plan_tool(node_request):

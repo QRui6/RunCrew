@@ -5,7 +5,7 @@
 
 ## 当前里程碑
 
-**M5 与 M6-A1/A2/A3a 已完成；真实 DeepSeek 聊天同题验收仍待补。M7-A 至 M7-E 和 M8-B 已完成训练产品闭环；M9-A 已实现显式确认的类型化偏好，M9-B 已实现由正式训练事实生成并被 Planning Agent 消费的版本化周训练记忆；M8-A2/A3 已形成可重复演示与求职证据包。全量153项测试通过，下一步进入 M9-C 按职责构建 Memory Context。**
+**M5 与 M6-A1/A2/A3a 已完成；真实 DeepSeek 聊天同题验收仍待补。M7-A 至 M7-E 和 M8-B 已完成训练产品闭环；M9-A 已实现类型化偏好，M9-B 已实现版本化周训练记忆，M9-C 已按 Execution、Recovery、Plan 固定记忆字段、排除审计与上下文预算；M8-A2/A3 已形成可重复演示与求职证据包。全量158项测试通过，下一步进入 M9-D 待确认 Memory Candidate。**
 
 M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
@@ -27,23 +27,27 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 - 本地服务不再在启动时永久缓存静态文件，CSS/JS 使用版本化 URL；旧服务只需再重启一次，后续前端更新可直接刷新查看；
 - 当前活动名称不再被会话标题覆盖；距离、用时、平均配速和平均心率由活动 DTO 动态填入连续数据带；
 - 用户问题、RunCrew 回答、回答模式、evidence、置信度和缺失数据已改为正文＋脚注式表达；Agent 协作和上下文用量移入“回答依据”；
-- 桌面根页面已固定为 `68px` 顶栏与剩余工作区两行网格，侧栏和聊天区允许在剩余行内收缩，静态资源版本为 `20260820-1`；
+- 桌面根页面已固定为 `68px` 顶栏与剩余工作区两行网格，侧栏和聊天区允许在剩余行内收缩，静态资源版本为 `20260820-2`；
 - M8-B 已将目标创建、周计划草案与重放确认、今日/下一节训练、活动候选人工匹配、跑后反馈、Coach 调整审核和本周总结接入同一网页流程；
 - M9-A 已增加 `athlete_preferences` 类型化长期偏好：网页/API/CLI 必须显式确认；同 key 新值替代旧版本，停用不硬删除，到期不进入计划上下文；
 - Planning Agent 会在目标允许日期内优先使用长跑日偏好，并在 `input_hash` 与 evidence 中记录偏好版本、来源和采用结果；偏好变化会使待激活旧草案变为 stale；
 - M9-B 已增加 `weekly_training_memories`：完整训练周结束后，只从正式计划、已应用执行确认、对应规范化 Activity、Check-in 和已批准变更确定性结算；
 - 周训练记忆具有输入 Hash、来源引用、版本及 `active / superseded / invalidated` 生命周期；未确认、未来或失效事实不会进入 Planning；
 - Planning Agent 优先用最近有效周记忆计算确认训练时长基线，并将记忆 ID、版本和 Hash 写入 evidence 与计划输入 Hash；记忆不足时回退到规范化 Activity；
+- M9-C 已增加统一 Memory Context Builder：Execution 为0条/0字符，Recovery 最多2条/1400字符，Plan 最多5条/1800字符；
+- 每个候选都记录选中顺序或职责无权限、未来、过期、替代、归档、失效、窗口外和预算不足等排除原因；
+- Plan 周摘要不包含恢复、疼痛和急性症状字段；Recovery 周摘要只作背景且不改变安全阈值；Context Hash 绑定实际选中内容，Audit Hash 绑定完整检索审计；
+- Execution、Recovery、Planning 结果和网页周视图携带职责 Context，`runcrew memory context` 可独立检查；CLI Planning 已与网页统一消费周记忆；
 - 周计划与执行写入分别受 `input_hash` 重放和 `revision` 保护，候选活动只有在用户确认后才计入周完成率；
 - Coach 运行开始和完成时，Execution、Recovery、Plan 三个职责节点会同步显示运行中、已完成、无需调用或生成草案状态；
-- 新界面保持 `textContent` DOM 安全边界和响应式布局，JavaScript 语法、专项静态资源测试及 153 项全量测试通过；
+- 新界面保持 `textContent` DOM 安全边界和响应式布局，JavaScript 语法、专项静态资源测试及 158 项全量测试通过；
 - `runcrew demo-seed --reset` 可以在 `data/private/demo/` 创建与个人数据库隔离的完整合成训练状态；种子不调用 COROS/DeepSeek，也不预置对话或 Coach 结论；
 - 求职演示包已包含系统架构图、训练闭环时序图、五分钟演示脚本和明确的可声明/不可声明证据边界；
-- 求职材料包已区分153项回归、真实 DeepSeek 单 Agent 12/12和确定性多 Agent 18/18，并为简历条目、核心难点和14个面试追问建立证据索引；
+- 求职材料包已区分158项回归、真实 DeepSeek 单 Agent 12/12和确定性多 Agent 18/18，并为简历条目、核心难点和14个面试追问建立证据索引；
 - 2026-08-19 应用内浏览器仍无可用实例，因此收敛版视觉和 M9-A 偏好表单点击验收仍需本机人工复核，没有冒充完成截图验收；
 
 - Python 3.13 本地环境可运行；
-- 自动化测试：153 passed；
+- 自动化测试：158 passed；
 - fixture 首次同步插入 2 条；
 - fixture 第二次同步插入 0 条、更新 2 条；
 - 真实 COROS OAuth + PKCE 成功；
@@ -185,7 +189,7 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 ## 当前已知限制
 
-- M9-A 的长期偏好当前只支持 `preferred_long_run_weekday`；M9-B 已实现周训练记忆，但普通聊天不会自动抽取或写入记忆，按职责 Context Builder 和 Memory Eval Suite 尚未实现；
+- M9-A 的长期偏好当前只支持 `preferred_long_run_weekday`；M9-B/M9-C 已实现周记忆和按职责 Context，但普通聊天不会生成待确认候选，Memory Candidate 与 Memory Eval Suite 尚未实现；
 - 演示种子是合成业务场景，只能证明当前工程链路可运行，不能证明真实用户训练效果或生产级稳定性；
 - 到期偏好会在读取时排除并投影为 `expired`，当前不运行后台任务改写其历史审计 JSON；
 - `getActivityDetail` 异常；
@@ -221,9 +225,9 @@ M1-M4 数据、Skill 和单 Agent Harness 已完成；M5-A 当前可以完成：
 
 ## 下一项唯一任务
 
-**M9-C：构建按职责选择的 Memory Context。**
+**M9-D：聊天只生成待确认 Memory Candidate。**
 
-为 Execution、Recovery、Plan 分别选择最小必要的偏好与周训练记忆，记录选中/排除原因、顺序和上下文预算；继续排除未来、过期、被替代和已失效版本，不允许角色读取不必要的私人事实。
+从自然语言聊天中只提取受支持的类型化候选，保存原消息引用、候选值与置信边界，并由用户明确确认或拒绝；LLM 和聊天 Policy 仍不能直接调用正式偏好或周记忆写入。
 
 完整模型结论见 [M5-B3 DeepSeek 最终评测报告](M5-B3-DeepSeek最终评测报告.md)。
 

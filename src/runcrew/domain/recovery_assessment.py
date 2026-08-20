@@ -6,6 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from runcrew.domain.activity import SourceProvider
+from runcrew.domain.memory import AgentMemoryContext
 
 
 class RecoveryAssessmentRequest(BaseModel):
@@ -50,6 +51,7 @@ class RecoveryEvidence(BaseModel):
         "readiness",
         "training_volume",
         "planned_session",
+        "memory_context",
         "missing_data",
     ]
     message: str = Field(min_length=1, max_length=300)
@@ -58,6 +60,7 @@ class RecoveryEvidence(BaseModel):
         "user_report",
         "runcrew_conservative_rule",
         "exercise_safety_red_flag",
+        "role_scoped_memory_context",
         "missing_data_policy",
     ]
 
@@ -114,6 +117,7 @@ class RecoveryAssessmentResult(BaseModel):
     current_7d: RecoveryWindowMetrics
     previous_7d: RecoveryWindowMetrics
     plan_action: RecoveryPlanAction
+    memory_context: AgentMemoryContext | None = None
 
     @field_validator("assessed_at")
     @classmethod
@@ -141,4 +145,10 @@ class RecoveryAssessmentResult(BaseModel):
         }
         if self.risk_level != expected[self.recommendation]:
             raise ValueError("recommendation 与 risk_level 不一致")
+        if self.memory_context is not None and (
+            self.memory_context.role != "recovery"
+            or self.memory_context.goal_id != self.goal_id
+            or self.memory_context.as_of != self.assessed_at
+        ):
+            raise ValueError("Recovery 结果包含了不属于当前任务的记忆上下文。")
         return self

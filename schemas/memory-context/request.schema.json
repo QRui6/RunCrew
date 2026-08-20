@@ -1,0 +1,44 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "role": {
+      "enum": [
+        "execution",
+        "recovery",
+        "plan"
+      ],
+      "title": "Role",
+      "type": "string"
+    },
+    "goal_id": {
+      "minLength": 1,
+      "title": "Goal Id",
+      "type": "string"
+    },
+    "as_of": {
+      "format": "date-time",
+      "title": "As Of",
+      "type": "string"
+    },
+    "target_week_start": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Week Start"
+    }
+  },
+  "required": [
+    "role",
+    "goal_id",
+    "as_of"
+  ],
+  "title": "按职责构建记忆上下文输入",
+  "type": "object"
+}

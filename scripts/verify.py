@@ -23,6 +23,7 @@ REQUIRED_FILES = [
     "scripts/export_training_operations_schemas.py",
     "scripts/export_coach_evaluation_schemas.py",
     "scripts/export_demo_schemas.py",
+    "scripts/export_memory_context_schemas.py",
     "docs/PROJECT_CONTEXT.md",
     "docs/RunCrew-项目实施全景与面试说明.md",
     "docs/M5-B-DeepSeek模型选型与接入方案.md",
@@ -47,6 +48,7 @@ REQUIRED_FILES = [
     "docs/adr/0020-confirmed-typed-athlete-preference-memory.md",
     "docs/adr/0021-isolated-synthetic-demo-database.md",
     "docs/adr/0022-versioned-weekly-training-memory.md",
+    "docs/adr/0023-role-scoped-memory-context.md",
     "docs/progress/2026-08-09-m3-training-review-skill.md",
     "docs/progress/2026-08-09-m4-review-agent-loop.md",
     "docs/progress/2026-08-09-m5-agent-evaluation-baseline.md",
@@ -67,6 +69,7 @@ REQUIRED_FILES = [
     "docs/progress/2026-08-19-m8a2-job-demo-package.md",
     "docs/progress/2026-08-19-m8a3-job-narrative-evidence.md",
     "docs/progress/2026-08-20-m9b-weekly-training-memory.md",
+    "docs/progress/2026-08-20-m9c-role-scoped-memory-context.md",
     "docs/job/README.md",
     "docs/job/resume-entry.md",
     "docs/job/core-challenges.md",
@@ -97,6 +100,7 @@ REQUIRED_FILES = [
     "src/runcrew/domain/memory.py",
     "src/runcrew/services/athlete_memory.py",
     "src/runcrew/services/weekly_training_memory.py",
+    "src/runcrew/services/memory_context.py",
     "src/runcrew/domain/demo.py",
     "src/runcrew/services/demo_seed.py",
     "docs/demo/README.md",
@@ -125,6 +129,8 @@ REQUIRED_FILES = [
     "schemas/training-operations/weekly-memory-output.schema.json",
     "schemas/training-operations/weekly-memory.schema.json",
     "schemas/training-operations/execution-decision-input.schema.json",
+    "schemas/memory-context/request.schema.json",
+    "schemas/memory-context/output.schema.json",
     "schemas/demo/seed-output.schema.json",
     "src/runcrew/web/dashboard.py",
     "src/runcrew/web/server.py",
@@ -156,6 +162,7 @@ REQUIRED_FILES = [
     "skills/compare-training-execution/references/execution-boundary.md",
     "skills/assess-running-recovery/references/safety-boundary.md",
     "tests/test_weekly_training_memory.py",
+    "tests/test_memory_context.py",
 ]
 
 

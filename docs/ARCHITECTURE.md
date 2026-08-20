@@ -365,7 +365,26 @@ versioned synthetic case
   → memory id/version/hash 进入 evidence 和计划 input_hash
 ```
 
-M9 不使用向量数据库，也不允许普通聊天或 LLM 直接写入正式记忆。未来 Memory Candidate 必须先通过类型校验与用户确认，才能进入长期偏好；按职责 Context Builder 还需要明确记录记忆的选中/排除理由与预算。
+按职责 Memory Context 链路为：
+
+```text
+全部长期偏好与周训练记忆候选
+  → 按 role / goal_id / as_of / target_week_start / status 过滤
+  → 按职责投影允许字段
+  → 按条数与字符预算确定性截断
+  → context_hash（仅业务可见上下文）+ audit_hash（完整选择审计）
+  → Execution / Recovery / Plan 结果、Evidence、Trace 与网页审计视图
+```
+
+| 职责 | 允许的正式记忆 | 固定预算 | 边界 |
+|---|---|---:|---|
+| Execution | 无 | 0条 / 0字符 | 只比较当前处方与已确认 Activity，历史记忆全部按 `role_not_allowed` 审计排除 |
+| Recovery | 周训练记忆 | 2条 / 1400字符 | 只读取负荷、完成度与恢复聚合，不读取偏好，也不改变安全阈值 |
+| Plan | 长期偏好 + 周训练记忆 | 5条 / 1800字符 | 读取排课偏好和训练基线，不接收疼痛等级、急性症状等恢复敏感字段 |
+
+`context_hash` 只覆盖真正进入 Agent 的职责投影，因此新增一条无关或失效候选不会制造业务 Hash 漂移；`audit_hash` 覆盖所有选中/排除决定与预算使用量，因此审计仍能发现候选集合变化。
+
+M9 不使用向量数据库，也不允许普通聊天或 LLM 直接写入正式记忆。M9-C 已完成按职责 Context Builder、字段投影、选中/排除理由、上下文预算与双 Hash 审计。下一步 Memory Candidate 仍必须先通过类型校验与用户确认，才能进入长期偏好。
 
 ## 可讲解的系统视图
 

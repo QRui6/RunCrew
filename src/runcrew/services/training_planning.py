@@ -8,7 +8,12 @@ from datetime import date, datetime, time, timedelta
 from typing import Protocol
 
 from runcrew.domain.activity import ActivityDetail, ActivitySummary, SportType
-from runcrew.domain.memory import AthletePreference, WeeklyTrainingMemory
+from runcrew.domain.memory import (
+    AgentMemoryContext,
+    AthletePreference,
+    MemoryContextBuildRequest,
+    WeeklyTrainingMemory,
+)
 from runcrew.domain.recovery_assessment import RecoveryAssessmentResult
 from runcrew.domain.training_cycle import PlanSession, PlanSessionPatch, TrainingGoal, TrainingPlan
 from runcrew.domain.training_planning import (
@@ -20,6 +25,7 @@ from runcrew.domain.training_planning import (
     WeeklyPlanDraft,
     WeeklyPlanDraftRequest,
 )
+from runcrew.services.memory_context import build_agent_memory_context
 
 
 Activity = ActivitySummary | ActivityDetail
@@ -63,12 +69,12 @@ class PlanningPlanStore(Protocol):
 
 
 class PlanningPreferenceStore(Protocol):
-    def active_at(self, at: datetime) -> list[AthletePreference]: ...
+    def list(self, *, limit: int = 50) -> list[AthletePreference]: ...
 
 
 class PlanningWeeklyMemoryStore(Protocol):
-    def recent_before(
-        self, goal_id: str, before: date, *, limit: int = 4
+    def list_for_goal(
+        self, goal_id: str, *, include_inactive: bool = False, limit: int = 20
     ) -> list[WeeklyTrainingMemory]: ...
 
 
@@ -96,23 +102,42 @@ def execute_weekly_plan_draft(
         provider=request.provider.value if request.provider is not None else None,
     )
     existing = plans.for_goal_week(goal.id, request.week_start)
-    active_preferences = preferences.active_at(request.as_of) if preferences else []
-    recent_memories = (
-        weekly_memories.recent_before(
-            request.goal_id,
-            request.week_start,
-            limit=max(2, min(8, request.lookback_days // 7)),
+    preference_candidates = preferences.list(limit=50) if preferences else []
+    weekly_candidates = (
+        weekly_memories.list_for_goal(
+            request.goal_id, include_inactive=True, limit=50
         )
-        if weekly_memories
+        if weekly_memories is not None
         else []
     )
+    memory_context = build_agent_memory_context(
+        MemoryContextBuildRequest(
+            role="plan",
+            goal_id=request.goal_id,
+            as_of=request.as_of,
+            target_week_start=request.week_start,
+        ),
+        preferences=preference_candidates,
+        weekly_memories=weekly_candidates,
+    )
+    selected_preference_ids = {
+        item.memory_id for item in memory_context.selected_preferences
+    }
+    selected_weekly_ids = {
+        item.memory_id for item in memory_context.selected_weekly_memories
+    }
     return build_weekly_plan_draft(
         request,
         goal=goal,
         activities=history,
         existing_plan=existing,
-        athlete_preferences=active_preferences,
-        weekly_training_memories=recent_memories,
+        athlete_preferences=[
+            item for item in preference_candidates if item.id in selected_preference_ids
+        ],
+        weekly_training_memories=[
+            item for item in weekly_candidates if item.id in selected_weekly_ids
+        ],
+        memory_context=memory_context,
     )
 
 
@@ -124,6 +149,7 @@ def build_weekly_plan_draft(
     existing_plan: TrainingPlan | None,
     athlete_preferences: list[AthletePreference] | None = None,
     weekly_training_memories: list[WeeklyTrainingMemory] | None = None,
+    memory_context: AgentMemoryContext | None = None,
 ) -> TrainingPlanningResult:
     active_preferences = [
         item
@@ -176,9 +202,39 @@ def build_weekly_plan_draft(
             "weekly_training_memories": [
                 _weekly_memory_features(item) for item in active_memories
             ],
+            "memory_context_hash": (
+                memory_context.context_hash if memory_context is not None else None
+            ),
         }
     )
     evidence = _draft_evidence(request, goal, relevant)
+    if memory_context is not None:
+        evidence.append(
+            PlanningEvidence(
+                id=f"memory-context:{memory_context.context_hash[:24]}",
+                type="memory_context",
+                message="Plan 只接收已确认偏好与目标周之前的有效周摘要，并记录排除原因和字符预算。",
+                values={
+                    "context_hash": memory_context.context_hash,
+                    "audit_hash": memory_context.audit_hash,
+                    "selected_memory_ids": [
+                        item.memory_id
+                        for item in memory_context.selected_preferences
+                    ]
+                    + [
+                        item.memory_id
+                        for item in memory_context.selected_weekly_memories
+                    ],
+                    "selected_count": memory_context.budget.used_items,
+                    "excluded_count": sum(
+                        not item.selected for item in memory_context.decisions
+                    ),
+                    "used_chars": memory_context.budget.used_chars,
+                    "max_chars": memory_context.budget.max_chars,
+                },
+                rule_source="role_scoped_memory_context",
+            )
+        )
     if active_memories:
         evidence.append(
             PlanningEvidence(
@@ -206,6 +262,7 @@ def build_weekly_plan_draft(
             evidence,
             "这一周已经存在训练计划，计划 Agent 不会覆盖已有计划。",
             "week_already_has_plan",
+            memory_context,
         )
     current_week_start = request.as_of.date() - timedelta(
         days=request.as_of.date().weekday()
@@ -217,6 +274,7 @@ def build_weekly_plan_draft(
             evidence,
             "v1 只生成尚未开始的训练周；进行中或过去的周需人工处理已完成训练。",
             "week_not_in_future",
+            memory_context,
         )
     if goal.target_date < request.week_start:
         return _blocked_draft(
@@ -225,6 +283,7 @@ def build_weekly_plan_draft(
             evidence,
             "目标日期早于待规划训练周，需先更新或结束目标。",
             "goal_target_date_passed",
+            memory_context,
         )
     if goal.target_date <= request.week_start + timedelta(days=6):
         return _blocked_draft(
@@ -233,6 +292,7 @@ def build_weekly_plan_draft(
             evidence,
             "v1 不自动生成比赛周减量与比赛方案，请人工确认比赛安排。",
             "event_week_requires_manual_plan",
+            memory_context,
         )
 
     available_dates = [
@@ -249,6 +309,7 @@ def build_weekly_plan_draft(
             evidence,
             "本周剩余时间没有可训练日期，不能生成有效草案。",
             "no_available_training_day",
+            memory_context,
         )
 
     preferred_long_run_date = (
@@ -366,6 +427,7 @@ def build_weekly_plan_draft(
         ),
         evidence=evidence,
         warnings=warnings,
+        memory_context=memory_context,
     )
 
 
@@ -586,6 +648,7 @@ def _blocked_draft(
     evidence: list[PlanningEvidence],
     summary: str,
     missing: str,
+    memory_context: AgentMemoryContext | None = None,
 ) -> TrainingPlanningResult:
     evidence.append(
         PlanningEvidence(
@@ -604,6 +667,7 @@ def _blocked_draft(
         summary=summary,
         evidence=evidence,
         missing_data=[missing],
+        memory_context=memory_context,
     )
 
 

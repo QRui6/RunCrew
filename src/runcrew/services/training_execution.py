@@ -6,6 +6,7 @@ from datetime import datetime, time, timedelta
 from typing import Protocol
 
 from runcrew.domain.activity import ActivityDetail, ActivitySummary, SportType
+from runcrew.domain.memory import AgentMemoryContext, MemoryContextBuildRequest
 from runcrew.domain.training_cycle import PlanSession, TrainingPlan, utc_now
 from runcrew.domain.training_execution import (
     ExecutionCandidate,
@@ -16,6 +17,11 @@ from runcrew.domain.training_execution import (
     TrainingExecutionDecisionRequest,
     TrainingExecutionRequest,
     TrainingExecutionResult,
+)
+from runcrew.services.memory_context import (
+    MemoryContextPreferenceStore,
+    MemoryContextWeeklyStore,
+    load_agent_memory_context,
 )
 
 
@@ -59,6 +65,8 @@ def execute_training_comparison(
     *,
     activities: ExecutionActivityStore,
     plans: ExecutionPlanStore,
+    preferences: MemoryContextPreferenceStore | None = None,
+    weekly_memories: MemoryContextWeeklyStore | None = None,
 ) -> TrainingExecutionResult:
     plan = plans.get(request.plan_id)
     if plan is None:
@@ -88,7 +96,25 @@ def execute_training_comparison(
         linked = activities.get_by_id(session.linked_activity_id)
         if linked is not None and linked.started_at <= request.as_of:
             history.append(linked)
-    return build_training_comparison(request, plan=plan, activities=history)
+    memory_context = (
+        load_agent_memory_context(
+            MemoryContextBuildRequest(
+                role="execution",
+                goal_id=plan.goal_id,
+                as_of=request.as_of,
+            ),
+            preferences=preferences,
+            weekly_memories=weekly_memories,
+        )
+        if preferences is not None or weekly_memories is not None
+        else None
+    )
+    return build_training_comparison(
+        request,
+        plan=plan,
+        activities=history,
+        memory_context=memory_context,
+    )
 
 
 def build_training_comparison(
@@ -96,6 +122,7 @@ def build_training_comparison(
     *,
     plan: TrainingPlan,
     activities: list[Activity],
+    memory_context: AgentMemoryContext | None = None,
 ) -> TrainingExecutionResult:
     relevant = sorted(
         {
@@ -126,6 +153,9 @@ def build_training_comparison(
             "request": request.model_dump(mode="json"),
             "plan": _plan_features(plan),
             "activities": [_activity_features(item) for item in relevant],
+            "memory_context_hash": (
+                memory_context.context_hash if memory_context is not None else None
+            ),
         }
     )
     linked_ids = {
@@ -191,6 +221,7 @@ def build_training_comparison(
         summary=summary,
         sessions=comparisons,
         unassigned_activity_ids=unassigned,
+        memory_context=memory_context,
     )
 
 
